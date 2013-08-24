@@ -1,0 +1,246 @@
+ATZ
+AT&F
+AT&D2
+AT&C1
+ATS7=60
+ATS30=0
+ATS0=0
+AT+CGDCONT=1,"IP","internet.orange"
+AT+ZOPRT=5
+AT+ZSNT=2,0,0
+ATDT*99#
+
+printf "ATDT*99#" > /dev/ttyUSB2
+/usr/sbin/pppd nodetach ttyUSB2
+
+
+pppd nodetach lock nodefaultroute ttyUSB2 noipdefault noauth usepeerdns 
+
+/usr/sbin/pppd nodetach lock nodefaultroute ttyUSB2 noipdefault noauth usepeerdns lcp-echo-failure 5 lcp-echo-interval 30
+/usr/sbin/pppd nodetach ttyUSB2 crtscts nodefaultroute usehostname user orange noipdefault usepeerdns idle 0
+460800
+--> Waiting for carrier.
+CONNECT 14000000
+--> Carrier detected.  Starting PPP immediately.
+--> Starting pppd at Wed Jul 10 21:06:03 2013
+
+pppd 57600 /dev/ttyUSB2 crtscts defaultroute usehostname -detach user orange noipdefault noauth usepeerdns idle 0 connect /home/shah/proj/rt-u/3g-modem/test
+
+!!!WORKING:
+pppd 57600 /dev/ttyUSB2 crtscts defaultroute usehostname -detach user orange noipdefault noauth usepeerdns idle 0 connect /home/shah/proj/rt-u/3g-modem/test
+!!!Minimal working as program:
+pppd /dev/ttyUSB2 defaultroute nodetach connect /home/shah/proj/rt-u/3g-modem/3g-zte-orange
+!!!PREFERRED
+pppd /dev/ttyUSB2 defaultroute nodetach noauth connect /home/shah/proj/rt-u/3g-modem/3g-zte-orange
+
+pppd /dev/ttyUSB2 defaultroute nodetach noauth connect 'printf "ATZ DT*99#\r\n"'
+
+!IMPORTANT OPTIONS:
+1.without defaultroute all ips are set but programs cannot find the route
+2.using -detach or nodetach prevents from being daemonized
+3.idle n disconnect after n seconds without packets. 0 is not exception but some minimal value is used
+
+pppd /dev/ttyUSB2 defaultroute nodetach noauth connect chat -f 3g.chat
+
+AT COMMANDS:
+AT&F  Restore factory settings
+ZTE SPECIFIC:
+AT+ZCDRUN=8 enable flash drive
+AT+ZCDRUN=9 disable flash drive
+AT+ZOPRT=5 stay online
+AT+ZRSSI  Report signal strength
+3G network（registered to 3G network）
+==
+RESPONSE:
++ZRSSI: rssi,ecio,rscp
+The unit of Rscp is 0.5dbm ( in 0.5 dBm step with no sign).
+The unit of Ecio is 0.5db ( in 0.5 dB step with no sign).
+The relation is: 2*rssi=rscp-ecio
+e.g.
++ZRSSI: 49,8,106
+Rssidbm = -rssi = -49dbm
+Eciodb = -ecio/2= -4db
+Rscpdbm = - rscp /2= -53dbm
+2G network（there is no ecio and rscp value when registered in 2G
+network ，so set
+value of 1000）
+e.g.
++ZRSSI: rssi,1000,1000
+No network e.g.
++ZRSSI ：OK
+
+AT+ZSNT=0,0,0 (Auto) - Default
+AT+ZSNT=1,0,0 GPRS Only
+AT+ZSNT=2,0,0 3G Only
+AT+ZSNT=0,0,1 GPRS Preferred
+AT+ZSNT=0,0,2 3G Preferred
+AT+ZPAS? Query Operational Mode
+
+https://en.wikipedia.org/wiki/Hayes_command_set
+
+??? https://en.wikipedia.org/wiki/Voice_modem_command_set
+AT+FCLASS=? //check if the voice commands are supported
+
+??? AT&Z&C1&S7=60&S30=0&+ZOPRT=5&+ZSNT=2,0,0&D*99#
+
+Modem online tester:
+http://m2msupport.net/m2msupport/module-tester/
+
+Configure modem with AT commands:
+http://www.tldp.org/HOWTO/Remote-Serial-Console-HOWTO/modem-hayes.html
+quiet mode: ATQ1
+echo off: ATE0
+
+Send SMS:
+ATZ
+OK
+AT+CMGF=1
+OK
+AT+CMGS="+37495643208"
+> test
+>
+//Ctrl+Z - to end message
++CMGS: 13
+
+OK
+
+Read SMS:
+AT+CMGL="ALL" //list all messages
+//response: +CMGL: <index>,<status>,<from_address>,<mr>,<scts><CRLF><data>
+AT+CMGD=2 //delete SMS 2
+
+
+PIN code:
+AT+CPIN?
+>>>  +CPIN: SIM PIN  // pin codes need to be entered
+>>>  OK
+ 
+AT+CPIN="9546"
+>>>  OK
+ 
+AT+CLCK="SC",0,"9546" // disable pin code
+>>>  OK
+ 
+AT+CPIN? 
+>>>  +CPIN: READY
+
+Autorun:
+AT+ZCDRUN=8 //close autorun
+AT+ZCDRUN=9 //open autorun
+AT+ZCDRUN=4
+Inquiry autorun open state result(0:NO 1:YES):1\r\n\r\nOK\r\n
+
+Signal strength - standard:
+AT+CSQ
+
++CSQ: 12,99 //strength, bit error rate 0-7% (99 = unknown)
+dbm=rssi*2 - 113
+0 < -113 dBm 
+...
+31 > -51 dBm 
+
+
+List available operators:
+AT+COPS=?
+Current operator:
+AT+COPS?
+
+Service Center:
+AT+CSCA?
++CSCA: "+37495980150",145
+
+OK
+
+Mobile Startion Class
+AT+CGCLASS?
++CGCLASS: "A"
+
+OK
+
+
+
+\r\n+ZPSTM: 1,4F72616E6765FFFF;1,496D204F72616E6765;\r\n\r\n+ZEND\r\n\r\n+ZEND\r\n\r\n+ZEND\r\n\r\n+ZEND\r\n\r\n+ZEND\r\n\r\n+ZRSSI: 71,7,150\r\n\r\nOK\r\n\
+
+ATV0 - short result code
+ATV1 - verbose result code
+
+
+Configure modem with AT commands:
+http://www.tldp.org/HOWTO/Remote-Serial-Console-HOWTO/modem-hayes.html
+quiet mode: ATQ1
+echo off: ATE0
+
+Send SMS:
+ATZ
+OK
+AT+CMGF=1
+OK
+AT+CMGS="+37495643208"
+> test
+>
+//Ctrl+Z - to end message
++CMGS: 13
+
+OK
+
+Read SMS:
+AT+CMGL="ALL" //list all messages
+//response: +CMGL: <index>,<status>,<from_address>,<mr>,<scts><CRLF><data>
+AT+CMGD=2 //delete SMS 2
+
+
+PIN code:
+AT+CPIN?
+>>>  +CPIN: SIM PIN  // pin codes need to be entered
+>>>  OK
+ 
+AT+CPIN="9546"
+>>>  OK
+ 
+AT+CLCK="SC",0,"9546" // disable pin code
+>>>  OK
+ 
+AT+CPIN? 
+>>>  +CPIN: READY
+
+Autorun:
+AT+ZCDRUN=8 //close autorun
+AT+ZCDRUN=9 //open autorun
+
+Signal strength - standard:
+AT+CSQ
+
++CSQ: 12,99 //strength, bit error rate 0-7% (99 = unknown)
+dbm=rssi*2 - 113
+0 < -113 dBm 
+...
+31 > -51 dBm 
+
+
+List available operators:
+AT+COPS=?
+Current operator:
+AT+COPS?
+
+Service Center:
+AT+CSCA?
++CSCA: "+37495980150",145
+
+OK
+
+Mobile Startion Class
+AT+CGCLASS?
++CGCLASS: "A"
+
+OK
+
+ATI
+
+Manufacturer: ZTE CORPORATION
+Model: MF656A
+Revision: BD_MF656V1.0.2B05
+IMEI: 356567040054015
++GCAP: +CGSM,+DS,+ES
+
+OK
+

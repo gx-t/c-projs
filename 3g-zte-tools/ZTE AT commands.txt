@@ -1,0 +1,617 @@
+﻿http://3g-modem.wetpaint.com/page/ZTE+AT-commands
+
+
+ZTE AT-commands
+
+
+disable/enable flashdrive:
+AT+ZCDRUN=8 enable 
+AT+ZCDRUN=9 disable
+
+
+stay online:
+AT+ZOPRT=5 
+
+
+check net-/SIMlock:
+AT+ZSEC?
+answer: <SEC_STATUE>,<SEC_ITEMS>
+< SEC_STATUE >: 
+0 Initializing the encryption (Insignificant SEC_ITEMS) 
+1 Network Lock error. (Insignificant SEC_ITEMS) 
+2 Network Locked 
+3 Unlocked or correct MCC/MNC 
+<SEC_ITEMS>: 
+0 No action 
+1 Network lock 
+2 (U)SIM card lock
+3 Network Lock and (U)SIM card Lock
+
+
+Unlock:
+AT+ZNCK="unlock-code" 
+AT+ZNCK?
+Unlock residual time 0-5
+
+
+Report signal strength:
+AT+ZRSSI parameter command syntax 
+Command Possible response(s) 
++ZRSSI <CR><LF>+ZRSSI:<rssi>,<ecio>,<rscp><CR><LF><CR><LF>
+OK<CR><LF>
+<CR><LF>+CME ERROR: <err><CR><LF> 
+
+Description:
+This command is used to report signal strength.. Notice the command is used only in platform 6290 and 6246. 
+Defined values:
+3G network（registered to 3G network） 
++ZRSSI: rssi,ecio,rscp 
+The unit of Rscp is 0.5dbm ( in 0.5 dBm step with no sign). 
+The unit of Ecio is 0.5db ( in 0.5 dB step with no sign). 
+The relation is: 2*rssi=rscp-ecio 
+e.g. 
++ZRSSI: 49,8,106 
+Rssidbm = -rssi = -49dbm 
+Eciodb = -ecio/2= -4db 
+Rscpdbm = - rscp /2= -53dbm 
+2G network（there is no ecio and rscp value when registered in 2G network ，so set 
+value of 1000） 
+e.g. 
++ZRSSI: rssi,1000,1000 
+No network e.g. 
++ZRSSI ：OK 
+Notice! the command is used only in platform 6290 and 6246.
+
+
+Set Operational Mode:
+AT+ZSNT=0,0,0 (Auto) - Default
+AT+ZSNT=1,0,0 GPRS Only
+AT+ZSNT=2,0,0 3G Only
+AT+ZSNT=0,0,1 GPRS Preferred
+AT+ZSNT=0,0,2 3G Preferred
+
+
+Query Operational Mode:
+AT+ZPAS?
+<CR><LF>+ZPAS:<network>,<srv_domain><CR><LF>OK<CR><LF>
+<network>: the type of current network
+No Service
+Limited Service
+GPRS
+GSM
+UMTS
+EDGE
+HSDPA
+<srv_domain>: service domain
+CS_ONLY: CS domain service available.
+PS_ONLY: PS domain service available.
+CS_PS: CS&PS domain service available.
+CAMPED: camped in a cell.
+example
+Command: AT+ZPAS?
+Response: +ZPAS: "GPRS","CS_PS"
+OK
+
+
+Set Band Status:
+AT+ZBANDI=0 • Automatic (Auto) - Default
+AT+ZBANDI=1 • UMTS 850 + GSM 900/1800 
+AT+ZBANDI=2 • UMTS 2100 + GSM 900/1800 (Europe) 
+AT+ZBANDI=3 • UMTS 850/2100 + GSM 900/1800 
+AT+ZBANDI=4 • UMTS 850/1900 + GSM 850/1900 
+Notice! the command is used only in platform 6290 and 6246.
+
+http://www.zte.com.au/downloads/USB_Modem_Config_Procedure.pdf
+
+********************************************************************************
+
+How to use a USB data modem without the Connection Manager
+ZTE USB modems support self-installation and auto-run functionality.
+Follow the steps described to use the device without the Connection Manager.
+PLEASE NOTE:
+No technical support is provided for troubleshooting this procedure.
+Step 1:
+When the USB modem is first inserted in to a computer the device will auto install the ‘User
+Interface (UI)’ and the appropriate USB modem drivers.
+Once the UI installation has finished, the Connection Manager will automatically launch, and
+load the drivers.
+Step 2:
+Close down the Connection Manager.
+Using the Hyperterminal tool (or equivalent) connect to the modem com port.
+The assigned com port for the ‘ZTE Proprietary HS-USB Modem’ will need to be determined.
+This information can be extracted from the ZTE modem properties within device manager.
+Hyperterminal Configuration Settings
+115200
+Bits per second
+8
+Data bits
+None
+Parity
+1
+Stop bits
+None
+Flow Control
+Step 3:
+Input the following AT commands:
+AT+ZOPRT=5 makes the device to stay in online mode
+AT+ZCDRUN=8 disables auto-run
+AT+CGDCONT configures the correct APN profile
+{Consult your service provider to obtain the APN name}
+For example:
+AT+CGDCONT=4,”IP”,”Telstra.internet”,,0,0
+With the above AT commands entered, when you plug in the device to computer, the
+Connection Manager will not launch automatically, you will be able to use this device without
+the Connection Manager and the Windows dial up tool can be used to initiate the data
+connection.
+Notes:
+After entering the AT command AT+ZCDRUN=8, the self-installation or auto-run
+features has been disabled, to re-enable this feature, input AT command ‘AT+ZCDRUN=9’
+Do not uninstall the Connection Manager from your computer, since it will uninstall the
+USB modem drivers.
+
+
+********************************************************************************
+
+
+rg@rg-laptop:~/blog$ kermit
+C-Kermit 8.0.211, 10 Apr 2004, for Linux
+ Copyright (C) 1985, 2004,
+  Trustees of Columbia University in the City of New York.
+Type ? or HELP for help.
+(/home/rg/blog/) C-Kermit>set line /dev/noz0
+(/home/rg/blog/) C-Kermit>c
+Connecting to /dev/noz0, speed 115200
+ Escape character: Ctrl-\ (ASCII 28, FS): enabled
+Type the escape character followed by C to get back,
+or followed by ? to see other options.
+----------------------------------------------------
+at+cpin="0000"
+OK
+at+cpms="SM"
++CPMS: 0,50,0,50,0,50
+
+
+OK
+at+cmgf=1
+OK
+at+cmgs="PHONE NUMBER"
+> MESSAGE
+> <TYPE C-z TO END THE MESSAGE>
+
+
++CMGS: 10
+
+
+OK
+
+
+(Back at localhost)
+----------------------------------------------------
+(/home/rg/blog/) C-Kermit>q
+ A serial connection might still be active on /dev/noz0.
+
+
+OK to exit? y
+Closing /dev/noz0...OK
+
+
+********************************************************************************
+
+
+[Dialer Defaults]
+Modem = /dev/ttyUSB2
+Modem Type = Analog Modem
+ISDN = 0
+Baud = 460800
+Dial Attempts = 1
+Username = orange
+Password = orange
+Init1 = ATZ
+Init2 = AT&F &D2 &C1
+Init3 = ATS7=60 S30=0 S0=0
+Init4 = AT+CGDCONT=1,"IP","orangeinternet"
+Phone = *99#
+Stupid Mode = 1
+
+
+********************************************************************************
+
+
+http://www.shapeshifter.se/2008/04/30/list-of-at-commands/
+PIN
+Command: AT+CPIN? 
+Response: +CPIN: <code>
+Description: Check PIN status.
+
+
+<code> can have several values, these are the more common ones
+
+
+READY
+Not waiting for PIN (no PIN or PIN already entered)
+SIM PIN
+Waiting for SIM PIN code.
+SIM PUK
+Waiting for SIM PUK code.
+Command: AT+CPIN=<pin>[,<newpin>]
+Response: OK | +CME ERROR: <error>
+Description: Enter/change PIN.
+
+
+Example
+
+
+>AT+CPIN?
++CPIN: SIM PIN
+OK
+
+
+>AT+CPIN=”1234″
+OK
+
+
+>AT+CPIN?
++CPIN: READY
+OK
+
+
+Network registration
+Command: AT+CREG?, AT+CREG=? , AT+CREG=<n>
+Response: +CREG: <n>,<stat>,[,<lac>,<ci>[,<AcT>]] | +CME ERROR
+Description: Get network registration status and controls unsolicited status callback, which when turned on will send a +CREG message with the new network status when something changes.
+
+
+<n>
+
+
+Disable unsolicited status callback.
+Enable unsolicited status callback, +CREG: <stat>
+Enable unsolicited status callback, +CREG: <stat>,[,<lac>,<ci>[,<AcT>]]
+<stat>
+
+
+Not registered, not searching
+Registered to home network
+Not registered, searching for network
+Registration denied
+Registered, roaming
+<lac> Location area code
+<ci> UTRAN/GERAN cell ID
+
+
+<AcT> Network access type
+
+
+GSM
+Compact GSM
+UTRAN
+GSM with EGPRS
+UTRAN with HSDPA
+UTRAN with HSUPA
+UTRAN with HSDPA and HSUPA
+UTRAN is a short for UMTS Terrestrial Radio Access Network
+
+
+The following example shows that full unsolicited status callback is enabled, that the device is registered to its home network followed by an location area code followed by the UTRAN cell ID. Unfortunately this device does not show access type with this command.
+
+
+Example:
+
+
+>AT+CREG=2
+OK
+>AT+CREG?
++CREG: 2,1,”048A”,”58B2″
+
+
+Command: AT+COPS?,
+Response: +COPS: (<mode>,[<format>,<oper>[,<AcT>]]),…, (<modeN>,[<formatN>,<operN>[,<AcTN>]])
+
+
+Command: AT+COPS=?
+Response: +COPS: <stat>, long <oper>, short <oper>, numeric <oper>, <AcT>
+
+
+Response: +CME ERROR:
+Command: AT+COPS=<mode>,[<format>,<oper>[,<AcT>]]
+Response: OK | +CME ERROR
+
+
+Description: Get/set current GSM/UMTS network operator, list available operators. This can be used to change for example access type and switch network.
+
+
+<mode>
+
+
+Automatic network selection (<oper> ignored)
+Manual network selection, <oper> must be present, <AcT> is optional.
+Deregister from network.
+Set <format only, no registration/deregistration.
+Manual selection with automatic fall back (enters automatic mode if manual selection fails).
+<format>
+
+
+Long alphanumeric string
+Short alphanumeric string
+Numeric ID
+<oper>
+String (based on <format>) that identifies the operator.
+
+
+<stat>
+
+
+Unknown
+Available
+Current
+Forbidden
+<AcT> Network access type
+
+
+GSM
+Compact GSM
+UTRAN
+GSM with EGPRS
+UTRAN with HSDPA
+UTRAN with HSUPA
+UTRAN with HSDPA and HSUPA
+The following example shows that the devices is connected to the operator called “3″ using UTRAN (which is UMTS, also called 3G). Listing available networks shows the current network, an additional UTMS network called Sweden3G that is forbidden and a GSM network called “3″ that is available.
+
+
+Example:
+
+
+>AT+COPS?
++COPS: 0,0,”3″,2
+
+
+AT+COPS=?
++COPS: (2,”3″,”3″,”24004″,2),(1,”3″,”3″,”24008″,0),(3,”Sweden 3G”,”Sweden3G”,”2)
+
+
+Command: AT+COPN
+Response: +COPN: <numeric1>,<alpha1>, …, +COPN: <numericN>,<alphaN>
+Description: Read operator names stored in device memory.
+
+
+Example:
+
+
++COPN: “20408″,”NL KPN”
++COPN: “20412″,”NL Telfort”
++COPN: “20416″,”T-Mobile NL”
++COPN: “20420″,”Orange NL”
+…
++COPN: “24002″,”3 SE”
++COPN: “24004″,”SWEDEN”
++COPN: “24005″,”Sweden 3G”
++COPN: “24008″,”Telenor SE”
++COPN: “24010″,”S COMVIQ”
+
+
+Define PDP (Packet Data Protocol) context
+Command: AT+CGDCONT=<cid> [,<pdptype> [,<apn>[,<pdpaddr> [,<dcomp>[,<hcomp]]]]]
+Response: OK | ERROR
+
+
+Command: AT+CGDCONT?
+Response: +CGDCONT: <cid1>,<pdptype1>,<apn1>,<pdpaddr1><dcomp1>,<hcomp1>, …, <cidN>,<pdptypeN>,<apnN>,<pdpaddrN><dcompN>
+
+
+Command: AT+CGDCONT=?
+Response: +CGDCONT: (<cid_range>),<pdptype>,,,(<dcomp_range>),(<hcomp_range>)
+Description: Allows configuration of one or several packet data protocol context which forms the base of a data connection.
+
+
+<cid> PDP context ID, minimum value is 1, maximum value depends on device and can be found with the =? command.
+
+
+<pdptype> String parameter identifying the protocol type
+IP – Internet Protocol
+IPV6 – Internet Protocol, version 6
+PPP – Point to Point Protocol
+
+
+<apn> String that identifies the Access Point Name in the packet data network.
+
+
+<pdpaddr> Requested address, if null (0.0.0.0) an address is requested dynamically.
+
+
+<dcomp> PDP data compression control, off by default.
+
+
+<hcomp> PDP header compression control, off by default.
+
+
+Example:
+
+
+> AT+CGDCONT=1,”IP”,”bredband.tre.se”
+OK
+
+
+>AT+CGDCONT?
++CGDCONT: 1,”IP”,”bredband.tre.se”,”0.0.0.0″,0,0
+
+
+>AT+CGDCONT=?
++CGDCONT: (1-16),”IP”,,,(0-2),(0-4)
++CGDCONT: (1-16),”PPP”,,,(0-2),(0-4)
++CGDCONT: (1-16),”IPV6″,,,(0-2),(0-4)
+
+
+PDP Authentication
+Command: AT$QCPDPP=<cid>,<auth_type>,<auth_name>,<auth_pwd>
+Response: OK | ERROR
+Description: A Qualcomm command, defines authentication parameters for the PDP context id <cid>.
+
+
+<auth_type>
+
+
+None
+PAP
+CHAP
+<auth_name> and <auth_pwd> are strings with the authentication information.
+
+
+Signal quality
+Command: AT+CSQ
+Response: +CSQ: <rssi>,<ber>
+Description: Returns signal quality.
+
+
+<rssi> Received Signal Strength Indicator
+
+
+0
+-113 dBm or less
+1
+-111 dBm
+2 to 30
+-109 to -53 dBm
+31
+-51 dBm or greater
+99
+not known or not detectable
+<ber> Bit Error Rate, in percent 0..7.
+99 not known or not detectable
+
+
+A note on the RSSI (received signal strength), dBm is a decibel (logarithmic) scale with a reference of 1 milliwatt thus 0 dBm equals a received signal of 1 mW.
+Signal strength is usually lower than 1 mW and therefore below 0, so the larger (closer to 0) the better signal strength.
+You can convert the RSSI to dBM with
+
+
+
+
+Example
+
+
+>AT+CSQ=?
++CSQ: (0-31,99),(99)
+OK
+
+
+>AT+CSQ
++CSQ: 14,99
+
+
+Manufacturer/model/revision identification
+Command: AT+GMI
+Response: Manufacturer Identification string
+
+
+Command: AT+GMM
+Response: Model Identification string
+
+
+Command: AT+GMR
+Response: Revision Identification string
+
+
+Example:
+
+
+>AT+GMI
+Option N.V.
+OK
+
+
+>AT+GMM
+GTM378
+OK
+
+
+>AT+GMR
+2.4.6Hd (Date: Oct 04 2007, Time: 11:59:08)
+
+
+Option N.V. proprietary AT-style commands
+Command: AT_OWANCALL=<pdp context>,<enabled>[,<callback enabled>]
+Response: OK
+Description: Used to initiate UMTS/HSDPA connections.
+
+
+<pdp context> – Existing, valid, PDP context that specifies the intended APN to connect to.
+<enabled> – 1 = Enable connection, 0 = Disable connection (disconnect)
+<callback enabled> – 1 = Asynchronous callback when connection is established, 0 = silent
+
+
+Example:
+
+
+>AT_OWANCALL=1,1,1
+OK
+_OWANCALL: 1, 1
+
+
+>AT_OWANCALL=1,0
+OK
+_OWANCALL: 1, 0
+
+
+Command: AT_OWANDATA=<pdp context>
+Response: _OWANDATA: <pdp context>, <ip address>, <route?>, <nameserver 1>, <nameserver 2>, <unknown>, <unknown>, <speed>
+Description: Retrieve IP configuration from an established connection previously created with AT_OWANCALL
+
+
+Example:
+
+
+>AT_OWANDATA=1
+_OWANDATA: 1, 79.138.181.171, 0.0.0.0, 80.251.192.244, 80.251.192.245, 0.0.0.0, 0.0.0.0, 72000
+
+
+References
+3GPP TS 27.007 V8.3.0 (2008-03) – AT command set for User Equipment (UE)
+Specification details at 3gpp.org
+
+
+This entry was posted on Wednesday, April 30th, 2008 at 2:22 pm and is filed under General. You can follow any responses to this entry through the RSS 2.0 feed. You can leave a response, or trackback from your own site.
+
+
+********************************************************************************
+
+
+AT+CGDCONT=4,”IP”,”Telstra.internet”,,0,0
+AT+CGDCONT=1,"IP","internet.orange",,0,0
+
+
+********************************************************************************
+AT
+OK
+AT+CMGF=1
+OK
+AT+CMGW="+85291234567"
+> A simple demo of SMS text messaging.
++CMGW: 1
+
+
+OK
+AT+CMSS=1
++CMSS: 20
+
+
+OK
+********************************************************************************
+AT
+OK
+AT+CMGF=1
+OK
+AT+CMGL="ALL"
++CMGL: 1,"REC READ","+85291234567",,"06/11/11,00:30:29+32"
+Hello, welcome to our SMS tutorial.
++CMGL: 2,"REC READ","+85291234567",,"06/11/11,00:32:20+32"
+A simple demo of SMS text messaging.
+
+
+OK
+********************************************************************************
+AT+CSMS?
++CSMS: 0,1,1,1
+
+
+OK
+********************************************************************************
