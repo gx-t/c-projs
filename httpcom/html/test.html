@@ -1,0 +1,14 @@
+<html>
+<script>
+var address_map = new Array();
+address_map["floor1/room1/lamp1"] = ["/dev/ttyUSB0", 2];
+address_map["floor1/room1/lamp2"] = ["/dev/ttyUSB0", 14];
+address_map["floor2/room2/lamp13"] = ["/dev/ttyUSB2", 9];
+function do_load()
+{
+  document.write(address_map["floor1/room1/lamp1"][0]);
+}
+</script>
+<body onload="do_load();">
+</body>
+</html>
