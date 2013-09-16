@@ -1,1 +1,2 @@
-##httpcom
+##httpcom usage:
+* 
