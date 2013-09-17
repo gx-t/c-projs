@@ -1,3 +1,3 @@
 ##httpcom:
-* usage: httpcom <home> <port>
+* usage: httpcom &lt;home&gt; &lt;port&gt;
 
