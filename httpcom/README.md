@@ -1,2 +1,3 @@
-##httpcom usage:
-* 
+##httpcom:
+* usage: httpcom <home> <port>
+
