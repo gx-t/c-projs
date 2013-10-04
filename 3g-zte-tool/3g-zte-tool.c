@@ -62,7 +62,7 @@ enum
 #define Z_LISTOPER_TIMEOUT 30
 
 static const char* g_cmd_port = "/dev/ttyUSB1";
-static char* const g_pppd[] = {"/usr/sbin/pppd", "/dev/ttyUSB2", "defaultroute", "nodetach", 0};
+static char* const g_pppd[] = {"/usr/sbin/pppd", "/dev/ttyUSB2", "defaultroute", "nodetach", "usepeerdns", 0};
 
 static int z_show_usage(int code)
 {
