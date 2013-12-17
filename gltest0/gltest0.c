@@ -25,7 +25,7 @@ struct SCENE
 {
   GLint bricks[BRICK_HCOUNT][BRICK_VCOUNT];
   GLfloat ball_x, ball_y, ball_vx, ball_vy;
-  GLfloat paddle_x, paddle_y;
+  GLfloat paddle_x;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -39,6 +39,7 @@ enum
   OBJ_BRICK_YELLOW,
   OBJ_BRICK_GREEN,
   OBJ_BRICK_BLUE,
+  OBJ_PADDLE,
   OBJ_FRAME,
   OBJ_LAST
 };
@@ -62,30 +63,41 @@ static GLvoid objCheckCollision()
 {
 }
 
-static GLvoid scrDrawPaddle()
+static GLvoid scrDrawPaddle(GLfloat* paddle_x)
 {
+  int x, y;
+  GLint viewport[4];
+  SDL_GetMouseState(&x, &y);
+  glGetIntegerv(GL_VIEWPORT, viewport);
+//  printf("<=>%g\n", (2.0 * x / viewport[2] - 1) * 1.2 * viewport[2] / viewport[3]);
+  *paddle_x = (2.0 * x / viewport[2] - 1) * 1.2 * viewport[2] / viewport[3];
+  glPushMatrix();
+    glTranslatef(*paddle_x, 0, 0);
+    glCallList(OBJ_PADDLE);
+  glPopMatrix();
 }
 
 static GLvoid scrDrawBall()
 {
 }
 
-static GLvoid scrDrawBricks(struct SCENE* scene)
+static GLvoid scrDrawBricks(GLint bricks[BRICK_HCOUNT][BRICK_VCOUNT])
 {
   int i, j;
-  glTranslatef(-1, 1, 0);
-  glScalef(0.1, 0.05, 1);
-  glTranslatef(1, -1, 0);
-  for(j = 0; j < 10; j ++)
-  {
-    for(i = 0; i < 10; i++)
+  glPushMatrix();
+    glTranslatef(-1, 1, 0);
+    glScalef(0.1, 0.05, 1);
+    glTranslatef(1, -1, 0);
+    for(j = 0; j < 10; j ++)
     {
-      glCallList(scene->bricks[i][j]);
-      glTranslatef(2, 0, 0);
+      for(i = 0; i < 10; i++)
+      {
+        glCallList(bricks[i][j]);
+        glTranslatef(2, 0, 0);
+      }
+      glTranslatef(-20, -2, 0);
     }
-    glTranslatef(-20, -2, 0);
-  }
-//  glCallList(OBJ_BRICK_RED);
+  glPopMatrix();
 }
 
 static GLvoid scrDrawAll(struct SCENE* scene)
@@ -95,8 +107,8 @@ static GLvoid scrDrawAll(struct SCENE* scene)
   glCallList(OBJ_FRAME);
   objCheckCollision();
   objDoMove();
-  scrDrawBricks(scene);
-  scrDrawPaddle();
+  scrDrawBricks(scene->bricks);
+  scrDrawPaddle(&scene->paddle_x);
   scrDrawBall();
 /*    glTranslatef(0, 0, -20);
     glRotatef(rotX, 0, 1, 0);
@@ -184,8 +196,16 @@ static GLvoid objInitObjects(struct SCENE* scene)
     glColor4f(0.25, 0.25, 1, 1);
     glCallList(OBJ_BRICK);
   glEndList();
+  glNewList(OBJ_PADDLE, GL_COMPILE);
+    glPushMatrix();
+      glTranslatef(0, -1, 0);
+      glScalef(0.2, 0.025, 1);
+      glColor4f(1.0, 1.0, 1.0, 1);
+      glCallList(OBJ_BRICK);
+    glPopMatrix();
+  glEndList();
   glNewList(OBJ_FRAME, GL_COMPILE);
-    glColor4f(0.75, 0.75, 0.75, 1);
+    glColor4f(0.5, 0.5, 0.5, 1);
     glCallList(OBJ_RECT);
   glEndList();
 /*  int i;
@@ -322,6 +342,7 @@ int main()
   }
   SDL_WM_SetCaption("Evol test", "Evol");
   scrInit(&scene);
+//  SDL_ShowCursor(0);
   fWndResize(screen->w, screen->h);
   int done = 0;
   while(!done)
@@ -330,6 +351,13 @@ int main()
     while(SDL_PollEvent(&event))
     {
       switch(event.type) {
+        case SDL_MOUSEBUTTONDOWN:
+          printf("=>MOUSEBUTTONDOWN\n");
+          break;
+        case SDL_MOUSEMOTION:
+//          printf("=>%d, %d\n", event.motion.xrel, event.motion.yrel);
+//          printf("+>%d, %d\n", event.motion.x, event.motion.y);
+          break;
         case SDL_KEYDOWN:
           if(event.key.keysym.sym == SDLK_p) autoRotate = !autoRotate;
           break;
