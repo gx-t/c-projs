@@ -33,13 +33,15 @@ struct SCENE
 enum
 {
   OBJ_FIRST = 1,
-  OBJ_RECT = OBJ_FIRST,
+  OBJ_EMPTY = OBJ_FIRST,
+  OBJ_RECT,
   OBJ_BRICK,
   OBJ_BRICK_RED,
   OBJ_BRICK_YELLOW,
   OBJ_BRICK_GREEN,
   OBJ_BRICK_BLUE,
   OBJ_PADDLE,
+  OBJ_BALL,
   OBJ_FRAME,
   OBJ_LAST
 };
@@ -55,8 +57,10 @@ static GLvoid objUpdateDotList(struct ACTIVE_OBJ_ARRAY* objArr)
   glEndList();
 }*/
 
-static GLvoid objDoMove()
+static GLvoid objDoMove(GLfloat* x, GLfloat* y, GLfloat vx, GLfloat vy)
 {
+  *x += vx;
+  *y += vy;
 }
 
 static GLvoid objCheckCollision()
@@ -77,8 +81,12 @@ static GLvoid scrDrawPaddle(GLfloat* paddle_x)
   glPopMatrix();
 }
 
-static GLvoid scrDrawBall()
+static GLvoid scrDrawBall(GLfloat ball_x, GLfloat ball_y)
 {
+  glPushMatrix();
+    glTranslatef(ball_x, ball_y, 0);
+    glCallList(OBJ_BALL);
+  glPopMatrix();
 }
 
 static GLvoid scrDrawBricks(GLint bricks[BRICK_HCOUNT][BRICK_VCOUNT])
@@ -106,10 +114,10 @@ static GLvoid scrDrawAll(struct SCENE* scene)
   glTranslatef(0, 0, -20);
   glCallList(OBJ_FRAME);
   objCheckCollision();
-  objDoMove();
   scrDrawBricks(scene->bricks);
   scrDrawPaddle(&scene->paddle_x);
-  scrDrawBall();
+  scrDrawBall(scene->ball_x, scene->ball_y);
+  objDoMove(&scene->ball_x, &scene->ball_y, scene->ball_vx, scene->ball_vy);
 /*    glTranslatef(0, 0, -20);
     glRotatef(rotX, 0, 1, 0);
     glRotatef(rotY, 1, 0, 0);
@@ -159,7 +167,8 @@ static GLvoid objInitRandomBricks(struct SCENE* scene)
 
 static GLvoid objInitObjects(struct SCENE* scene)
 {
-  objInitRandomBricks(scene);
+  glNewList(OBJ_EMPTY, GL_COMPILE);
+  glEndList();
   glNewList(OBJ_RECT, GL_COMPILE);
     glBegin(GL_LINE_LOOP);
       glVertex2f(-1, -1);
@@ -204,10 +213,18 @@ static GLvoid objInitObjects(struct SCENE* scene)
       glCallList(OBJ_BRICK);
     glPopMatrix();
   glEndList();
+  glNewList(OBJ_BALL, GL_COMPILE);
+    glPushMatrix();
+      glScalef(0.05, 0.05, 1);
+      glColor4f(1.0, 1.0, 0, 1);
+      glCallList(OBJ_RECT);
+    glPopMatrix();
+  glEndList();
   glNewList(OBJ_FRAME, GL_COMPILE);
     glColor4f(0.5, 0.5, 0.5, 1);
     glCallList(OBJ_RECT);
   glEndList();
+  objInitRandomBricks(scene);
 /*  int i;
   glNewList(OBJ_ARROW, GL_COMPILE);
     glBegin(GL_LINE_LOOP);
@@ -329,7 +346,10 @@ static GLvoid scrInit(struct SCENE* scene)
 int main()
 {
   struct SCENE scene;
-  unsigned char autoRotate = 0;
+  scene.ball_x = scene.ball_y = 0;
+  scene.ball_vx = 0.01;
+  scene.ball_vy = -0.005;
+//  unsigned char autoRotate = 0;
   int res = 0;
   SDL_Surface *screen;
   SDL_Init(SDL_INIT_VIDEO);
@@ -359,7 +379,7 @@ int main()
 //          printf("+>%d, %d\n", event.motion.x, event.motion.y);
           break;
         case SDL_KEYDOWN:
-          if(event.key.keysym.sym == SDLK_p) autoRotate = !autoRotate;
+//          if(event.key.keysym.sym == SDLK_p) autoRotate = !autoRotate;
           break;
         case SDL_VIDEORESIZE:
           screen = SDL_SetVideoMode(event.resize.w, event.resize.h, 32, SDL_OPENGL|SDL_RESIZABLE);
