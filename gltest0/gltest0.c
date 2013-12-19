@@ -20,12 +20,22 @@ struct ACTIVE_OBJ_ARRAY
 
 #define BRICK_HCOUNT 10
 #define BRICK_VCOUNT 10
+#define BALL_SIZE 0.05
+#define PADDLE_WIDTH 0.2
+#define PADDLE_HEIGHT 0.025
 
 struct SCENE
 {
   GLint bricks[BRICK_HCOUNT][BRICK_VCOUNT];
-  GLfloat ball_x, ball_y, ball_vx, ball_vy;
-  GLfloat paddle_x;
+  struct
+  {
+    GLfloat x, y, vx, vy;
+    GLvoid (*draw)(struct SCENE*);
+  }ball;
+  struct
+  {
+    GLfloat x;
+  }paddle;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -57,50 +67,60 @@ static GLvoid objUpdateDotList(struct ACTIVE_OBJ_ARRAY* objArr)
   glEndList();
 }*/
 
-static GLvoid objDoMove(GLfloat* x, GLfloat* y, GLfloat vx, GLfloat vy)
+static GLvoid objDoMove(struct SCENE* scene)
 {
-  *x += vx;
-  *y += vy;
+  scene->ball.x += scene->ball.vx;
+  scene->ball.y += scene->ball.vy;
 }
 
-static GLvoid objCheckCollision()
-{
-}
-
-static GLvoid scrDrawPaddle(GLfloat* paddle_x)
+static GLvoid scrDrawPaddle(struct SCENE* scene)
 {
   int x, y;
   GLint viewport[4];
   SDL_GetMouseState(&x, &y);
   glGetIntegerv(GL_VIEWPORT, viewport);
 //  printf("<=>%g\n", (2.0 * x / viewport[2] - 1) * 1.2 * viewport[2] / viewport[3]);
-  *paddle_x = (2.0 * x / viewport[2] - 1) * 1.2 * viewport[2] / viewport[3];
+  scene->paddle.x = (2.0 * x / viewport[2] - 1) * 1.2 * viewport[2] / viewport[3];
   glPushMatrix();
-    glTranslatef(*paddle_x, 0, 0);
+    glTranslatef(scene->paddle.x, 0, 0);
     glCallList(OBJ_PADDLE);
   glPopMatrix();
 }
 
-static GLvoid scrDrawBall(GLfloat ball_x, GLfloat ball_y)
+static GLvoid scrDrawRunningBall(struct SCENE* scene)
+{
+  glTranslatef(scene->ball.x, scene->ball.y, 0);
+  if(scene->ball.x - BALL_SIZE < -1 || scene->ball.x + BALL_SIZE > 1) scene->ball.vx = -scene->ball.vx;
+  if(scene->ball.y - BALL_SIZE < -1 || scene->ball.y + BALL_SIZE > 1) scene->ball.vy = -scene->ball.vy;
+}
+
+static GLvoid scrDrawStickBall(struct SCENE* scene)
+{
+  scene->ball.x = scene->paddle.x;
+  scene->ball.y = -1 + BALL_SIZE + PADDLE_HEIGHT;
+  glTranslatef(scene->ball.x, scene->ball.y, 0);
+}
+
+static GLvoid scrDrawBall(struct SCENE* scene)
 {
   glPushMatrix();
-    glTranslatef(ball_x, ball_y, 0);
+    scene->ball.draw(scene);
     glCallList(OBJ_BALL);
   glPopMatrix();
 }
 
-static GLvoid scrDrawBricks(GLint bricks[BRICK_HCOUNT][BRICK_VCOUNT])
+static GLvoid scrDrawBricks(struct SCENE* scene)
 {
   int i, j;
   glPushMatrix();
     glTranslatef(-1, 1, 0);
     glScalef(0.1, 0.05, 1);
     glTranslatef(1, -1, 0);
-    for(j = 0; j < 10; j ++)
+    for(j = 0; j < BRICK_VCOUNT; j ++)
     {
-      for(i = 0; i < 10; i++)
+      for(i = 0; i < BRICK_HCOUNT; i++)
       {
-        glCallList(bricks[i][j]);
+        glCallList(scene->bricks[i][j]);
         glTranslatef(2, 0, 0);
       }
       glTranslatef(-20, -2, 0);
@@ -113,11 +133,10 @@ static GLvoid scrDrawAll(struct SCENE* scene)
   glPushMatrix();
   glTranslatef(0, 0, -20);
   glCallList(OBJ_FRAME);
-  objCheckCollision();
-  scrDrawBricks(scene->bricks);
-  scrDrawPaddle(&scene->paddle_x);
-  scrDrawBall(scene->ball_x, scene->ball_y);
-  objDoMove(&scene->ball_x, &scene->ball_y, scene->ball_vx, scene->ball_vy);
+  scrDrawBricks(scene);
+  scrDrawPaddle(scene);
+  scrDrawBall(scene);
+  objDoMove(scene);
 /*    glTranslatef(0, 0, -20);
     glRotatef(rotX, 0, 1, 0);
     glRotatef(rotY, 1, 0, 0);
@@ -208,14 +227,14 @@ static GLvoid objInitObjects(struct SCENE* scene)
   glNewList(OBJ_PADDLE, GL_COMPILE);
     glPushMatrix();
       glTranslatef(0, -1, 0);
-      glScalef(0.2, 0.025, 1);
+      glScalef(PADDLE_WIDTH, PADDLE_HEIGHT, 1);
       glColor4f(1.0, 1.0, 1.0, 1);
       glCallList(OBJ_BRICK);
     glPopMatrix();
   glEndList();
   glNewList(OBJ_BALL, GL_COMPILE);
     glPushMatrix();
-      glScalef(0.05, 0.05, 1);
+      glScalef(BALL_SIZE, BALL_SIZE, 1);
       glColor4f(1.0, 1.0, 0, 1);
       glCallList(OBJ_RECT);
     glPopMatrix();
@@ -346,9 +365,10 @@ static GLvoid scrInit(struct SCENE* scene)
 int main()
 {
   struct SCENE scene;
-  scene.ball_x = scene.ball_y = 0;
-  scene.ball_vx = 0.01;
-  scene.ball_vy = -0.005;
+  scene.ball.x = scene.ball.y = 0;
+  scene.ball.vx = 0.01;
+  scene.ball.vy = 0.013;
+  scene.ball.draw = scrDrawStickBall;
 //  unsigned char autoRotate = 0;
   int res = 0;
   SDL_Surface *screen;
@@ -372,7 +392,7 @@ int main()
     {
       switch(event.type) {
         case SDL_MOUSEBUTTONDOWN:
-          printf("=>MOUSEBUTTONDOWN\n");
+          scene.ball.draw = scrDrawRunningBall;
           break;
         case SDL_MOUSEMOTION:
 //          printf("=>%d, %d\n", event.motion.xrel, event.motion.yrel);
@@ -382,7 +402,7 @@ int main()
 //          if(event.key.keysym.sym == SDLK_p) autoRotate = !autoRotate;
           break;
         case SDL_VIDEORESIZE:
-          screen = SDL_SetVideoMode(event.resize.w, event.resize.h, 32, SDL_OPENGL|SDL_RESIZABLE);
+          screen = SDL_SetVideoMode(event.resize.w, event.resize.h, 32, SDL_OPENGL | SDL_RESIZABLE);
           if(screen)
           {
             fWndResize(screen->w, screen->h);
