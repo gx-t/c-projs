@@ -90,8 +90,18 @@ static GLvoid scrDrawPaddle(struct SCENE* scene)
 static GLvoid scrDrawRunningBall(struct SCENE* scene)
 {
   glTranslatef(scene->ball.x, scene->ball.y, 0);
-  if(scene->ball.x - BALL_SIZE < -1 || scene->ball.x + BALL_SIZE > 1) scene->ball.vx = -scene->ball.vx;
-  if(scene->ball.y - BALL_SIZE < -1 || scene->ball.y + BALL_SIZE > 1) scene->ball.vy = -scene->ball.vy;
+  GLfloat l = scene->ball.x - BALL_SIZE;
+  GLfloat r = scene->ball.x + BALL_SIZE;
+  GLfloat t = scene->ball.y + BALL_SIZE;
+  GLfloat b = scene->ball.y - BALL_SIZE;
+  if(l < -1 || r > 1) {scene->ball.vx = -scene->ball.vx; return;}
+  if(t > 1 || b < -1) {scene->ball.vy = -scene->ball.vy; return;}
+  if(scene->ball.y > 0)
+  {
+    GLint ix = (GLint)((scene->ball.x + 1) * 5);
+    GLint iy = (GLint)((1 - scene->ball.y) * 10);
+    scene->bricks[ix][iy] = OBJ_EMPTY;
+  }
 }
 
 static GLvoid scrDrawStickBall(struct SCENE* scene)
@@ -348,7 +358,7 @@ static GLvoid scrInit(struct SCENE* scene)
   glClearColor(0, 0, 0, 1);
   glLineWidth(1);
   glPointSize(1);
-  glEnable(GL_DEPTH_TEST);
+//  glEnable(GL_DEPTH_TEST);
 //  glEnable(GL_BLEND);
 //  glEnable(GL_LINE_SMOOTH);
 //  glEnable(GL_POINT_SMOOTH);
@@ -432,4 +442,3 @@ end:
   SDL_Quit();
   return res;
 }
-
