@@ -94,8 +94,8 @@ static GLvoid scrDrawRunningBall(struct SCENE* scene)
   GLfloat r = scene->ball.x + BALL_SIZE;
   GLfloat t = scene->ball.y + BALL_SIZE;
   GLfloat b = scene->ball.y - BALL_SIZE;
-  if(l < -1 || r > 1) {scene->ball.vx = -scene->ball.vx; return;}
-  if(t > 1 || b < -1) {scene->ball.vy = -scene->ball.vy; return;}
+  if(l < -1 || r > 1) {scene->ball.vx = -scene->ball.vx;}
+  if(t > 1 || b < -1) {scene->ball.vy = -scene->ball.vy;}
   if(scene->ball.y > 0)
   {
     GLint ix = (GLint)((scene->ball.x + 1) * 5);
@@ -394,8 +394,7 @@ int main()
   scrInit(&scene);
 //  SDL_ShowCursor(0);
   fWndResize(screen->w, screen->h);
-  int done = 0;
-  while(!done)
+  while(1)
   {
     SDL_Event event;
     while(SDL_PollEvent(&event))
@@ -434,11 +433,13 @@ int main()
 //    rotX -= keys[SDLK_LEFT];
 //    rotX += keys[SDLK_RIGHT];
 
-    done = keys[SDLK_ESCAPE];
+    if(keys[SDLK_ESCAPE]) goto end;
     fWndDraw(&scene);
   }
 end:
+  SDL_FreeSurface(screen);
   objDeleteObjects();
   SDL_Quit();
   return res;
 }
+
