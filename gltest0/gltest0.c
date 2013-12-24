@@ -100,7 +100,14 @@ static GLvoid scrDrawRunningBall(struct SCENE* scene)
   {
     GLint ix = (GLint)((scene->ball.x + 1) * 5);
     GLint iy = (GLint)((1 - scene->ball.y) * 10);
-    scene->bricks[ix][iy] = OBJ_EMPTY;
+    if(scene->bricks[ix][iy] != OBJ_EMPTY)
+    {
+//      if((GLint)((scene->ball.x - scene->ball.vx + 1) * 5) != ix) scene->ball.vy = -scene->ball.vy;
+//      if((GLint)((1 - scene->ball.y + scene->ball.vy) * 10) != iy) scene->ball.vx = -scene->ball.vx;
+//      scene->ball.vx = -scene->ball.vx;
+      scene->ball.vy = -scene->ball.vy;
+      scene->bricks[ix][iy] = OBJ_EMPTY;
+    }
   }
 }
 
