@@ -87,6 +87,8 @@ static GLvoid scrDrawPaddle(struct SCENE* scene)
   glPopMatrix();
 }
 
+static GLvoid scrReset(struct SCENE* scene);
+
 static GLvoid scrDrawRunningBall(struct SCENE* scene)
 {
   glTranslatef(scene->ball.x, scene->ball.y, 0);
@@ -95,7 +97,17 @@ static GLvoid scrDrawRunningBall(struct SCENE* scene)
   GLfloat t = scene->ball.y + BALL_SIZE;
   GLfloat b = scene->ball.y - BALL_SIZE;
   if(l < -1 || r > 1) {scene->ball.vx = -scene->ball.vx;}
-  if(t > 1 || b < -1) {scene->ball.vy = -scene->ball.vy;}
+  if(t > 1) {scene->ball.vy = -scene->ball.vy;}
+  if(b < -1)
+  {
+    GLfloat delta = scene->paddle.x - scene->ball.x;
+    if((delta >= -PADDLE_WIDTH) && (delta <= PADDLE_WIDTH))
+    {
+      scene->ball.vy = -scene->ball.vy;
+      return;
+    }
+    scrReset(scene);
+  }
   if(scene->ball.y > 0)
   {
     GLint ix = (GLint)((scene->ball.x + 1) * 5);
@@ -260,7 +272,6 @@ static GLvoid objInitObjects(struct SCENE* scene)
     glColor4f(0.5, 0.5, 0.5, 1);
     glCallList(OBJ_RECT);
   glEndList();
-  objInitRandomBricks(scene);
 /*  int i;
   glNewList(OBJ_ARROW, GL_COMPILE);
     glBegin(GL_LINE_LOOP);
@@ -379,13 +390,19 @@ static GLvoid scrInit(struct SCENE* scene)
   fprintf(stderr, "OpenGL: %s\n", gluErrorString(glGetError()));
 }
 
+GLvoid scrReset(struct SCENE* scene)
+{
+  scene->ball.x = scene->ball.y = 0;
+  scene->ball.draw = scrDrawStickBall;
+  objInitRandomBricks(scene);
+}
+
 int main()
 {
   struct SCENE scene;
-  scene.ball.x = scene.ball.y = 0;
+  
   scene.ball.vx = 0.01;
   scene.ball.vy = 0.013;
-  scene.ball.draw = scrDrawStickBall;
 //  unsigned char autoRotate = 0;
   int res = 0;
   SDL_Surface *screen;
@@ -399,6 +416,7 @@ int main()
   }
   SDL_WM_SetCaption("Evol test", "Evol");
   scrInit(&scene);
+  scrReset(&scene);
 //  SDL_ShowCursor(0);
   fWndResize(screen->w, screen->h);
   while(1)
@@ -449,4 +467,3 @@ end:
   SDL_Quit();
   return res;
 }
-
