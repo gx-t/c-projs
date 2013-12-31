@@ -6,18 +6,6 @@
 
 #define PI 3.14159265
 
-/*
-struct DOT
-{
-  GLfloat x, y, z, distance;
-};
-
-struct ACTIVE_OBJ_ARRAY
-{
-  struct DOT dotArr[DOT_COUNT];
-  GLushort dotIdxArr[DOT_COUNT];
-};*/
-
 #define BRICK_HCOUNT 10
 #define BRICK_VCOUNT 10
 #define BALL_SIZE 0.05
@@ -36,6 +24,7 @@ struct SCENE
   {
     GLfloat x;
   }paddle;
+  int cnt;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -55,17 +44,6 @@ enum
   OBJ_FRAME,
   OBJ_LAST
 };
-/*
-static GLvoid objUpdateDotList(struct ACTIVE_OBJ_ARRAY* objArr)
-{
-  glNewList(OBJ_DOTS, GL_COMPILE);
-  glPushMatrix();
-    glScalef(0.8, 0.8, 0.8);
-    glVertexPointer(3, GL_FLOAT, sizeof(struct DOT), objArr->dotArr);
-    glDrawElements(GL_POINTS, DOT_COUNT, GL_UNSIGNED_SHORT, objArr->dotIdxArr);
-  glPopMatrix();
-  glEndList();
-}*/
 
 static GLvoid objDoMove(struct SCENE* scene)
 {
@@ -81,6 +59,8 @@ static GLvoid scrDrawPaddle(struct SCENE* scene)
   glGetIntegerv(GL_VIEWPORT, viewport);
 //  printf("<=>%g\n", (2.0 * x / viewport[2] - 1) * 1.2 * viewport[2] / viewport[3]);
   scene->paddle.x = (2.0 * x / viewport[2] - 1) * 1.2 * viewport[2] / viewport[3];
+  if(scene->paddle.x < -1 + PADDLE_WIDTH) scene->paddle.x = -1 + PADDLE_WIDTH;
+  else if(scene->paddle.x > 1 - PADDLE_WIDTH) scene->paddle.x = 1 - PADDLE_WIDTH;
   glPushMatrix();
     glTranslatef(scene->paddle.x, 0, 0);
     glCallList(OBJ_PADDLE);
@@ -103,6 +83,7 @@ static GLvoid scrDrawRunningBall(struct SCENE* scene)
     GLfloat delta = scene->paddle.x - scene->ball.x;
     if((delta >= -PADDLE_WIDTH) && (delta <= PADDLE_WIDTH))
     {
+      scene->ball.vx = -delta / PADDLE_WIDTH * 0.02;
       scene->ball.vy = -scene->ball.vy;
       return;
     }
@@ -114,11 +95,10 @@ static GLvoid scrDrawRunningBall(struct SCENE* scene)
     GLint iy = (GLint)((1 - scene->ball.y) * 10);
     if(scene->bricks[ix][iy] != OBJ_EMPTY)
     {
-//      if((GLint)((scene->ball.x - scene->ball.vx + 1) * 5) != ix) scene->ball.vy = -scene->ball.vy;
-//      if((GLint)((1 - scene->ball.y + scene->ball.vy) * 10) != iy) scene->ball.vx = -scene->ball.vx;
-//      scene->ball.vx = -scene->ball.vx;
       scene->ball.vy = -scene->ball.vy;
       scene->bricks[ix][iy] = OBJ_EMPTY;
+      scene->cnt--;
+      if(!scene->cnt) scrReset(scene);
     }
   }
 }
@@ -160,41 +140,14 @@ static GLvoid scrDrawBricks(struct SCENE* scene)
 static GLvoid scrDrawAll(struct SCENE* scene)
 {
   glPushMatrix();
-  glTranslatef(0, 0, -20);
-  glCallList(OBJ_FRAME);
-  scrDrawBricks(scene);
-  scrDrawPaddle(scene);
-  scrDrawBall(scene);
-  objDoMove(scene);
-/*    glTranslatef(0, 0, -20);
-    glRotatef(rotX, 0, 1, 0);
-    glRotatef(rotY, 1, 0, 0);
-    glPushMatrix();
-      glTranslatef(-0.8, -0.8, -0.8);
-      glScalef(0.05, 0.05, 0.05);
-      glCallList(OBJ_XYZARROWS);
-    glPopMatrix();
-    glColor4f(1, 1, 1, 1);
-    glCallList(OBJ_DOTS);
-    glColor4f(1, 1, 0.5, 0.7);
-    glCallList(OBJ_AXES);*/
+    glTranslatef(0, 0, -20);
+    glCallList(OBJ_FRAME);
+    scrDrawBricks(scene);
+    scrDrawPaddle(scene);
+    scrDrawBall(scene);
+    objDoMove(scene);
   glPopMatrix();
-//  objUpdateDotList();
 }
-/*
-static GLvoid objInitRandomDots(struct ACTIVE_OBJ_ARRAY* objArr)
-{
-  int i;
-  srand48(SDL_GetTicks());
-  for(i = 0; i < DOT_COUNT; i ++)
-  {
-    objArr->dotIdxArr[i] = (GLushort)i;
-    objArr->dotArr[i].x = 2 * drand48() - 1;
-    objArr->dotArr[i].y = 2 * drand48() - 1;
-    objArr->dotArr[i].z = 2 * drand48() - 1;
-  }
-  objUpdateDotList(objArr);
-}*/
 
 static GLvoid objInitRandomBricks(struct SCENE* scene)
 {
@@ -272,59 +225,6 @@ static GLvoid objInitObjects(struct SCENE* scene)
     glColor4f(0.5, 0.5, 0.5, 1);
     glCallList(OBJ_RECT);
   glEndList();
-/*  int i;
-  glNewList(OBJ_ARROW, GL_COMPILE);
-    glBegin(GL_LINE_LOOP);
-      glVertex2f(-1, 0.5);
-      glVertex2f(0, 0.5);
-      glVertex2f(0, 1);
-      glVertex2f(1, 0);
-      glVertex2f(0, -1);
-      glVertex2f(0, -0.5);
-      glVertex2f(-1, -0.5);
-    glEnd();
-  glEndList();
-  glNewList(OBJ_AXES, GL_COMPILE);
-    glPushMatrix();
-      for(i = 0; i < 4; i ++)
-      {
-        glBegin(GL_LINE_LOOP);
-          glVertex3f(-1, -1, 1);
-          glVertex3f(1, -1, 1);
-          glVertex3f(1, 1, 1);
-          glVertex3f(-1, 1, 1);
-        glEnd();
-        glRotatef(90, 0, 1, 0);
-        glRotatef(90, 1, 0, 0);
-        glRotatef(90, 0, 0, 1);
-      }
-    glPopMatrix();
-  glEndList();
-  glNewList(OBJ_BRICK, GL_COMPILE);
-    glBegin(GL_LINE_LOOP);
-      glVertex2f(-1, -0.8);
-      glVertex2f(-0.8, -1);
-      glVertex2f(0.8,  -1);
-      glVertex2f(1,  -0.8);
-      glVertex2f(1,  0.8);
-      glVertex2f(0.8,  1);
-      glVertex2f(-0.8, 1);
-      glVertex2f(-1, 0.8);
-    glEnd();
-  glEndList();
-  glNewList(OBJ_XYZARROWS, GL_COMPILE);
-    glColor4f(1, 0.25, 0.25, 1);
-    glCallList(OBJ_ARROW);
-    glRotatef(90.0, 0, 0, 1);
-    glTranslatef(4, 0, 0);
-    glColor4f(0.25, 1, 0.25, 1);
-    glCallList(OBJ_ARROW);
-    glRotatef(-90.0, 0, 1, 0);
-    glTranslatef(4, 0, 2);
-    glColor4f(0.25, 0.25, 1, 1);
-    glCallList(OBJ_ARROW);
-  glEndList();
-  objInitRandomDots(objArr);*/
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -385,7 +285,6 @@ static GLvoid scrInit(struct SCENE* scene)
 //  glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 //  glEnable(GL_ALPHA_TEST);
   glEnableClientState(GL_VERTEX_ARRAY);
-//  fntInitFonts();
   objInitObjects(scene);
   fprintf(stderr, "OpenGL: %s\n", gluErrorString(glGetError()));
 }
@@ -394,6 +293,7 @@ GLvoid scrReset(struct SCENE* scene)
 {
   scene->ball.x = scene->ball.y = 0;
   scene->ball.draw = scrDrawStickBall;
+  scene->cnt = BRICK_HCOUNT * BRICK_VCOUNT;
   objInitRandomBricks(scene);
 }
 
@@ -414,7 +314,7 @@ int main()
     SDL_Quit();
     return 1;
   }
-  SDL_WM_SetCaption("Evol test", "Evol");
+  SDL_WM_SetCaption("gltest0", "gltest0");
   scrInit(&scene);
   scrReset(&scene);
 //  SDL_ShowCursor(0);
@@ -453,11 +353,6 @@ int main()
       }
     }
     Uint8* keys = SDL_GetKeyState(NULL);
-//    rotY -= keys[SDLK_UP];
-//    rotY += keys[SDLK_DOWN];
-//    rotX -= keys[SDLK_LEFT];
-//    rotX += keys[SDLK_RIGHT];
-
     if(keys[SDLK_ESCAPE]) goto end;
     fWndDraw(&scene);
   }
