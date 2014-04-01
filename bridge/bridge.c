@@ -621,7 +621,7 @@ static int b_single_usage(const char* txt, int code)
 
 static int b_init_listen(int port)
 {
-  int ss = socket(AF_INET, SOCK_STREAM, 0);
+  int ss = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if(ss < 0)
   {
     perror("Cannot create server socket");
@@ -687,7 +687,7 @@ int main(int argc, char* argv[])
   if(!strcmp(*argv, "single")) return b_single(argc, argv);
   if(!strcmp(*argv, "pool")) return b_pool(argc, argv);
   if(!strcmp(*argv, "dynamic")) return b_dynamic(argc, argv);
-  return b_show_usage("Unknown mode.\n",ERR_ARGV);
+  return b_show_usage("Unknown mode.\n", ERR_ARGV);
 }
 
 
