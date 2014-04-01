@@ -26,6 +26,14 @@ enum
 #define MIN_PORT 1
 #define MAX_PORT 65535
 #define BUFF_SIZE 4096
+#define NAME_SIZE 8
+#define USER_COUNT 256
+
+struct U_USER
+{
+  struct sockaddr_in addr;
+  char name[NAME_SIZE];
+};
 
 static int g_s = -1;
 
@@ -108,9 +116,17 @@ static int u_wait_data(int ss, char* buff, struct sockaddr_in* addr)
   return ERR_OK;
 }
 
-//static void u_cmd
+static void u_cmd_ping(struct sockaddr_in* addr, char* data, struct U_USER* usr_arr)
+{
+  char* name = data;
+}
 
-static void u_process_data(struct sockaddr_in* addr, char* data)
+static void (*u_cmd_arr[])(struct sockaddr_in*, char*, struct U_USER*) =
+{
+  u_cmd_ping
+};
+
+static void u_process_data(struct sockaddr_in* addr, char* data, struct U_USER* usr_arr)
 {
   fprintf(stderr, "Connection: %s:%d\n", inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
   int cmd = *data++;
@@ -120,7 +136,7 @@ static void u_process_data(struct sockaddr_in* addr, char* data)
     return;
   }
   cmd -= CMD_FIRST;
-//  return u_cmd_arr[cmd](addr, data);
+  return u_cmd_arr[cmd](addr, data, usr_arr);
 }
 
 static int u_server_loop(int ss)
@@ -128,9 +144,10 @@ static int u_server_loop(int ss)
   fputs("Entering server loop...\n", stderr);
   char buff[BUFF_SIZE];
   struct sockaddr_in addr = {0};
+  struct U_USER usr_arr[USER_COUNT];
   while(u_wait_data(ss, buff, &addr))
   {
-    u_process_data(&addr, buff);
+    u_process_data(&addr, buff, usr_arr);
     fprintf(stderr, ">>FROM:%s:%d\n>>DATA: %s\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), buff);
   }
   close(ss);
