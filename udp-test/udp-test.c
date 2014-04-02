@@ -17,9 +17,10 @@ enum
 
 enum
 {
-  CMD_FIRST = '1'
+  CMD_FIRST = 'a'
   , CMD_PING = CMD_FIRST
-  , CMD_LAST = CMD_PING
+  , CMD_MESSAGE
+  , CMD_LAST = CMD_MESSAGE
   
 };
 
@@ -116,17 +117,83 @@ static int u_wait_data(int ss, char* buff, struct sockaddr_in* addr)
   return ERR_OK;
 }
 
-static void u_cmd_ping(struct sockaddr_in* addr, char* data, struct U_USER* usr_arr)
+static struct U_USER* u_find_name(char* name, struct U_USER* usr_arr)
 {
-  char* name = data;
+  int i = 0;
+  struct U_USER* pp = usr_arr;
+  for(; i < USER_COUNT; i++, pp++) if(!strcmp(pp->name, name)) return pp;
+  return (struct U_USER*)0;
 }
 
-static void (*u_cmd_arr[])(struct sockaddr_in*, char*, struct U_USER*) =
+static struct U_USER* u_find_addr(struct sockaddr_in* addr, struct U_USER* usr_arr)
 {
-  u_cmd_ping
+  int i = 0;
+  struct U_USER* pp = usr_arr;
+  for(; i < USER_COUNT; i++, pp++) if(!memcmp(&pp->addr, addr, sizeof(*addr))) return pp;
+  return (struct U_USER*)0;
+}
+
+static struct U_USER* u_find_empty(struct U_USER* usr_arr)
+{
+  int i = 0;
+  struct U_USER* pp = usr_arr;
+  for(; i < USER_COUNT; i++, pp++) if(!*pp->name) return pp;
+  return (struct U_USER*)0;
+}
+
+static void u_ping_reject(struct sockaddr_in* addr, char* name)
+{
+  fprintf(stderr, "Ping rejected: no space for new client (%s - %s:%d)\n", name, inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
+}
+
+static void u_register(struct sockaddr_in* addr, char* name, struct U_USER* usr_arr)
+{
+  struct U_USER* pp = u_find_name(name, usr_arr);
+  if(!pp) pp = u_find_empty(usr_arr);
+  if(!pp) return u_ping_reject(addr, name);
+  memcpy(&pp->addr, addr, sizeof(*addr));
+  strcpy(pp->name, name);
+  fprintf(stderr, "Ping from client: %s - %s:%d\n", name, inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
+}
+
+static int u_check_name(char* name)
+{
+  int len = strlen(name);
+  if(len < 1 || len > NAME_SIZE - 1)
+  {
+    fprintf(stderr, "Invalid name length: %d (must be 1 to 7)\n", len);
+    return 0;
+  }
+  return 1;
+}
+
+static void u_cmd_ping(int ss, struct sockaddr_in* addr, char* data, struct U_USER* usr_arr)
+{
+  char* name = data;
+  if(u_check_name(name)) return;
+  u_register(addr, name, usr_arr);
+}
+
+static void u_cmd_message(int ss, struct sockaddr_in* addr, char* data, struct U_USER* usr_arr)
+{
+  char* dest_name = data;
+  if(u_check_name(dest_name)) return;
+  struct U_USER* dest = u_find_name(dest_name, usr_arr);
+  if(!dest)
+  {
+    fprintf(stderr, "The name: %s is not registered.\n", dest_name);
+    return;
+  }
+  ssize_t len = strlen(data);
+  if(len != sendto(ss, data, len, 0, (struct sockaddr*)&dest->addr, sizeof(dest->addr))) perror("sendto");
+}
+
+static void (*u_cmd_arr[])(int, struct sockaddr_in*, char*, struct U_USER*) =
+{
+  u_cmd_ping, u_cmd_message
 };
 
-static void u_process_data(struct sockaddr_in* addr, char* data, struct U_USER* usr_arr)
+static void u_process_data(int ss, struct sockaddr_in* addr, char* data, struct U_USER* usr_arr)
 {
   fprintf(stderr, "Connection: %s:%d\n", inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
   int cmd = *data++;
@@ -136,7 +203,7 @@ static void u_process_data(struct sockaddr_in* addr, char* data, struct U_USER* 
     return;
   }
   cmd -= CMD_FIRST;
-  return u_cmd_arr[cmd](addr, data, usr_arr);
+  return u_cmd_arr[cmd](ss, addr, data, usr_arr);
 }
 
 static int u_server_loop(int ss)
@@ -147,7 +214,7 @@ static int u_server_loop(int ss)
   struct U_USER usr_arr[USER_COUNT];
   while(u_wait_data(ss, buff, &addr))
   {
-    u_process_data(&addr, buff, usr_arr);
+    u_process_data(ss, &addr, buff, usr_arr);
     fprintf(stderr, ">>FROM:%s:%d\n>>DATA: %s\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), buff);
   }
   close(ss);
