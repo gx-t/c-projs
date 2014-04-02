@@ -114,6 +114,8 @@ static int u_wait_data(int ss, char* buff, struct sockaddr_in* addr)
     perror("recvfrom");
     return ERR_RECVFROM;
   }
+  buff[bytes_rcvd] = 0;
+  fprintf(stderr, "Client: %s:%d\n", inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
   return ERR_OK;
 }
 
@@ -153,7 +155,6 @@ static void u_register(struct sockaddr_in* addr, char* name, struct U_USER* usr_
   if(!pp) return u_ping_reject(addr, name);
   memcpy(&pp->addr, addr, sizeof(*addr));
   strcpy(pp->name, name);
-  fprintf(stderr, "Ping from client: %s - %s:%d\n", name, inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
 }
 
 static int u_check_name(char* name)
@@ -176,7 +177,11 @@ static void u_cmd_ping(int ss, struct sockaddr_in* addr, char* data, struct U_US
 
 static void u_cmd_message(int ss, struct sockaddr_in* addr, char* data, struct U_USER* usr_arr)
 {
-  char* dest_name = data;
+  ssize_t len = 0;
+  char* pp = data;
+  pp++;
+  len ++;
+  char* dest_name = pp;
   if(u_check_name(dest_name)) return;
   struct U_USER* dest = u_find_name(dest_name, usr_arr);
   if(!dest)
@@ -184,7 +189,8 @@ static void u_cmd_message(int ss, struct sockaddr_in* addr, char* data, struct U
     fprintf(stderr, "The name: %s is not registered.\n", dest_name);
     return;
   }
-  ssize_t len = strlen(data);
+  ssize_t len = 0;
+  len 
   if(len != sendto(ss, data, len, 0, (struct sockaddr*)&dest->addr, sizeof(dest->addr))) perror("sendto");
 }
 
@@ -215,7 +221,6 @@ static int u_server_loop(int ss)
   while(u_wait_data(ss, buff, &addr))
   {
     u_process_data(ss, &addr, buff, usr_arr);
-    fprintf(stderr, ">>FROM:%s:%d\n>>DATA: %s\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), buff);
   }
   close(ss);
 }
