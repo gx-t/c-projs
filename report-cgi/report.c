@@ -15,38 +15,27 @@ static int r_weeknum()
   return atoi(buff);
 }
 
-static const char* r_grpname(const char* key)
+static const char* r_grpname()
 {
-  const char* ss =
-  "ya\0Manufacturing Test Group\0"
-  "mdg\0MASIS Design Group\0"
-  "rtl\0RTL Team\0"
-  "qa\0QA Team\0";
-  const char* p1 = ss;
-  while(*p1)
-  {
-    const char* p2 = key;
-    while(*p1 && *p2 == *p1) p1++, p2++;
-    if(*p1 == *p2)
-    {
-      const char* value = ++p1;
-      return value;
-    }
-    while(*p1) p1++; p1++;
-    while(*p1) p1++; p1++;
-  }
-  return 0;
+  static char gname[256];
+  FILE* ff = fopen(".title", "r");
+  if(!ff) return 0;
+  if(fgets(gname, sizeof(gname), ff));
+  fclose(ff);
+  return gname;
 }
 
-static void r_form(char* arg)
+static void r_errgrp(const char* alias)
+{
+  printf("Content-type: text/plain\r\n\r\nERROR: unknown group alias: %s\r\n", alias);
+}
+
+static void r_form(const char* arg)
 {
   if(!*arg) return;
-  const char* group = r_grpname(arg);
-  if(!group)
-  {
-    printf("Content-type: text/plain\r\n\r\nERROR: unknown group alias: %s\n", arg);
-    return;
-  }
+  if(chdir("../reports"));
+  if(chdir(arg)) return r_errgrp(arg);
+  const char* group = r_grpname();
   const char* cc1 =
   "Content-type: text/html\r\n\r\n"
   "<!DOCTYPE html>\r\n<html>\r\n"
@@ -111,26 +100,26 @@ static void r_report(const char* gr, const char* gname)
   sprintf(buff, "abiword ../%s.html -t doc", r_weekstr());
   printf("<a href=\"/reports/%s/%s.html\">View online</a><br>\r\n", gr, r_weekstr());
   if(system(buff));
+  printf("<script>parent.frames['list'].location.reload();</script>\r\n");
   printf("<a href=\"/reports/%s/%s.doc\">Download doc file</a>\r\n</body></html>", gr, r_weekstr());
 }
 
-static void r_submit(char* gr)
+static void r_erruser()
+{
+  printf("Content-type: text/plain\r\n\r\nERROR: Name field is empty\r\n");
+}
+
+static void r_submit(const char* gr)
 {
   if(!*gr) return;
-  const char* group = r_grpname(gr);
-  if(!group)
-  {
-    printf("Content-type: text/plain\r\n\r\nERROR: unknown group alias: %s\n", gr);
-    return;
-  }
   if(chdir("../reports")) return;
-  mkdir(gr, 0755);
-  if(chdir(gr)) return;
+  if(chdir(gr)) r_errgrp(gr);
+  const char* group = r_grpname();
   char* week = r_weekstr();
   mkdir(week, 0755);
   if(chdir(week)) return;
   char* line = r_line();
-  if(!line) return;
+  if(!*line) return r_erruser();
   FILE* ff = fopen(line, "w");
   if(!ff)
   {
@@ -148,6 +137,35 @@ static void r_submit(char* gr)
   r_report(gr, group);
 }
 
+static void r_list(const char* gr)
+{
+  if(!*gr) return;
+  if(chdir("../reports")) return;
+  if(chdir(gr)) r_errgrp(gr);
+  printf("Content-type: text/html\r\n\r\n<html><body><h2>Report archive</h2><table style=\"width: 200px\">\r\n");
+  struct dirent *de = 0;
+  DIR* pd = opendir(".");
+  while((de = readdir(pd)))
+  {
+    if(de->d_type != DT_REG) continue;
+    char* pp = de->d_name;
+    while(*pp && *pp != '.') pp++;
+    if(*pp) *pp++ = 0;
+    if(strcmp(pp, "html")) continue;
+    printf("<tr><td><b>%s</b></td><td><a href=/reports/%s/%s.html><i>html</i></a></td><td><a href=/reports/%s/%s.doc><i>doc</i></a></td></tr>\r\n", de->d_name, gr, de->d_name, gr, de->d_name);
+  }
+  closedir(pd);
+  printf("</table></body></html>\n");
+}
+
+static void r_time(const char* fmt)
+{
+  char buff[4096];
+  time_t t = time(0);
+  strftime(buff, sizeof(buff), fmt, localtime(&t));
+  printf("Content-type: text/plain\r\n\r\n%s\r\n", buff);
+}
+
 int main(int argc, char* argv[])
 {
   char* pp = getenv("QUERY_STRING");
@@ -157,6 +175,8 @@ int main(int argc, char* argv[])
   if(*pp) *pp++ = 0;
   if(!strcmp(func, "form")) return r_form(pp), 0;
   if(!strcmp(func, "submit")) return r_submit(pp), 0;
+  if(!strcmp(func, "list")) return r_list(pp), 0;
+  if(!strcmp(func, "time")) return r_time(pp), 0;
   return 1;
 }
 
