@@ -79,7 +79,7 @@ static void r_report(const char* gr, const char* gname)
   sprintf(buff, "../%s.html", r_weekstr());
   FILE* rf = fopen(buff, "w");
   if(!rf) return;
-  fprintf(rf, "<html><head><meta http-equiv=\"pragma\" content=\"no-cache\" /></head><body>\r\n<h2><u>%s</u></h2>\r\n", gname);
+  fprintf(rf, "<html><head><meta http-equiv=Expires content=0 /></head><body>\r\n<h2><u>%s</u></h2>\r\n", gname);
   struct dirent *de = 0;
   DIR* pd = opendir(".");
   while((de = readdir(pd)))
@@ -142,7 +142,7 @@ static void r_list(const char* gr)
   if(!*gr) return;
   if(chdir("../reports")) return;
   if(chdir(gr)) r_errgrp(gr);
-  printf("Content-type: text/html\r\n\r\n<html><body><h2>Report archive</h2><table style=\"width: 200px\">\r\n");
+  printf("Content-type: text/html\r\n\r\n<html><head><meta http-equiv=Expires content=0 /></head><body><h2>Report archive</h2><table style=\"width: 200px\">\r\n");
   struct dirent *de = 0;
   DIR* pd = opendir(".");
   while((de = readdir(pd)))

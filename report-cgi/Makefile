@@ -3,7 +3,7 @@ deb:
 
 rel:
 	gcc -O2 -s -Wall -o report *.c
-	cp report $(HOME)/html/cgi-bin
+	cp report $(HOME)/www/cgi-bin
 
 clean:
 	rm report
