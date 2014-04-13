@@ -16,6 +16,12 @@ static int r_weeknum()
   return atoi(buff);
 }
 
+static void r_cutline(char* buff)
+{
+  while(*buff && *buff != '\r' && *buff != '\n') buff ++;
+  *buff = 0;
+}
+
 static const char* r_grpname()
 {
   static char gname[256];
@@ -23,22 +29,13 @@ static const char* r_grpname()
   if(!ff) return 0;
   if(fgets(gname, sizeof(gname), ff));
   fclose(ff);
+  r_cutline(gname);
   return gname;
 }
 
 static void r_errgrp(const char* alias)
 {
   printf("Content-type: text/plain\r\n\r\nERROR: unknown group alias: %s\r\n", alias);
-}
-
-static char* r_trim(char* str)
-{
-  while(isspace(*str)) str++;
-  char* pp = str;
-  while(*pp) pp++;
-  while(isspace(*--pp));
-  *++pp = 0;
-  return str;
 }
 
 static void r_form_name()
@@ -53,7 +50,7 @@ static void r_form_name()
   printf("<select name=name>\r\n");
   while(fgets(buff, sizeof(buff), ff))
   {
-    r_trim(buff);
+    r_cutline(buff);
     printf("<option value=\"%s\">%s</option>", buff, buff);
   }
   printf("</select>\r\n");
@@ -99,8 +96,7 @@ static char* r_line()
   while(*pp && *pp != '=') pp++;
   if(!*pp) return 0;
   char* value = ++pp;
-  while(*pp && *pp != '\r') pp ++;
-  *pp = 0;
+  r_cutline(value);
   return value;
 }
 
