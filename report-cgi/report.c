@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <ctype.h>
 
 static int r_weeknum()
 {
@@ -30,6 +31,35 @@ static void r_errgrp(const char* alias)
   printf("Content-type: text/plain\r\n\r\nERROR: unknown group alias: %s\r\n", alias);
 }
 
+static char* r_trim(char* str)
+{
+  while(isspace(*str)) str++;
+  char* pp = str;
+  while(*pp) pp++;
+  while(isspace(*--pp));
+  *++pp = 0;
+  return str;
+}
+
+static void r_form_name()
+{
+  char buff[4096];
+  FILE* ff = fopen(".users", "r");
+  if(!ff)
+  {
+    printf("Name: <input name=name type=text size=32></input>\r\n");
+    return;
+  }
+  printf("<select name=name>\r\n");
+  while(fgets(buff, sizeof(buff), ff))
+  {
+    r_trim(buff);
+    printf("<option value=\"%s\">%s</option>", buff, buff);
+  }
+  printf("</select>\r\n");
+  fclose(ff);
+}
+
 static void r_form(const char* arg)
 {
   if(!*arg) return;
@@ -41,9 +71,10 @@ static void r_form(const char* arg)
   "<!DOCTYPE html>\r\n<html>\r\n"
   "<head><title>Weekly Report</title></head>\r\n"
   "<body>\r\n<h2>Weekly Report (Week %d)</h2>\r\n<h3>%s</h3>"
-  "<form action=/cgi-bin/report?submit&%s method=post enctype=text/plain>\r\n"
-  "Name: <input name=name type=text size=32></input>\r\n<ol>\r\n";
+  "<form action=/cgi-bin/report?submit&%s method=post enctype=text/plain>\r\n";
   printf(cc1, r_weeknum(), group, arg);
+  r_form_name();
+  printf("<ol>\r\n");
   int i = 16;
   while(i--) puts("<li><input name=task type=text size=64></input></li>");
   printf("</ol>\r\n<h2>Next Week (Week %d):</h2>\r\n<input name=ww type=hidden value=---------></input>\r\n<ol>\r\n", r_weeknum() + 1);
