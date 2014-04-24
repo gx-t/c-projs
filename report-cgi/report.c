@@ -124,11 +124,11 @@ static void r_report(const char* gr, const char* gname)
   closedir(pd);
   fprintf(rf, "</body></html>\r\n");
   fclose(rf);
-  sprintf(buff, "abiword ../%s.html -t doc", r_weekstr());
+  sprintf(buff, "abiword ../%s.html -t docx", r_weekstr());
   printf("<a href=\"/reports/%s/%s.html\">View online</a><br>\r\n", gr, r_weekstr());
   if(system(buff));
   printf("<script>parent.frames['list'].location.reload();</script>\r\n");
-  printf("<a href=\"/reports/%s/%s.doc\">Download doc file</a>\r\n</body></html>", gr, r_weekstr());
+  printf("<a href=\"/reports/%s/%s.docx\">Download docx file</a>\r\n</body></html>", gr, r_weekstr());
 }
 
 static void r_erruser()
@@ -179,7 +179,7 @@ static void r_list(const char* gr)
     while(*pp && *pp != '.') pp++;
     if(*pp) *pp++ = 0;
     if(strcmp(pp, "html")) continue;
-    printf("<tr><td><b>%s</b></td><td><a href=/reports/%s/%s.html><i>html</i></a></td><td><a href=/reports/%s/%s.doc><i>doc</i></a></td></tr>\r\n", de->d_name, gr, de->d_name, gr, de->d_name);
+    printf("<tr><td><b>%s</b></td><td><a href=/reports/%s/%s.html><i>html</i></a></td><td><a href=/reports/%s/%s.docx><i>docx</i></a></td></tr>\r\n", de->d_name, gr, de->d_name, gr, de->d_name);
   }
   closedir(pd);
   printf("</table></body></html>\n");
