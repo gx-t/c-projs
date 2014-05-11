@@ -9,3 +9,4 @@ c-projs
 * report-cgi CGI part of special report management web application (see also html/report)
 * rt-u Directory structure scanning based tool
 * udptest UDP socket testing application
+* orange-cgi Orange report statistical analysis CGI
