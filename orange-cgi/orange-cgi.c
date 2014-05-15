@@ -112,6 +112,6 @@ int main(int argc, char* argv[])
     total_cost += pp->cost;
   }
   printf("<tr>\n<td>Բոլորը միասին</td><td id=time_total>%g</td><td id=cost_total>%d</td><td id=price_total>%g</td>\n</tr>\n", (double)total_time / 60, total_cost, (double)total_cost * 60 / total_time);
-  puts("</table>\n<hr>\n<input type=button value=Վերահաշվել onclick=\'recalc();\'></input>\n</body>\n</html>");
+  puts("</table>\n<hr>\n<a href=\'javascript:recalc();\'>Վերահաշվել</a>\n</body>\n</html>");
   return 0;
 }
