@@ -100,6 +100,8 @@ static char* r_line()
   return value;
 }
 
+//TODO: Special symbols in input: <, >, ---------
+
 static void r_report(const char* gr, const char* gname)
 {
   char buff[4096];
