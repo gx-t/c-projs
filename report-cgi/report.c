@@ -8,6 +8,8 @@
 #include <dirent.h>
 #include <ctype.h>
 
+//DEPENDENCY: decode
+
 static int r_weeknum()
 {
   char buff[8];
@@ -74,7 +76,7 @@ static void r_form(const char* arg)
   printf("<ol>\r\n");
   int i = 16;
   while(i--) puts("<li><input name=task type=text size=64></input></li>");
-  printf("</ol>\r\n<h2>Next Week (Week %d):</h2>\r\n<input name=ww type=hidden value=---------></input>\r\n<ol>\r\n", r_weeknum() + 1);
+  printf("</ol>\r\n<h2>Next Week (Week %d):</h2>\r\n<input name=ww type=hidden value=5c39d0afa28d77a76659ffa85392fbb9></input>\r\n<ol>\r\n", r_weeknum() + 1);
   i = 16;
   while(i--) puts("<li><input name=task type=text size=64></input></li>");
   puts("</ol>\r\n<input type=submit value=Submit></input>\r\n</form>\r\n</body>\r\n</html>");
@@ -100,8 +102,6 @@ static char* r_line()
   return value;
 }
 
-//TODO: Special symbols in input: <, >, ---------
-
 static void r_report(const char* gr, const char* gname)
 {
   char buff[4096];
@@ -114,14 +114,15 @@ static void r_report(const char* gr, const char* gname)
   while((de = readdir(pd)))
   {
     if(de->d_type != DT_REG) continue;
-    FILE* ff = fopen(de->d_name, "r");
+    sprintf(buff, "recode ascii..html < \"%s\"", de->d_name);
+    FILE* ff = popen(buff, "r");
     fprintf(rf, "<h2>%s</h2>\r\n", de->d_name);//name
     fprintf(rf, "<ol>\r\n");
-    while(fgets(buff, sizeof(buff), ff) && strcmp(buff, "---------\r\n")) fprintf(rf, "<li>%s</li>\r\n", buff);
+    while(fgets(buff, sizeof(buff), ff) && !strstr(buff, "5c39d0afa28d77a76659ffa85392fbb9")) fprintf(rf, "<li>%s</li>\r\n", buff);
     fprintf(rf, "</ol>\r\nWW%d tasks:<ol>\r\n", r_weeknum() + 1);
     while(fgets(buff, sizeof(buff), ff)) fprintf(rf, "<li>%s</li>\r\n", buff);
     fprintf(rf, "</ol>\r\n");
-    fclose(ff);
+    pclose(ff);
   }
   closedir(pd);
   fprintf(rf, "</body></html>\r\n");
