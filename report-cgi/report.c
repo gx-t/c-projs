@@ -173,18 +173,16 @@ static void r_list(const char* gr)
   if(chdir("../reports")) return;
   if(chdir(gr)) r_errgrp(gr);
   printf("Content-type: text/html\r\n\r\n<html><head><meta http-equiv=Expires content=0 /></head><body><h2>Report archive</h2><table style=\"width: 200px\">\r\n");
-  struct dirent *de = 0;
-  DIR* pd = opendir(".");
-  while((de = readdir(pd)))
+  FILE* fd = popen("ls *.html", "r");
+  char fname[256];
+  while(fgets(fname, sizeof(fname), fd))
   {
-    if(de->d_type != DT_REG) continue;
-    char* pp = de->d_name;
+    char* pp = fname;
     while(*pp && *pp != '.') pp++;
-    if(*pp) *pp++ = 0;
-    if(strcmp(pp, "html")) continue;
-    printf("<tr><td><b>%s</b></td><td><a href=/reports/%s/%s.html><i>html</i></a></td><td><a href=/reports/%s/%s.docx><i>docx</i></a></td></tr>\r\n", de->d_name, gr, de->d_name, gr, de->d_name);
+    *pp = 0;
+    printf("<tr><td><b>%s</b></td><td><a href=/reports/%s/%s.html><i>html</i></a></td><td><a href=/reports/%s/%s.docx><i>docx</i></a></td></tr>\r\n", fname, gr, fname, gr, fname);
   }
-  closedir(pd);
+  pclose(fd);
   printf("</table></body></html>\n");
 }
 
