@@ -49,7 +49,7 @@ static void r_form_name()
     printf("Name: <input name=name type=text size=32></input>\r\n");
     return;
   }
-  printf("<select name=name>\r\n");
+  printf("<select name=name id=name>\r\n");
   while(fgets(buff, sizeof(buff), ff))
   {
     r_cutline(buff);
@@ -68,7 +68,10 @@ static void r_form(const char* arg)
   const char* cc1 =
   "Content-type: text/html\r\n\r\n"
   "<!DOCTYPE html>\r\n<html>\r\n"
-  "<head><title>Weekly Report</title></head>\r\n"
+  "<head><title>Weekly Report</title><script>"
+  //SCRIPT------------>>>
+  "onload=function() {document.getElementById(\"name\").selectedIndex=-1}\n"
+  "</script></head>\r\n"
   "<body>\r\n<h2>Weekly Report (Week %d)</h2>\r\n<h3>%s</h3>"
   "<form action=/cgi-bin/report?submit&%s method=post enctype=text/plain>\r\n";
   printf(cc1, r_weeknum(), group, arg);
@@ -127,11 +130,11 @@ static void r_report(const char* gr, const char* gname)
   closedir(pd);
   fprintf(rf, "</body></html>\r\n");
   fclose(rf);
-  sprintf(buff, "abiword ../%s.html -t docx", r_weekstr());
+  sprintf(buff, "abiword ../%s.html -t doc", r_weekstr());
   printf("<a href=\"/reports/%s/%s.html\">View online</a><br>\r\n", gr, r_weekstr());
   if(system(buff));
   printf("<script>parent.frames['list'].location.reload();</script>\r\n");
-  printf("<a href=\"/reports/%s/%s.docx\">Download docx file</a>\r\n</body></html>", gr, r_weekstr());
+  printf("<a href=\"/reports/%s/%s.doc\">Download doc file</a>\r\n</body></html>", gr, r_weekstr());
 }
 
 static void r_erruser()
@@ -180,7 +183,7 @@ static void r_list(const char* gr)
     char* pp = fname;
     while(*pp && *pp != '.') pp++;
     *pp = 0;
-    printf("<tr><td><b>%s</b></td><td><a href=/reports/%s/%s.html><i>html</i></a></td><td><a href=/reports/%s/%s.docx><i>docx</i></a></td></tr>\r\n", fname, gr, fname, gr, fname);
+    printf("<tr><td><b>%s</b></td><td><a href=/reports/%s/%s.html><i>html</i></a></td><td><a href=/reports/%s/%s.doc><i>doc</i></a></td></tr>\r\n", fname, gr, fname, gr, fname);
   }
   pclose(fd);
   printf("</table></body></html>\n");
