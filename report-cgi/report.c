@@ -8,20 +8,12 @@
 #include <dirent.h>
 #include <ctype.h>
 
-//DEPENDENCY: decode
-
 static int r_weeknum()
 {
   char buff[8];
   time_t t = time(0);
   strftime(buff, sizeof(buff), "%V", localtime(&t));
   return atoi(buff);
-}
-
-static void r_cutline(char* buff)
-{
-  while(*buff && *buff != '\r' && *buff != '\n') buff ++;
-  *buff = 0;
 }
 
 static const char* r_grpname()
@@ -31,13 +23,22 @@ static const char* r_grpname()
   if(!ff) return 0;
   if(fgets(gname, sizeof(gname), ff));
   fclose(ff);
-  r_cutline(gname);
   return gname;
 }
 
 static void r_errgrp(const char* alias)
 {
   printf("Content-type: text/plain\r\n\r\nERROR: unknown group alias: %s\r\n", alias);
+}
+
+static char* r_trim(char* str)
+{
+  while(isspace(*str)) str++;
+  char* pp = str;
+  while(*pp) pp++;
+  while(isspace(*--pp));
+  *++pp = 0;
+  return str;
 }
 
 static void r_form_name()
@@ -52,7 +53,7 @@ static void r_form_name()
   printf("<select name=name id=name>\r\n");
   while(fgets(buff, sizeof(buff), ff))
   {
-    r_cutline(buff);
+    r_trim(buff);
     printf("<option value=\"%s\">%s</option>", buff, buff);
   }
   printf("</select>\r\n");
@@ -101,7 +102,8 @@ static char* r_line()
   while(*pp && *pp != '=') pp++;
   if(!*pp) return 0;
   char* value = ++pp;
-  r_cutline(value);
+  while(*pp && *pp != '\r') pp ++;
+  *pp = 0;
   return value;
 }
 
@@ -114,17 +116,19 @@ static void r_report(const char* gr, const char* gname)
   fprintf(rf, "<html><head><meta http-equiv=Expires content=0 /></head><body>\r\n<h2><u>%s</u></h2>\r\n", gname);
   struct dirent *de = 0;
   DIR* pd = opendir(".");
-  while((de = readdir(pd)))
+  while((de = readdir(pd))) 
   {
     if(de->d_type != DT_REG) continue;
+//    FILE* ff = fopen(de->d_name, "r");
     sprintf(buff, "recode ascii..html < \"%s\"", de->d_name);
     FILE* ff = popen(buff, "r");
     fprintf(rf, "<h2>%s</h2>\r\n", de->d_name);//name
     fprintf(rf, "<ol>\r\n");
-    while(fgets(buff, sizeof(buff), ff) && !strstr(buff, "5c39d0afa28d77a76659ffa85392fbb9")) fprintf(rf, "<li>%s</li>\r\n", buff);
+    while(fgets(buff, sizeof(buff), ff) && strcmp(buff, "5c39d0afa28d77a76659ffa85392fbb9&#13;\n")) fprintf(rf, "<li>%s</li>\r\n", buff);
     fprintf(rf, "</ol>\r\nWW%d tasks:<ol>\r\n", r_weeknum() + 1);
     while(fgets(buff, sizeof(buff), ff)) fprintf(rf, "<li>%s</li>\r\n", buff);
     fprintf(rf, "</ol>\r\n");
+//    fclose(ff);
     pclose(ff);
   }
   closedir(pd);
@@ -176,7 +180,7 @@ static void r_list(const char* gr)
   if(chdir("../reports")) return;
   if(chdir(gr)) r_errgrp(gr);
   printf("Content-type: text/html\r\n\r\n<html><head><meta http-equiv=Expires content=0 /></head><body><h2>Report archive</h2><table style=\"width: 200px\">\r\n");
-  FILE* fd = popen("ls *.html", "r");
+  FILE* fd = popen("ls -r *.html", "r");
   char fname[256];
   while(fgets(fname, sizeof(fname), fd))
   {
