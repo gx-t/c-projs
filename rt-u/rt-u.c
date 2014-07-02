@@ -97,6 +97,8 @@
 -- added missing MAP_FILE flag to mmap call
 14.08.2012
 -- replaced * -status with | -status and excluded status from regexp processing
+02.07.2014
+-- added jpeg-gps function
 */
 
 /*
@@ -176,6 +178,11 @@ enum
   , ERR_HTTP_BIND_LISTEN
   , ERR_HTTP_ACCEPT
   , ERR_HTTP_CONNECTION_CLOSED
+//jpeg
+  , ERR_JPEG_INVALID_STREAM
+  , ERR_JPEG_NO_EXIF
+  , ERR_JPEG_EXIF_HEADER
+  , ERR_JPEG_EXIF
 };
 
 static FILE* rt_tmp_file()
@@ -930,9 +937,6 @@ static void sffd_sort(unsigned file_count, struct FS_FILE_ENTRY** idx_arr, unsig
 static void sffd_output(unsigned file_count, struct FS_FILE_ENTRY** idx_arr, unsigned root_count, char* roots[], unsigned* by_root_counts, struct FS_FILE_ENTRY*** idx_by_root)
 {
   unsigned i, j, k, scount = 0, acount = 0, ccount = 0;
-  unsigned offset_arr[root_count];
-  for(j = 0; j < root_count; j ++)
-    offset_arr[j] = strlen(roots[j]) + 1;
   fprintf(stderr, "Calculating hashes for equal size files...\n");
   printf("sffd");
   g_status.count = 0;
@@ -1485,7 +1489,7 @@ static int gds_main(int argc, char* argv[])
 static int http_process()
 {
   char buff[0x10000];
-  while(gets(buff) && *buff != '\r')
+  while(fgets(buff, sizeof(buff), stdin) && *buff != '\r')
   {
     fputs(buff, stderr);
     fflush(stderr);
@@ -1612,6 +1616,91 @@ static int http_main(int argc, char* argv[])
 }
 
 //******************************************************************************
+//jpeg_main
+static int jpeg_main(int argc, char* argv[])
+{
+  unsigned read_u16_le(char* data) {return data[0] | data[1] << 8;}
+  unsigned read_u16_be(char* data) {return data[0] << 8 | data[1];}
+  unsigned read_u32_le(char* data) {return data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24;}
+  unsigned read_u32_be(char* data) {return data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];}
+  unsigned (*read_u16)(char*);
+  unsigned (*read_u32)(char*);
+  unsigned i, j, a;
+  if(0xFF != fgetc(stdin) || 0xD8 != fgetc(stdin))
+  {
+    fputs("Invalid JPEG input stream - must begin with 0xFF, 0xD8.", stderr);
+    return ERR_JPEG_INVALID_STREAM;
+  }
+  for(i = 0; i < 19; i ++)
+  {
+    for(j = 0; j < 8 && 0xFF == (a = fgetc(stdin)); j ++);
+    if(a == 0xFF)
+    {
+      fputs("Too many padding bytes in input stream.", stderr);
+      return ERR_JPEG_INVALID_STREAM;
+    }
+    int sec_len = fgetc(stdin) << 8 | fgetc(stdin);
+    if(sec_len < 2)
+    {
+      fputs("Invalid marker.\n", stderr);
+      return ERR_JPEG_INVALID_STREAM;
+    }
+    char data[sec_len - 1];
+    if(sec_len - 2 != fread(data, 1, sec_len - 2, stdin))
+    {
+      fputs("Invalid length of input stream.", stderr);
+      return ERR_JPEG_INVALID_STREAM;
+    }
+    if(a != 0xE1) //not EXIF
+      continue;
+    if(data[0] != 0x45 || data[1] != 0x78 || data[2] != 0x69 || data[3] != 0x66 || data[4] != 0x00 || data[5] != 0x00)
+    {
+      fputs("Invalid EXIF header.", stderr);
+      return ERR_JPEG_EXIF_HEADER;
+    }
+    if(data[6] == 'M' && data[7] == 'M')
+    {
+      read_u16 = read_u16_be;
+      read_u32 = read_u32_be;
+    }
+    else if(data[6] == 'I' && data[7] == 'I')
+    {
+      read_u16 = read_u16_le;
+      read_u32 = read_u32_le;
+    }
+    else
+    {
+      fputs("Invalid endian marker in EXIF.", stderr);
+      return ERR_JPEG_EXIF;
+    }
+    if(0x2a != read_u16(data + 8) || 0x08 != read_u32(data + 10))
+    {
+      fputs("Invalid EXIF data start.", stderr);
+      return ERR_JPEG_EXIF;
+    }
+    char* pp = data + 14;
+    unsigned num_dirs = read_u16(pp);
+    pp += 2;
+    for(j = 0; j < num_dirs; j ++, pp += 12)
+    {
+      unsigned tag = read_u16(pp); pp += 2;
+      unsigned format = read_u16(pp); pp += 2;
+      if(format > 12)
+      {
+        fputs("Illegal format code in EXIF dir.", stderr);
+        return ERR_JPEG_EXIF;
+      }
+      unsigned comp = read_u32(pp); pp += 4;
+      static const unsigned bytes_per_format[] = {0, 1, 1, 2, 4, 8, 1, 1, 2, 4, 8, 4, 8};
+      unsigned byte_count = comp * bytes_per_format[format];
+      
+    }
+    return ERR_OK;
+  }
+  return ERR_JPEG_NO_EXIF;
+}
+
+//******************************************************************************
 //rt_sig_usr1
 static void rt_sig_usr1(int sig)
 {
@@ -1631,12 +1720,14 @@ static void show_usage()
   fprintf(stderr, "\trt-u bin2txt *regexp* < binary_file [> text_file]\n");
   fprintf(stderr, "\trt-u gds dump text < gds_file [> text_file]\n");
   fprintf(stderr, "\trt-u http home port\n");
+  fprintf(stderr, "\tjpeg-gps < JPEG file [> coordinates text file]\n");
   fprintf(stderr, "Functions:\n\tsfdf = Scan For Duplicate Files\n");
   fprintf(stderr, "\tsffd = Scan For Different Files\n");
   fprintf(stderr, "\tsfcl = Collect File Information\n");
   fprintf(stderr, "\tbin2txt = Convert binary (generated) file to text\n");
   fprintf(stderr, "\tgds = GDS file operations\n");
   fprintf(stderr, "\thttp = HTTP server\n");
+  fprintf(stderr, "\tjpeg-gps = extract EXIF GPS coordinate information from JPEG file\n");
 }
 
 //******************************************************************************
@@ -1664,6 +1755,8 @@ int main(int argc, char* argv[])
     return gds_main(argc, argv);
   if(!strcmp("http", *argv))
     return http_main(argc, argv);
+  if(!strcmp("jpeg-gps", *argv))
+    return jpeg_main(argc, argv);
   fprintf(stderr, "Unknown function: %s\n", *argv);
   show_usage();
   return ERR_UNKNOWN_FUNC;
