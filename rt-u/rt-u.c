@@ -1628,7 +1628,7 @@ static int jpeg_main(int argc, char* argv[])
   unsigned i, j, a;
   if(0xFF != fgetc(stdin) || 0xD8 != fgetc(stdin))
   {
-    fputs("Invalid JPEG input stream - must begin with 0xFF, 0xD8.", stderr);
+    fputs("Invalid JPEG input stream - must begin with 0xFF, 0xD8.\n", stderr);
     return ERR_JPEG_INVALID_STREAM;
   }
   for(i = 0; i < 19; i ++)
@@ -1636,7 +1636,7 @@ static int jpeg_main(int argc, char* argv[])
     for(j = 0; j < 8 && 0xFF == (a = fgetc(stdin)); j ++);
     if(a == 0xFF)
     {
-      fputs("Too many padding bytes in input stream.", stderr);
+      fputs("Too many padding bytes in input stream.\n", stderr);
       return ERR_JPEG_INVALID_STREAM;
     }
     int sec_len = fgetc(stdin) << 8 | fgetc(stdin);
@@ -1648,14 +1648,14 @@ static int jpeg_main(int argc, char* argv[])
     char data[sec_len - 1];
     if(sec_len - 2 != fread(data, 1, sec_len - 2, stdin))
     {
-      fputs("Invalid length of input stream.", stderr);
+      fputs("Invalid length of input stream.\n", stderr);
       return ERR_JPEG_INVALID_STREAM;
     }
     if(a != 0xE1) //not EXIF
       continue;
     if(data[0] != 0x45 || data[1] != 0x78 || data[2] != 0x69 || data[3] != 0x66 || data[4] != 0x00 || data[5] != 0x00)
     {
-      fputs("Invalid EXIF header.", stderr);
+      fputs("Invalid EXIF header.\n", stderr);
       return ERR_JPEG_EXIF_HEADER;
     }
     if(data[6] == 'M' && data[7] == 'M')
@@ -1670,24 +1670,23 @@ static int jpeg_main(int argc, char* argv[])
     }
     else
     {
-      fputs("Invalid endian marker in EXIF.", stderr);
+      fputs("Invalid endian marker in EXIF.\n", stderr);
       return ERR_JPEG_EXIF;
     }
     if(0x2a != read_u16(data + 8) || 0x08 != read_u32(data + 10))
     {
-      fputs("Invalid EXIF data start.", stderr);
+      fputs("Invalid EXIF data start.\n", stderr);
       return ERR_JPEG_EXIF;
     }
     char* pp = data + 14;
-    unsigned num_dirs = read_u16(pp);
-    pp += 2;
+    unsigned num_dirs = read_u16(pp); pp += 2;
     for(j = 0; j < num_dirs; j ++, pp += 12)
     {
       unsigned tag = read_u16(pp); pp += 2;
       unsigned format = read_u16(pp); pp += 2;
       if(format > 12)
       {
-        fputs("Illegal format code in EXIF dir.", stderr);
+        fputs("Illegal format code in EXIF dir.\n", stderr);
         return ERR_JPEG_EXIF;
       }
       unsigned comp = read_u32(pp); pp += 4;
