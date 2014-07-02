@@ -1619,10 +1619,22 @@ static int http_main(int argc, char* argv[])
 //jpeg_main
 static int jpeg_main(int argc, char* argv[])
 {
-  unsigned read_u16_le(char* data) {return data[0] | data[1] << 8;}
-  unsigned read_u16_be(char* data) {return data[0] << 8 | data[1];}
-  unsigned read_u32_le(char* data) {return data[0] | data[1] << 8 | data[2] << 16 | data[3] << 24;}
-  unsigned read_u32_be(char* data) {return data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];}
+  unsigned read_u16_le()
+  {
+    return fgetc(stdin) | fgetc(stdin) << 8;
+  }
+  unsigned read_u16_be()
+  {
+    return fgetc(stdin) << 8 | fgetc(stdin);
+  }
+  unsigned read_u32_le(char* data)
+  {
+    return fgetc(stdin) | fgetc(stdin) << 8 | fgetc(stdin) << 16 | fgetc(stdin) << 24);
+  }
+  unsigned read_u32_be(char* data)
+  {
+    return fgetc(stdin) << 24 | fgetc(stdin) << 16 | fgetc(stdin) << 8 | fgetc(stdin);
+  }
   unsigned (*read_u16)(char*);
   unsigned (*read_u32)(char*);
   unsigned i, j, a;
@@ -1645,51 +1657,43 @@ static int jpeg_main(int argc, char* argv[])
       fputs("Invalid marker.\n", stderr);
       return ERR_JPEG_INVALID_STREAM;
     }
-    char data[sec_len - 1];
-    if(sec_len - 2 != fread(data, 1, sec_len - 2, stdin))
-    {
-      fputs("Invalid length of input stream.\n", stderr);
-      return ERR_JPEG_INVALID_STREAM;
-    }
     if(a != 0xE1) //not EXIF
+    {
+      char data[sec_len - 2];
+      fread(...);
       continue;
-    if(data[0] != 0x45 || data[1] != 0x78 || data[2] != 0x69 || data[3] != 0x66 || data[4] != 0x00 || data[5] != 0x00)
+    }
+    if(fgetc(stdin) != 0x45 || fgetc(stdin) != 0x78 || fgetc(stdin) != 0x69 || fgetc(stdin) != 0x66 || fgetc(stdin) != 0x00 || fgetc(stdin) != 0x00)
     {
       fputs("Invalid EXIF header.\n", stderr);
       return ERR_JPEG_EXIF_HEADER;
     }
-    if(data[6] == 'M' && data[7] == 'M')
+    if('M' == fgetc(stdin) && 'M' == fgetc(stdin))
     {
       read_u16 = read_u16_be;
       read_u32 = read_u32_be;
     }
-    else if(data[6] == 'I' && data[7] == 'I')
+    else
     {
       read_u16 = read_u16_le;
       read_u32 = read_u32_le;
     }
-    else
-    {
-      fputs("Invalid endian marker in EXIF.\n", stderr);
-      return ERR_JPEG_EXIF;
-    }
-    if(0x2a != read_u16(data + 8) || 0x08 != read_u32(data + 10))
+    if(0x2a != read_u16() || 0x08 != read_u32())
     {
       fputs("Invalid EXIF data start.\n", stderr);
       return ERR_JPEG_EXIF;
     }
-    char* pp = data + 14;
-    unsigned num_dirs = read_u16(pp); pp += 2;
-    for(j = 0; j < num_dirs; j ++, pp += 12)
+    unsigned num_dirs = read_u16();
+    for(j = 0; j < num_dirs; j ++)
     {
-      unsigned tag = read_u16(pp); pp += 2;
-      unsigned format = read_u16(pp); pp += 2;
+      unsigned tag = read_u16();
+      unsigned format = read_u16();
       if(format > 12)
       {
         fputs("Illegal format code in EXIF dir.\n", stderr);
         return ERR_JPEG_EXIF;
       }
-      unsigned comp = read_u32(pp); pp += 4;
+      unsigned comp = read_u32();
       static const unsigned bytes_per_format[] = {0, 1, 1, 2, 4, 8, 1, 1, 2, 4, 8, 4, 8};
       unsigned byte_count = comp * bytes_per_format[format];
       
