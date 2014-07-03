@@ -1619,7 +1619,7 @@ static int http_main(int argc, char* argv[])
 //jpeg_main
 static int jpeg_main(int argc, char* argv[])
 {
-  unsigned read_u16_le()
+/*  unsigned read_u16_le()
   {
     return fgetc(stdin) | fgetc(stdin) << 8;
   }
@@ -1699,7 +1699,7 @@ static int jpeg_main(int argc, char* argv[])
       
     }
     return ERR_OK;
-  }
+  }*/
   return ERR_JPEG_NO_EXIF;
 }
 
