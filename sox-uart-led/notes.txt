@@ -1,0 +1,5 @@
+sudo apt-get install libsox-dev
+based on http://sourceforge.net/p/sox/code/ci/master/tree/src/example[2,3].c
+(sox mp3 support: sudo apt-get install libsox-fmt-mp3)
+
+
