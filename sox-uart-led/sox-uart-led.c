@@ -1,6 +1,7 @@
 #include "sox.h"
 #include <signal.h>
 #include <stdio.h>
+#include <math.h>
 #include <assert.h>
 
 #define min(a, b) ((a) <= (b) ? (a) : (b))
@@ -71,19 +72,26 @@ int main(int argc, char * argv[])
     return ERR_OUTPUT;
   }
 
-  //block for 1/4 th seconds
-  size_t block_size = in->signal.rate / 4 * in->signal.channels; //1/4th sec. buffer
+  size_t block_size = in->signal.rate / 10 * in->signal.channels;
   sox_sample_t samples[block_size];
   signal(SIGINT, ctrl_c);
   size_t number_read;
   int result = ERR_OK;
+  static const char line[] = "================================================================================";
   while(!stop && (number_read = sox_read(in, samples, block_size)))
   {
-    fprintf(stderr, "---block---\n");
+    int i;
+    double avrg = 0;
+    for(i = 0; i < number_read; i++)
+      avrg += fabs(SOX_SAMPLE_TO_FLOAT_64BIT(samples[i],));
+    avrg /= number_read;
+    int offset = (1 - avrg) * (sizeof(line) - 1);
 /*    result = process_data(samples, number_read, in->signal.channels);
     if(result) break;*/
     number_read = sox_write(out, samples, number_read);
+    printf("%s\n", line + offset);
   }
+  printf("\n");
   fprintf(stderr, "Stopping...\n");
   sox_close(out);
   sox_close(in);
