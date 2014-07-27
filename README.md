@@ -10,3 +10,4 @@ c-projs
 * rt-u Directory structure scanning based tool
 * udptest UDP socket testing application
 * orange-cgi Orange report statistical analysis CGI
+* sox-uart-led Sound to LED effects through UART on RPI, libsox for file read and sound output
