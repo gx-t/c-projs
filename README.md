@@ -11,3 +11,4 @@ c-projs
 * udptest UDP socket testing application
 * orange-cgi Orange report statistical analysis CGI
 * sox-uart-led Sound to LED effects through UART on RPI, libsox for file read and sound output
+* avconv-cam-http-wrapper sends http header and execs to avconv
