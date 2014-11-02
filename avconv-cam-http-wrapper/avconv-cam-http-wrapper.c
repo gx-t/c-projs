@@ -41,8 +41,8 @@ int main(int argc, char* argv[])
 //  dup2(STDIN_FILENO, STDOUT_FILENO);
   const char hdr[] =
   "HTTP/1.0 200 OK\r\n"
-  "Connection: close\r\n"
-  "Content-Type: video/mpeg\r\n\r\n";
+  "Connection: close\r\n\r\n";
+//  "Content-Type: video/mpeg\r\n\r\n";
   if(write(STDOUT_FILENO, hdr, sizeof(hdr) - 1) != sizeof(hdr) - 1)
   {
     perror("write");
