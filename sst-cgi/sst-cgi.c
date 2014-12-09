@@ -11,8 +11,11 @@
 #define MAX_CMD_LENGTH			0x100
 #define MIN_PASSWORD_LENGTH		5
 #define UUID_SIZE			36
-static const char users_root[]     =	"users/";
-static const char user_dir_inbox[] =	"inbox/";
+#define USER_INFO_FIELD_COUNT		5
+static const char users_root[]		= "users/";
+static const char user_dir_inbox[]	= "inbox/";
+static const char passwd_file_name[]	= ".passwd";
+static const char user_info_file_name[]	= ".info";
 
 static void resp_text_ok()
 {
@@ -41,15 +44,41 @@ static void cmd_echo_line()
 	}
 }
 
-static int get_cllient_line(char* buff, size_t buff_size, const char* field_name, size_t min_length)
+static size_t str_read_line(char* buff, size_t buff_size)
 {
-	if(!fgets(buff, buff_size, stdin) || strlen(buff) < min_length) {
-		resp_text_err();	
-		printf("You must specify at least %lu character long %s\n", min_length, field_name);
+	size_t length = 0;
+	char* pp = buff;
+	*buff = 0;
+	if(!fgets(buff, buff_size, stdin)) return 0;
+	while(*pp) pp++;
+	length = (size_t)(pp - buff);
+	if(length) {
+		pp --;
+		while(*pp == '\n' && pp <= buff) *pp-- = 0, length --;
+	}
+	return length;
+}
+
+
+static int register_client_password()
+{
+	char passwd[PAGE_SIZE];
+	size_t length = str_read_line(passwd, sizeof(passwd));
+	if(length < MIN_PASSWORD_LENGTH) {
+		resp_text_err();
+		printf("The speocified password is too short. It must be at least %d characters long.\n", MIN_PASSWORD_LENGTH);
 		return 1;
 	}
+	FILE* ff = fopen(passwd_file_name, "w");
+	if(!ff) {
+		perror(passwd_file_name);
+		return 1;
+	}
+	fprintf(ff, "%s", passwd);
+	fclose(ff);
 	return 0;
 }
+
 
 static void gen_uuid(char* buff)
 {
@@ -77,6 +106,19 @@ static char* db_create_enter_new_user_dir(char* buff)
 	return buff + sizeof(users_root) - 1;
 }
 
+static void register_client_user_info()
+{
+	char buff[PAGE_SIZE];
+	int count = 0;
+	FILE* ff = fopen(user_info_file_name, "w");
+	if(!ff) {
+		perror(user_info_file_name);
+		return;
+	}
+	while(fgets(buff, sizeof(buff), stdin) && count < USER_INFO_FIELD_COUNT) fprintf(ff, "%s", buff), count++;
+	fclose(ff);
+}
+
 static void db_make_user_dirs()
 {
 	if(mkdir(user_dir_inbox, 0700)) perror(user_dir_inbox);
@@ -85,12 +127,15 @@ static void db_make_user_dirs()
 static void cmd_register()
 {
 	char buff[PAGE_SIZE];
-	if(!get_cllient_line(buff, sizeof(buff), "password", MIN_PASSWORD_LENGTH)) {
-		char* uuid_str = db_create_enter_new_user_dir(buff);
-		db_make_user_dirs();
-		resp_text_ok();	
-		puts(uuid_str);
+	char* uuid_str = db_create_enter_new_user_dir(buff);
+	if(register_client_password()) {
+		if(chdir("..") || rmdir(uuid_str)) perror("User home cleanup on invalid password");
+		return;
 	}
+	register_client_user_info();
+	db_make_user_dirs();
+	resp_text_ok();	
+	puts(uuid_str);
 }
 
 static void* dispatch_cmd()
@@ -107,7 +152,6 @@ int main(int argc, char* argv[])
 	void (*cmd_handler)() = dispatch_cmd();
 	cmd_handler();
 	return 0;
-
 }
 
 
