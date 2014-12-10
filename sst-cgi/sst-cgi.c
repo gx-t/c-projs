@@ -12,10 +12,12 @@
 #define MIN_PASSWORD_LENGTH		5
 #define UUID_SIZE			36
 #define USER_INFO_FIELD_COUNT		5
+#define HEART_BEAT_PERIOD		20
 static const char users_root[]		= "users/";
 static const char user_dir_inbox[]	= "inbox/";
 static const char passwd_file_name[]	= ".passwd";
 static const char user_info_file_name[]	= ".info";
+static const char pid_file_name[]	= ".pid";
 
 static void resp_text_ok()
 {
@@ -138,12 +140,77 @@ static void cmd_register()
 	puts(uuid_str);
 }
 
+static int check_client_password() {
+	char passwd1[PAGE_SIZE];
+	char passwd2[PAGE_SIZE];
+	size_t passwd_len = str_read_line(passwd1, sizeof(passwd1));
+	if(passwd_len < MIN_PASSWORD_LENGTH) return 1;
+	FILE* ff = fopen(passwd_file_name, "r");
+	if(!ff) {
+		perror(passwd_file_name);
+		return 2;
+	}
+	*passwd2 = 0;
+	if(!fgets(passwd2, sizeof(passwd2), ff)) perror("read user password file");
+	fclose(ff);
+	return  !!strcmp(passwd1, passwd2);
+}
+
+static int read_client_uuid_and_go_home()
+{
+	char uuid[UUID_SIZE + 2];
+	if(UUID_SIZE != str_read_line(uuid, sizeof(uuid))) return 1;
+	if(chdir(users_root) || chdir(uuid)) {
+		resp_text_err();
+		puts("Rejected. Unknown user");
+		return 2;
+	}
+	return 0;
+}
+
+static int register_notification_pid()
+{
+	pid_t npid = getpid();
+	FILE* ff = fopen(pid_file_name, "w");
+	if(!ff) {
+		perror(pid_file_name);
+		return 1;
+	}
+	fprintf(ff, "%d", npid);
+	fclose(ff);
+	return 0;
+}
+
+static void event_loop()
+{
+	int is_running = 1;
+	while(is_running) {
+		sleep(HEART_BEAT_PERIOD);
+		puts("");
+	}
+}
+
+static void remove_notification_pid()
+{
+	unlink(pid_file_name);
+}
+
+static void cmd_login()
+{
+	if(read_client_uuid_and_go_home()) return;
+	if(check_client_password()) return;
+	if(register_notification_pid()) return;
+	event_loop();
+	remove_notification_pid();
+}
+
 static void* dispatch_cmd()
 {
 	char cmd_buff[MAX_CMD_LENGTH];
 	if(!fgets(cmd_buff, sizeof(cmd_buff), stdin)) return cmd_unknown;
 	if(!strcmp(cmd_buff, "echo-line\n")) return cmd_echo_line;
 	if(!strcmp(cmd_buff, "register\n")) return cmd_register;
+	if(!strcmp(cmd_buff, "login\n")) return cmd_login;
 	return cmd_unknown;
 }
 
