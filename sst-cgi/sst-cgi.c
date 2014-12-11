@@ -3,6 +3,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <signal.h>
+#include <dirent.h>
 #ifndef NO_UUID_LIB
 #include <uuid/uuid.h>
 #endif //NO_UUID_LIB
@@ -12,7 +14,7 @@
 #define MIN_PASSWORD_LENGTH		5
 #define UUID_SIZE			36
 #define USER_INFO_FIELD_COUNT		5
-#define HEART_BEAT_PERIOD		20
+#define HEART_BEAT_PERIOD		5
 static const char users_root[]		= "users/";
 static const char user_dir_inbox[]	= "inbox/";
 static const char passwd_file_name[]	= ".passwd";
@@ -56,11 +58,25 @@ static size_t str_read_line(char* buff, size_t buff_size)
 	length = (size_t)(pp - buff);
 	if(length) {
 		pp --;
-		while(*pp == '\n' && pp <= buff) *pp-- = 0, length --;
+		while(*pp == '\n' && pp > buff) *pp-- = 0, length --;
 	}
 	return length;
 }
 
+static size_t str_read_line_ff(char* buff, size_t buff_size, FILE* ff)
+{
+	size_t length = 0;
+	char* pp = buff;
+	*buff = 0;
+	if(!fgets(buff, buff_size, ff)) return 0;
+	while(*pp) pp++;
+	length = (size_t)(pp - buff);
+	if(length) {
+		pp --;
+		while(*pp == '\n' && pp > buff) *pp-- = 0, length --;
+	}
+	return length;
+}
 
 static int register_client_password()
 {
@@ -151,7 +167,7 @@ static int check_client_password() {
 		return 2;
 	}
 	*passwd2 = 0;
-	if(!fgets(passwd2, sizeof(passwd2), ff)) perror("read user password file");
+	str_read_line_ff(passwd2, sizeof(passwd2), ff);
 	fclose(ff);
 	return  !!strcmp(passwd1, passwd2);
 }
@@ -181,13 +197,39 @@ static int register_notification_pid()
 	return 0;
 }
 
+static void send_and_delete_msg(const char* file_name)
+{
+	char buff[PAGE_SIZE];
+	FILE* ff = fopen(file_name, "r");
+	if(!ff) return;
+	size_t ll = fread(buff, 1, PAGE_SIZE, ff);
+	fclose(ff);
+	unlink(file_name);
+	if(ll <= 0) return;
+	printf("message %ld\n", ll);
+	fwrite(buff, 1, ll, stdout);
+}
+
+static void scan_inbox_and_send()
+{
+	if(!chdir(user_dir_inbox)) {
+		struct dirent *de = 0;
+		DIR* pd = opendir(".");
+		if(pd) {
+			while((de = readdir(pd))) {
+				if(strstr(de->d_name, "msg") == de->d_name)
+					send_and_delete_msg(de->d_name);
+			}
+			closedir(pd);
+		}
+		if(chdir("..")) perror("chdir");
+	}
+}
+
 static void event_loop()
 {
-	int is_running = 1;
-	while(is_running) {
-		sleep(HEART_BEAT_PERIOD);
-		puts("");
-	}
+	resp_text_ok();
+	scan_inbox_and_send();
 }
 
 static void remove_notification_pid()
