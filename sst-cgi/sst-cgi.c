@@ -246,6 +246,42 @@ static void cmd_login()
 	remove_notification_pid();
 }
 
+static void read_and_save_message()
+{
+	char buff[PAGE_SIZE];
+	char file_name[UUID_SIZE + 5] = "msg-";
+	gen_uuid(file_name + 4);
+	FILE* ff = fopen(file_name, "w");
+	if(!ff) {
+		perror(file_name);
+		return;
+	}
+	while(fgets(buff, sizeof(buff), stdin)) {
+		fprintf(ff, "%s", buff);
+	}
+	fclose(ff);
+}
+
+static void put_message_to_inbox()
+{
+	char uuid[UUID_SIZE + 2];
+	if(UUID_SIZE != str_read_line(uuid, sizeof(uuid))) return;
+	if(chdir("..") || chdir(uuid) || chdir(user_dir_inbox)) {
+		resp_text_err();
+		puts("Invalid recepient user ID");
+		return;
+	}
+	read_and_save_message();
+	resp_text_ok();
+}
+
+static void cmd_message()
+{
+	if(read_client_uuid_and_go_home()) return;
+	if(check_client_password()) return;
+	put_message_to_inbox();
+}
+
 static void* dispatch_cmd()
 {
 	char cmd_buff[MAX_CMD_LENGTH];
@@ -253,6 +289,7 @@ static void* dispatch_cmd()
 	if(!strcmp(cmd_buff, "echo-line\n")) return cmd_echo_line;
 	if(!strcmp(cmd_buff, "register\n")) return cmd_register;
 	if(!strcmp(cmd_buff, "login\n")) return cmd_login;
+	if(!strcmp(cmd_buff, "message\n")) return cmd_message;
 	return cmd_unknown;
 }
 
