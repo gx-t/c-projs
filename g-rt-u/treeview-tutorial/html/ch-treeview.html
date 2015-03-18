@@ -1,0 +1,336 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>Lists and Trees: the GtkTreeView Widget</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="PREVIOUS"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="NEXT"
+TITLE="Components: Model, Renderer, Column, View"
+HREF="sec-treeview-components.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="chapter"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-treeview-components.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="chapter"
+><H1
+><A
+NAME="ch-TreeView"
+></A
+>Chapter 1. Lists and Trees: the GtkTreeView Widget</H1
+><P
+>&#13;<TT
+CLASS="literal"
+>GtkTreeView</TT
+> is a widget that displays single- or multi-columned lists and trees.
+It replaces the old Gtk+-1.2 GtkCList and GtkCTree widgets. Even though <TT
+CLASS="literal"
+>GtkTreeView</TT
+> is
+slightly harder to master than its predecessors, it is so much more powerful and flexible
+that most application developers will not want to miss it once they have come to know it.
+</P
+><P
+>&#13;The purpose of this chapter is not to provide an exhaustive documentation of <TT
+CLASS="literal"
+>GtkTreeView</TT
+> -
+that is what the <A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/TreeWidgetObjects.html"
+TARGET="_top"
+>API documentation</A
+> is for,
+which should be read alongside with this tutorial.
+The goal is rather to present an introduction to the most commonly-used aspects of <TT
+CLASS="literal"
+>GtkTreeView</TT
+>,
+and to demonstrate how the various <TT
+CLASS="literal"
+>GtkTreeView</TT
+> components and concepts work together.
+Furthermore, an attempt has been made to shed some light on custom tree models and custom cell renderers,
+which seem to be often-mentioned, but rarely explained.
+</P
+><P
+>&#13;Developers looking for a quick and dirty introduction that teaches them everything they need
+to know in less than five paragraphs will not find it here. In the author's experience,
+developers who do not understand how the tree view and the models work together will run
+into problems once they try to modify the given examples, whereas developers who have worked
+with other toolkits that employ the Model/View/Controller-design will find that the API reference
+provides all the information they need to know in more condensed form anyway. Those who disagree
+may jump straight to the <A
+HREF="sec-treeview-col-example.html"
+>working example code</A
+> of course.
+</P
+><P
+>&#13;Please note that the code examples in the following sections do not necessarily demonstrate how
+<TT
+CLASS="literal"
+>GtkTreeView</TT
+> is used best in a particular situation. There are different ways
+to achieve the same result, and the examples merely show those different ways, so that developers
+are able to decide which one is most suitable for the task at hand.
+</P
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-TreeView-HelloWorld"
+>1.1. Hello World</A
+></H1
+><P
+>&#13;For the impatient, here is a small treeview 'Hello World' program (which can 
+also be found in the examples section of the <A
+HREF="treeview-tutorial.tar.gz"
+TARGET="_top"
+>&#13;treeview-tutorial.tar.gz</A
+> tarball).
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;
+/* 
+ * Compile with:
+ *  gcc -o helloworld helloworld.c `pkg-config --cflags --libs gtk+-2.0`
+ *
+ */
+
+#include &#60;gtk/gtk.h&#62;
+
+enum
+{
+  COL_NAME = 0,
+  COL_AGE,
+  NUM_COLS
+} ;
+
+
+static GtkTreeModel *
+create_and_fill_model (void)
+{
+  GtkListStore  *store;
+  GtkTreeIter    iter;
+  
+  store = gtk_list_store_new (NUM_COLS, G_TYPE_STRING, G_TYPE_UINT);
+
+  /* Append a row and fill in some data */
+  gtk_list_store_append (store, &#38;iter);
+  gtk_list_store_set (store, &#38;iter,
+                      COL_NAME, "Heinz El-Mann",
+                      COL_AGE, 51,
+                      -1);
+  
+  /* append another row and fill in some data */
+  gtk_list_store_append (store, &#38;iter);
+  gtk_list_store_set (store, &#38;iter,
+                      COL_NAME, "Jane Doe",
+                      COL_AGE, 23,
+                      -1);
+  
+  /* ... and a third row */
+  gtk_list_store_append (store, &#38;iter);
+  gtk_list_store_set (store, &#38;iter,
+                      COL_NAME, "Joe Bungop",
+                      COL_AGE, 91,
+                      -1);
+  
+  return GTK_TREE_MODEL (store);
+}
+
+static GtkWidget *
+create_view_and_model (void)
+{
+  GtkCellRenderer     *renderer;
+  GtkTreeModel        *model;
+  GtkWidget           *view;
+
+  view = gtk_tree_view_new ();
+
+  /* --- Column #1 --- */
+
+  renderer = gtk_cell_renderer_text_new ();
+  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view),
+                                               -1,      
+                                               "Name",  
+                                               renderer,
+                                               "text", COL_NAME,
+                                               NULL);
+
+  /* --- Column #2 --- */
+
+  renderer = gtk_cell_renderer_text_new ();
+  gtk_tree_view_insert_column_with_attributes (GTK_TREE_VIEW (view),
+                                               -1,      
+                                               "Age",  
+                                               renderer,
+                                               "text", COL_AGE,
+                                               NULL);
+
+  model = create_and_fill_model ();
+
+  gtk_tree_view_set_model (GTK_TREE_VIEW (view), model);
+
+  /* The tree view has acquired its own reference to the
+   *  model, so we can drop ours. That way the model will
+   *  be freed automatically when the tree view is destroyed */
+
+  g_object_unref (model);
+
+  return view;
+}
+
+
+int
+main (int argc, char **argv)
+{
+  GtkWidget *window;
+  GtkWidget *view;
+
+  gtk_init (&#38;argc, &#38;argv);
+
+  window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+  g_signal_connect (window, "delete_event", gtk_main_quit, NULL); /* dirty */
+
+  view = create_view_and_model ();
+
+  gtk_container_add (GTK_CONTAINER (window), view);
+
+  gtk_widget_show_all (window);
+
+  gtk_main ();
+
+  return 0;
+}
+</PRE
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-treeview-components.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>GTK+ 2.0 Tree View Tutorial</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Components: Model, Renderer, Column, View</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

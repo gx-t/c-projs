@@ -1,0 +1,324 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>GtkCellRendererText and Integer, Boolean and Float Types</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="UP"
+TITLE="Mapping Data to the Screen: GtkTreeViewColumn and GtkCellRenderer"
+HREF="sec-treeviewcol-renderer.html"><LINK
+REL="PREVIOUS"
+TITLE="Cell Data Functions"
+HREF="sec-treeview-col-celldatafunc.html"><LINK
+REL="NEXT"
+TITLE="GtkCellRendererText, UTF8, and pango markup"
+HREF="sec-treeview-col-utf8-pango.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-treeview-col-celldatafunc.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 5. Mapping Data to the Screen: GtkTreeViewColumn and GtkCellRenderer</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-treeview-col-utf8-pango.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-treeview-celltext-types"
+>5.4. GtkCellRendererText and Integer, Boolean and Float Types</A
+></H1
+><P
+>&#13;It has been said before that, when using attributes to connect data from
+the model to a cell renderer property, the data in the model column
+specified in <TT
+CLASS="literal"
+>gtk_tree_view_column_add_attribute</TT
+> must
+always be of the same type as the data type that the property requires.
+</P
+><P
+>&#13;This is usually true, but there is an exception: if you use
+<TT
+CLASS="literal"
+>gtk_tree_view_column_add_attribute</TT
+> to connect
+a text cell renderer's <TT
+CLASS="literal"
+>"text"</TT
+> property to a
+model column, the model column does not need to be of
+<TT
+CLASS="literal"
+>G_TYPE_STRING</TT
+>, it can also be one of most
+other fundamental GLib types, e.g.
+<TT
+CLASS="literal"
+>G_TYPE_BOOLEAN</TT
+>,
+<TT
+CLASS="literal"
+>G_TYPE_INT</TT
+>,
+<TT
+CLASS="literal"
+>G_TYPE_UINT</TT
+>,
+<TT
+CLASS="literal"
+>G_TYPE_LONG</TT
+>,
+<TT
+CLASS="literal"
+>G_TYPE_ULONG</TT
+>,
+<TT
+CLASS="literal"
+>G_TYPE_INT64</TT
+>,
+<TT
+CLASS="literal"
+>G_TYPE_UINT64</TT
+>,
+<TT
+CLASS="literal"
+>G_TYPE_FLOAT</TT
+>, or
+<TT
+CLASS="literal"
+>G_TYPE_DOUBLE</TT
+>. The text cell renderer
+will automatically display the values of these types
+correctly in the tree view. For example:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;  enum
+  {
+    COL_NAME = 0,
+    COL_YEAR_BORN,
+    NUM_COLS
+  };
+
+  liststore = gtk_list_store_new(NUM_COLS, G_TYPE_STRING, G_TYPE_UINT);
+
+  ...
+
+  cell = gtk_cell_renderer_text_new();
+  col = gtk_tree_view_column_new();
+  gtk_tree_view_column_add_attribute(col, cell, "text", COL_YEAR_BORN);
+
+  ...
+</PRE
+></TD
+></TR
+></TABLE
+><P
+>&#13;Even though the <TT
+CLASS="literal"
+>"text"</TT
+> property would require a
+string value, we use a model column of an integer type when setting
+attributes. The integer will then automatically be converted into
+a string before the cell renderer property is set
+<A
+NAME="AEN635"
+HREF="#FTN.AEN635"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>.
+</P
+><P
+>&#13;If you are using a floating point type, ie. <TT
+CLASS="literal"
+>G_TYPE_FLOAT</TT
+>
+or <TT
+CLASS="literal"
+>G_TYPE_DOUBLE</TT
+>, there is no way to tell the text cell
+renderer how many digits after the floating point (or comma) should be
+rendered. If you only want a certain amount of digits after the point/comma,
+you will need to use a <A
+HREF="sec-treeview-col-celldatafunc.html"
+>cell data function</A
+>.
+</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN635"
+HREF="sec-treeview-celltext-types.html#AEN635"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>&#13;For those interested, the conversion actually takes place within
+<TT
+CLASS="literal"
+>g_object_set_property</TT
+>. Before a certain cell is
+rendered, the tree view column will call <TT
+CLASS="literal"
+>gtk_tree_model_get_value</TT
+>
+to set the cell renderer properties according to values stored in
+the tree model (if any are mapped via <TT
+CLASS="literal"
+>gtk_tree_view_column_add_attribute</TT
+>
+or one of the convenience functions that do the same thing), and then
+pass on the <TT
+CLASS="literal"
+>GValue</TT
+> retrieved to
+<TT
+CLASS="literal"
+>g_object_set_property</TT
+>.
+</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-treeview-col-celldatafunc.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-treeview-col-utf8-pango.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Cell Data Functions</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="sec-treeviewcol-renderer.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>GtkCellRendererText, UTF8, and pango markup</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

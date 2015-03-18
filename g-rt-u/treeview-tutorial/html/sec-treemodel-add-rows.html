@@ -1,0 +1,338 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>Adding Rows to a Store</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="UP"
+TITLE="GtkTreeModels for Data Storage: GtkListStore and GtkTreeStore"
+HREF="sec-treemodels.html"><LINK
+REL="PREVIOUS"
+TITLE="Refering to Rows: GtkTreeIter, GtkTreePath, GtkTreeRowReference"
+HREF="sec-treemodel-rowref.html"><LINK
+REL="NEXT"
+TITLE="Manipulating Row Data"
+HREF="sec-treemodel-data-manipulation.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-treemodel-rowref.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. GtkTreeModels for Data Storage: GtkListStore and GtkTreeStore</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-treemodel-data-manipulation.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-treemodel-add-rows"
+>3.3. Adding Rows to a Store</A
+></H1
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="sec-liststore-add-rows"
+>3.3.1. Adding Rows to a List Store</A
+></H2
+><P
+>&#13;Rows are added to a list store with <A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkListStore.html#gtk-list-store-append"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>gtk_list_store_append</TT
+></A
+>.
+This will insert a new empty row at the end of the list. There are other functions,
+documented in the <A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkListStore.html"
+TARGET="_top"
+>&#13;GtkListStore API reference</A
+>, that give you more control
+about where exactly the new row is inserted, but as they work very similar to
+<TT
+CLASS="literal"
+>gtk_list_store_append</TT
+> and are fairly straight-forward to use,
+we will not deal with them here.
+</P
+><P
+>&#13;Here is a simple example of how to create a list store and add some (empty) rows to it:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;  GtkListStore *liststore;
+  GtkTreeIter   iter;
+
+  liststore = gtk_list_store_new(1, G_TYPE_STRING);
+
+  /* Append an empty row to the list store. Iter will point to the new row */
+  gtk_list_store_append(liststore, &#38;iter);
+
+  /* Append an empty row to the list store. Iter will point to the new row */
+  gtk_list_store_append(liststore, &#38;iter);
+
+  /* Append an empty row to the list store. Iter will point to the new row */
+  gtk_list_store_append(liststore, &#38;iter);
+</PRE
+></TD
+></TR
+></TABLE
+><P
+>&#13;This in itself is not very useful yet of course. We will add data to the rows in the next section.
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="sec-treestore-add-rows"
+>3.3.2. Adding Rows to a Tree Store</A
+></H2
+><P
+>&#13;Adding rows to a tree store works similar to adding rows to a list store, only that
+<A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkTreeStore.html#gtk-tree-store-append"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>gtk_tree_store_append</TT
+></A
+> is the function to use and one more
+argument is required, namely the tree iter to the parent of the row to insert.
+If you supply NULL instead of providing the tree iter of another row, a new top-level
+row will be inserted. If you do provide a parent tree iter, the new empty row will be
+inserted after any already existing children of the parent. Again, there are other ways
+to insert a row into the tree store and they are documented in the
+<A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkTreeStore.html"
+TARGET="_top"
+>&#13;GtkTreeStore API reference manual</A
+>. Another short example:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;  GtkTreeStore *treestore;
+  GtkTreeIter   iter, child;
+
+  treestore = gtk_tree_store_new(1, G_TYPE_STRING);
+
+  /* Append an empty top-level row to the tree store.
+   *  Iter will point to the new row */
+  gtk_tree_store_append(treestore, &#38;iter, NULL);
+
+  /* Append another empty top-level row to the tree store.
+   *  Iter will point to the new row */
+  gtk_tree_store_append(treestore, &#38;iter, NULL);
+
+  /* Append a child to the row we just added.
+   *  Child will point to the new row */
+  gtk_tree_store_append(treestore, &#38;child, &#38;iter);
+
+  /* Get the first row, and add a child to it as well (could have been done
+   *  right away earlier of course, this is just for demonstration purposes) */
+  if (gtk_tree_model_get_iter_first(GTK_TREE_MODEL(treestore), &#38;iter))
+  {
+    /* Child will point to new row */
+    gtk_tree_store_append(treestore, &#38;child, &#38;iter);
+  }
+  else
+  {
+    g_error("Oops, we should have a first row in the tree store!\n");
+  }
+</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="sec-treestore-adding-many-rows"
+>3.3.3. Speed Issues when Adding a Lot of Rows</A
+></H2
+><P
+>&#13;A common scenario is that a model needs to be filled with a lot of rows at some point, either at start-up,
+or when some file is opened. An equally common scenario is that this takes an awfully long time even on powerful
+machines once the model contains more than a couple of thousand rows, with an exponentially decreasing rate of
+insertion. As already pointed out above, <A
+HREF="sec-custom-models.html"
+>writing a custom model</A
+>
+ might be the best thing to do in this case. Nevertheless, there are some things you can do to work around
+this problem and speed things up a bit even with the stock Gtk+ models:
+</P
+><P
+>&#13;Firstly, you should detach your list store or tree store from the tree view before doing your mass insertions, then
+do your insertions, and only connect your store to the tree view again when you are done with your insertions. Like this:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;  ...
+
+  model = gtk_tree_view_get_model(GTK_TREE_VIEW(view));
+
+  g_object_ref(model); /* Make sure the model stays with us after the tree view unrefs it */
+
+  gtk_tree_view_set_model(GTK_TREE_VIEW(view), NULL); /* Detach model from view */
+
+  ... insert a couple of thousand rows ...
+
+  gtk_tree_view_set_model(GTK_TREE_VIEW(view), model); /* Re-attach model to view */
+
+  g_object_unref(model);
+
+  ...
+</PRE
+></TD
+></TR
+></TABLE
+><P
+>&#13;Secondly, you should make sure that sorting is disabled while you are doing your mass insertions, otherwise your store
+might be resorted after each and every single row insertion, which is going to be everything but fast.
+</P
+><P
+>&#13;Thirdly, you should not keep around a lot of tree row references if you have so many rows, because with each
+insertion (or removal) every single tree row reference will check whether its path needs to be updated or not.
+</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-treemodel-rowref.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-treemodel-data-manipulation.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Refering to Rows: GtkTreeIter, GtkTreePath, GtkTreeRowReference</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="sec-treemodels.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Manipulating Row Data</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

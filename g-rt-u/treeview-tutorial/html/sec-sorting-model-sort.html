@@ -1,0 +1,260 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>GtkTreeModelSort</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="UP"
+TITLE="Sorting"
+HREF="sec-sorting.html"><LINK
+REL="PREVIOUS"
+TITLE="Sorting"
+HREF="sec-sorting.html"><LINK
+REL="NEXT"
+TITLE="Sorting and Tree View Column Headers"
+HREF="sec-sorting-view-cols.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-sorting.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 7. Sorting</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-sorting-view-cols.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-sorting-model-sort"
+>7.2. GtkTreeModelSort</A
+></H1
+><P
+>&#13;<A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkTreeModelSort.html"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>GtkTreeModelSort</TT
+></A
+> is a wrapper tree model.
+It takes another tree model such as a list store or a tree store as
+child model, and presents the child model to the 'outside' (ie. a tree
+view or whoever else is accessing it via the tree model interface) in a
+sorted state. It does that without changing the order of the rows in the
+child model. This is useful if you want to display the same model in
+different tree views with different sorting criteria for each tree view,
+for example, or if you need to restore the original unsorted state of
+your store again at some point.
+</P
+><P
+>&#13;<TT
+CLASS="literal"
+>GtkTreeModelSort</TT
+> implements the <TT
+CLASS="literal"
+>GtkTreeSortable</TT
+> interface, so you can treat
+it just as if it was your data store for sorting purposes. Here is the basic setup with a tree view:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;
+  ...
+
+  void
+  create_list_and_view (void)
+  {
+    ...
+
+    liststore = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_UINT);
+
+    sortmodel = gtk_tree_model_sort_new_with_model(liststore);
+
+    gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(sortmodel), SORTID_NAME,
+                                    sort_func, GINT_TO_POINTER(SORTID_NAME), NULL);
+
+    gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(sortmodel), SORTID_YEAR,
+                                    sort_func, GINT_TO_POINTER(SORTID_YEAR), NULL);
+
+    /* set initial sort order */
+    gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(sortmodel),
+                                         SORTID_NAME, GTK_SORT_ASCENDING);
+
+    ...
+
+    view = gtk_tree_view_new_with_model(sortmodel);
+
+    ...
+
+  }
+
+  ...
+
+</PRE
+></TD
+></TR
+></TABLE
+><P
+>&#13;However, when using the sort tree model, you need to be careful when
+you use iters and paths with the model. This is because a path pointing
+to a row in the view (and the sort tree model here) does probably not
+point to the same row in the child model which is your original list
+store or tree store, because the row order in the child model is
+probably different from the sorted order. Similarly, an iter that
+is valid for the sort tree model is not valid for the child model,
+and vice versa. You can convert paths and iters from and to the child
+model using
+<TT
+CLASS="literal"
+>gtk_tree_model_sort_convert_child_path_to_path</TT
+>,
+<TT
+CLASS="literal"
+>gtk_tree_model_sort_convert_child_iter_to_iter</TT
+>,
+<TT
+CLASS="literal"
+>gtk_tree_model_sort_convert_path_to_child_path</TT
+>, and
+<TT
+CLASS="literal"
+>gtk_tree_model_sort_convert_iter_to_child_iter</TT
+>.
+You are unlikely to need these functions frequently though, as you can
+still directly use <TT
+CLASS="literal"
+>gtk_tree_model_get</TT
+>
+on the sort tree model with a path supplied by the tree view.
+</P
+><P
+>&#13;For the tree view, the sort tree model is the 'real' model - it knows
+nothing about the sort tree model's child model at all, which means
+that any path or iter that you get passed from the tree view in a callback
+or otherwise will refer to the sort tree model, and that you need to pass
+a path or iter refering to the sort tree model as well if you call tree
+view functions.
+</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-sorting.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-sorting-view-cols.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Sorting</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="sec-sorting.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Sorting and Tree View Column Headers</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

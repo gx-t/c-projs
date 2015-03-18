@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>From a List to a Tree</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="UP"
+TITLE="Writing Custom Models"
+HREF="sec-custom-models.html"><LINK
+REL="PREVIOUS"
+TITLE="Example: A Simple Custom List Model"
+HREF="sec-custom-model-list.html"><LINK
+REL="NEXT"
+TITLE="Additional interfaces, here: the GtkTreeSortable interface"
+HREF="sec-custom-model-sorting.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-custom-model-list.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 11. Writing Custom Models</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-custom-model-sorting.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-custom-model-tree"
+>11.4. From a List to a Tree</A
+></H1
+><P
+>&#13;Writing a custom model for a tree is a bit trickier than a simple list model,
+but follows the same pattern. Basically you just need to extend the above
+model to cater for the case of children. You could do this by keeping track
+of the whole tree hierarchy in the <TT
+CLASS="literal"
+>CustomList</TT
+> structure,
+using GLib N-ary trees for example, or you could do this by keeping track
+of each row's children within the row's <TT
+CLASS="literal"
+>CustomRecord</TT
+>
+structure, keeping only a pointer to the (invisible) root record in the
+<TT
+CLASS="literal"
+>CustomList</TT
+> structure.
+</P
+><P
+>&#13;TODO: do we need anything else here?
+</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-custom-model-list.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-custom-model-sorting.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Example: A Simple Custom List Model</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="sec-custom-models.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Additional interfaces, here: the GtkTreeSortable interface</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

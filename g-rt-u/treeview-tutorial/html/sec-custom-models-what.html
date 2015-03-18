@@ -1,0 +1,277 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>What Does Writing a Custom Model Involve?</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="UP"
+TITLE="Writing Custom Models"
+HREF="sec-custom-models.html"><LINK
+REL="PREVIOUS"
+TITLE="Writing Custom Models"
+HREF="sec-custom-models.html"><LINK
+REL="NEXT"
+TITLE="Example: A Simple Custom List Model"
+HREF="sec-custom-model-list.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-custom-models.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 11. Writing Custom Models</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-custom-model-list.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-custom-models-what"
+>11.2. What Does Writing a Custom Model Involve?</A
+></H1
+><P
+>&#13;Basically, all you need to do is to write a new GObject that implements the
+<TT
+CLASS="literal"
+>GtkTreeModel</TT
+> interface, <TT
+CLASS="literal"
+>GtkTreeModelIface</TT
+>.
+Intimate knowledge about the GLib GObject system is not a requirement - you
+just need to copy some boilerplate code and modify it a bit. The core of your
+custom tree model is your own implementation of a couple of
+<TT
+CLASS="literal"
+>gtk_tree_model_foo</TT
+> functions that reveal the structure of your
+data, ie. how many rows there are, how many
+children a row has, how many columns there are and what type of data they contain.
+Furthermore, you need to provide functions that convert a tree path to a tree iter
+and a tree iter to a tree path. Additionally, you should provide some functions to
+add and remove rows to your custom model, but those are only ever used by yourself
+anyway, so they do not fall within the scope of the tree model interface.
+</P
+><P
+>&#13;The functions you <I
+CLASS="emphasis"
+>need</I
+> to implement are:
+</P
+><P
+></P
+><UL
+><LI
+><P
+>&#13;      <TT
+CLASS="literal"
+>get_flags</TT
+> - tells the outside that your model has certain special characterstics, like persistent iters.
+    </P
+></LI
+><LI
+><P
+>&#13;      <TT
+CLASS="literal"
+>get_n_columns</TT
+> - how many data fields per row are visible to the outside that uses gtk_tree_model_get, e.g. cell renderer attributes
+    </P
+></LI
+><LI
+><P
+>&#13;      <TT
+CLASS="literal"
+>get_column_type</TT
+> - what type of data is stored in a data field (model column) that is visible to the outside
+    </P
+></LI
+><LI
+><P
+>&#13;      <TT
+CLASS="literal"
+>get_iter</TT
+> - take a tree path and fill an iter structure so that you know which row it refers to
+    </P
+></LI
+><LI
+><P
+>&#13;      <TT
+CLASS="literal"
+>get_path</TT
+> - take an iter and convert it into a tree path, ie. the 'physical' position within the model
+    </P
+></LI
+><LI
+><P
+>&#13;      <TT
+CLASS="literal"
+>get_value</TT
+> - retrieve data from a row
+    </P
+></LI
+><LI
+><P
+>&#13;      <TT
+CLASS="literal"
+>iter_next</TT
+> - take an iter structure and make it point to the next row
+    </P
+></LI
+><LI
+><P
+>&#13;      <TT
+CLASS="literal"
+>iter_children</TT
+> - tell whether the row represented by a given iter has any children or not
+    </P
+></LI
+><LI
+><P
+>&#13;      <TT
+CLASS="literal"
+>iter_n_children</TT
+> - tell how many children a row represented by a given iter has
+    </P
+></LI
+><LI
+><P
+>&#13;      <TT
+CLASS="literal"
+>iter_nth_child</TT
+> - set a given iter structure to the n-th child of a given parent iter
+    </P
+></LI
+><LI
+><P
+>&#13;      <TT
+CLASS="literal"
+>iter_parent</TT
+> - set a given iter structure to the parent of a given child iter
+    </P
+></LI
+></UL
+><P
+>&#13;It is up to you to decide which of your data you make 'visible' to the outside in form of model columns
+and which not. You can always implement functions specific to your custom model that will return any data
+in any form you desire. You only <I
+CLASS="emphasis"
+>need</I
+> to make data 'visble' to the outside via the GType and GValue system
+if you want the tree view components to access it (e.g. when setting cell renderer attributes).
+</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-custom-models.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-custom-model-list.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Writing Custom Models</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="sec-custom-models.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Example: A Simple Custom List Model</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

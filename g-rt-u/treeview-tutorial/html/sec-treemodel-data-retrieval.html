@@ -1,0 +1,414 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>Retrieving Row Data</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="UP"
+TITLE="GtkTreeModels for Data Storage: GtkListStore and GtkTreeStore"
+HREF="sec-treemodels.html"><LINK
+REL="PREVIOUS"
+TITLE="Manipulating Row Data"
+HREF="sec-treemodel-data-manipulation.html"><LINK
+REL="NEXT"
+TITLE="Removing Rows"
+HREF="sec-treemodel-remove-row.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-treemodel-data-manipulation.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. GtkTreeModels for Data Storage: GtkListStore and GtkTreeStore</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-treemodel-remove-row.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-treemodel-data-retrieval"
+>3.5. Retrieving Row Data</A
+></H1
+><P
+>&#13;Storing data is not very useful if it cannot be retrieved again. This is done using
+<A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkTreeModel.html#gtk-tree-model-get"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>gtk_tree_model_get</TT
+></A
+>, which takes similar arguments as
+<TT
+CLASS="literal"
+>gtk_list_store_set</TT
+> or <TT
+CLASS="literal"
+>gtk_tree_store_set</TT
+> do, only
+that it takes (column, pointer) arguments. The pointer must point to a variable that is
+ of the same type as the data stored in that particular model column.
+</P
+><P
+>&#13;Here is the previous example extended to traverse the list store and print out the data stored.
+As an extra, we use <TT
+CLASS="literal"
+>gtk_tree_model_foreach</TT
+> to traverse the store and retrieve
+the row number from the <TT
+CLASS="literal"
+>GtkTreePath</TT
+> passed to us in the foreach callback function:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;  #include &#60;gtk/gtk.h&#62;
+
+  enum
+  {
+    COL_FIRST_NAME = 0,
+    COL_LAST_NAME,
+    COL_YEAR_BORN,
+    NUM_COLS
+  };
+
+  gboolean
+  foreach_func (GtkTreeModel *model,
+                GtkTreePath  *path,
+                GtkTreeIter  *iter,
+                gpointer      user_data)
+  {
+    gchar *first_name, *last_name, *tree_path_str;
+    guint  year_of_birth;
+
+    /* Note: here we use 'iter' and not '&#38;iter', because we did not allocate
+     *  the iter on the stack and are already getting the pointer to a tree iter */
+
+    gtk_tree_model_get (model, iter,
+                        COL_FIRST_NAME, &#38;first_name,
+                        COL_LAST_NAME, &#38;last_name,
+                        COL_YEAR_BORN, &#38;year_of_birth,
+                        -1);
+
+    tree_path_str = gtk_tree_path_to_string(path);
+
+    g_print ("Row %s: %s %s, born %u\n", tree_path_str,
+             first_name, last_name, year_of_birth);
+
+    g_free(tree_path_str);
+
+    g_free(first_name); /* gtk_tree_model_get made copies of       */
+    g_free(last_name);  /* the strings for us when retrieving them */
+
+    return FALSE; /* do not stop walking the store, call us with next row */
+  }
+
+  void
+  create_and_fill_and_dump_store (void)
+  {
+    GtkListStore *liststore;
+    GtkTreeIter   iter;
+
+    liststore = gtk_list_store_new(NUM_COLS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_UINT);
+
+    /* Append an empty row to the list store. Iter will point to the new row */
+    gtk_list_store_append(liststore, &#38;iter);
+
+    /* Fill fields with some data */
+    gtk_list_store_set (liststore, &#38;iter,
+                        COL_FIRST_NAME, "Joe",
+                        COL_LAST_NAME, "Average",
+                        COL_YEAR_BORN, (guint) 1970,
+                        -1);
+
+    /* Append another row, and fill in some data */
+    gtk_list_store_append(liststore, &#38;iter);
+
+    gtk_list_store_set (liststore, &#38;iter,
+                        COL_FIRST_NAME, "Jane",
+                        COL_LAST_NAME, "Common",
+                        COL_YEAR_BORN, (guint) 1967,
+                        -1);
+
+    /* Append yet another row, and fill it */
+    gtk_list_store_append(liststore, &#38;iter);
+
+    gtk_list_store_set (liststore, &#38;iter,
+                        COL_FIRST_NAME, "Yo",
+                        COL_LAST_NAME, "Da",
+                        COL_YEAR_BORN, (guint) 1873,
+                        -1);
+
+    /* Now traverse the list */
+
+    gtk_tree_model_foreach(GTK_TREE_MODEL(liststore), foreach_func, NULL);
+  }
+
+  int
+  main (int argc, char **argv)
+  {
+    gtk_init(&#38;argc, &#38;argv);
+
+    create_and_fill_and_dump_store();
+
+    return 0;
+  }
+
+</PRE
+></TD
+></TR
+></TABLE
+><P
+>&#13;Note that when a new row is created, all fields of a row are set to a default NIL value 
+appropriate for the data type in question. A field of type <TT
+CLASS="literal"
+>G_TYPE_INT</TT
+> 
+will automatically contain the value 0 until it is set to a different value, and strings 
+and all kind of pointer types will be <TT
+CLASS="literal"
+>NULL</TT
+> until set to something else. 
+Those are valid contents for the model, and if you are not sure that row contents have
+been set to something, you need to be prepared to handle  <TT
+CLASS="literal"
+>NULL</TT
+> pointers 
+and the like in your code.
+</P
+><P
+>&#13;Run the above program with an additional empty row and look at the output to see 
+this in effect.
+</P
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="sec-treemodel-retrieved-data-disposal"
+>3.5.1. Freeing Retrieved Row Data</A
+></H2
+><P
+>&#13;Unless you are dealing with a model column of type <TT
+CLASS="literal"
+>G_TYPE_POINTER</TT
+>,
+<TT
+CLASS="literal"
+>gtk_tree_model_get</TT
+> will always make <I
+CLASS="emphasis"
+>copies</I
+> of
+the data retrieved.
+</P
+><P
+>&#13;In the case of strings, this means that you need to <TT
+CLASS="literal"
+>g_free</TT
+> the 
+string returned when you don't need it any longer, as in the example above.
+</P
+><P
+>&#13;If you retrieve a <TT
+CLASS="literal"
+>GObject</TT
+> such as a <TT
+CLASS="literal"
+>GdkPixbuf</TT
+>
+from the store, <TT
+CLASS="literal"
+>gtk_tree_model_get</TT
+> will automatically add a 
+reference to it, so you need to call <TT
+CLASS="literal"
+>g_object_unref</TT
+> on the 
+retrieved object once you are done with it:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;  ...
+
+  GdkPixbuf *pixbuf;
+
+  gtk_tree_model_get (model, &#38;iter, 
+                      COL_PICTURE, &#38;pixbuf, 
+                      NULL);
+
+  if (pixbuf != NULL)
+  {
+    do_something_with_pixbuf (pixbuf);
+    g_object_unref (pixbuf);
+  }
+
+  ...
+</PRE
+></TD
+></TR
+></TABLE
+><P
+>&#13;Similarly, <TT
+CLASS="literal"
+>GBoxed</TT
+>-derived types retrieved from a model
+need to be freed with <TT
+CLASS="literal"
+>g_boxed_free</TT
+> when done with them
+(don't worry if you have never heard of <TT
+CLASS="literal"
+>GBoxed</TT
+>).
+</P
+><P
+>&#13;If the model column is of type <TT
+CLASS="literal"
+>G_TYPE_POINTER</TT
+>,
+<TT
+CLASS="literal"
+>gtk_tree_model_get</TT
+> will simply copy the pointer 
+value, but not the data (even if if it wanted to, it couldn't copy 
+the data, because it would not know how to copy it or what to copy
+exactly). If you store pointers to objects or strings in a pointer
+column (which you should not do unless you really know what you are
+doing and why you are doing it), you do not need to unref or free 
+the returned values as described above, because
+<TT
+CLASS="literal"
+>gtk_tree_model_get</TT
+> would not know what kind of 
+data they are and therefore won't ref or copy them on retrieval.
+</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-treemodel-data-manipulation.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-treemodel-remove-row.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Manipulating Row Data</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="sec-treemodels.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Removing Rows</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

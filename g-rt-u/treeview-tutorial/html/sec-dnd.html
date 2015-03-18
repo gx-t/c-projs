@@ -1,0 +1,410 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>Drag'n'Drop (DnD) **** needs revision ***</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="PREVIOUS"
+TITLE="Glade and Tree Views"
+HREF="sec-misc-glade.html"><LINK
+REL="NEXT"
+TITLE="Dragging Rows Around Within a Tree  **** TODO ***"
+HREF="sec-dnd-rows-within-tree.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="chapter"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-misc-glade.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-dnd-rows-within-tree.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="chapter"
+><H1
+><A
+NAME="sec-dnd"
+></A
+>Chapter 10. Drag'n'Drop (DnD) **** needs revision ***</H1
+><P
+>&#13;****** NEEDS REVISION
+</P
+><P
+>&#13;This section needs revision more than any other section. If you
+know anything about tree view drag'n'drop, you probably know more
+than the author of this text. Please give some feedback in that case.
+</P
+><P
+>&#13;If you want to dive into treeview drag'n'drop, you might want to
+check out <A
+HREF="http://mail.gnome.org/archives/gtk-devel-list/2001-November/msg00018.html"
+TARGET="_top"
+>&#13;Owen Taylor's mail on that topic</A
+>. It might not be completely
+identical to what has actually been implemented, but it gives a great
+overview, and provides more information than the docs do.
+</P
+><P
+>&#13;In addition to the standard Gtk+ Drag and Drop mechanisms that work
+with any widget, there are special Drag and Drop mechanisms just for
+the tree view widget. You usually want to use the tree-view specific
+Drag-and-Drop framework.
+</P
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-dnd-selected-item-info"
+>10.1. Drag'n'Dropping Row-Unrelated Data to and from a Tree View from other Windows or Widgets</A
+></H1
+><P
+>&#13;Drag'n'Dropping general information from or to a tree view widget works
+just like it works with any other widget and involves the standard
+<A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/gtk-Drag-and-Drop.html"
+TARGET="_top"
+>&#13;Gtk+ Drag and Drop</A
+> mechanisms. If you use this, you can
+receive drops to or initiate drags from anywhere in your tree view
+(including empty sections). This is not row- or column-specific and
+<I
+CLASS="emphasis"
+>is most likely not want you want</I
+>.
+Nevertheless, here is a small example
+of a tree view in which you can drag'n'drop URIs from other
+applications (browsers, for example), with the dropped URIs just
+being appended to the list (note that usually you would probably
+rather want to set up your whole window as a target then and not
+just the tree view widget):
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;#include &#60;gtk/gtk.h&#62;
+
+enum
+{
+  COL_URI = 0,
+  NUM_COLS
+} ;
+
+
+void
+view_onDragDataReceived(GtkWidget *wgt, GdkDragContext *context, int x, int y,
+                        GtkSelectionData *seldata, guint info, guint time,
+                        gpointer userdata)
+{
+  GtkTreeModel *model;
+  GtkTreeIter   iter;
+
+  model = GTK_TREE_MODEL(userdata);
+
+  gtk_list_store_append(GTK_LIST_STORE(model), &#38;iter);
+
+  gtk_list_store_set(GTK_LIST_STORE(model), &#38;iter, COL_URI, (gchar*)seldata-&#62;data, -1);
+}
+
+static GtkWidget *
+create_view_and_model (void)
+{
+  GtkTreeViewColumn   *col;
+  GtkCellRenderer     *renderer;
+  GtkListStore        *liststore;
+  GtkWidget           *view;
+
+  liststore = gtk_list_store_new(NUM_COLS, G_TYPE_STRING);
+
+  view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(liststore));
+
+  g_object_unref(liststore); /* destroy model with view */
+
+  col = gtk_tree_view_column_new();
+  renderer = gtk_cell_renderer_text_new();
+
+  gtk_tree_view_column_set_title(col, "URI");
+  gtk_tree_view_append_column(GTK_TREE_VIEW(view), col);
+  gtk_tree_view_column_pack_start(col, renderer, TRUE);
+  gtk_tree_view_column_add_attribute(col, renderer, "text", COL_URI);
+
+  gtk_tree_selection_set_mode(gtk_tree_view_get_selection(GTK_TREE_VIEW(view)),
+                              GTK_SELECTION_SINGLE);
+
+  /* Make tree view a destination for Drag'n'Drop */
+  if (1)
+  {
+    enum
+    {
+      TARGET_STRING,
+      TARGET_URL
+    };
+
+    static GtkTargetEntry targetentries[] =
+    {
+      { "STRING",        0, TARGET_STRING },
+      { "text/plain",    0, TARGET_STRING },
+      { "text/uri-list", 0, TARGET_URL },
+    };
+
+    gtk_drag_dest_set(view, GTK_DEST_DEFAULT_ALL, targetentries, 3,
+                      GDK_ACTION_COPY|GDK_ACTION_MOVE|GDK_ACTION_LINK);
+
+    g_signal_connect(view, "drag_data_received",
+                     G_CALLBACK(view_onDragDataReceived), liststore);
+  }
+
+  return view;
+}
+
+int
+main (int argc, char **argv)
+{
+  GtkWidget *window, *vbox, *view, *label;
+
+  gtk_init(&#38;argc, &#38;argv);
+
+  window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  g_signal_connect(window, "delete_event", gtk_main_quit, NULL); /* dirty */
+  gtk_window_set_default_size(GTK_WINDOW(window), 400, 200);
+
+  vbox = gtk_vbox_new(FALSE, 0);
+  gtk_container_add(GTK_CONTAINER(window), vbox);
+
+  label = gtk_label_new("\nDrag and drop links from your browser into the tree view.\n");
+  gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
+
+  view = create_view_and_model();
+  gtk_box_pack_start(GTK_BOX(vbox), view, TRUE, TRUE, 0);
+
+  gtk_widget_show_all(window);
+
+  gtk_main();
+
+  return 0;
+}
+</PRE
+></TD
+></TR
+></TABLE
+><P
+>&#13;If you are receiving drops into a tree view, you can connect to the view's
+<TT
+CLASS="literal"
+>"drag-motion"</TT
+> signal to track the mouse pointer while
+it is in a drag and drop operation over the tree view. This is useful for
+example if you want to expand a collapsed node in a tree when the mouse
+hovers above the node for a certain amount of time during a drag'n'drop
+operation. Here is an example of how to achieve this:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;/***************************************************************************
+ *
+ *   onDragMotion_expand_timeout
+ *
+ *   Timeout used to make sure that we expand rows only
+ *    after hovering about them for a certain amount
+ *    of time while doing Drag'n'Drop
+ *
+ ***************************************************************************/
+
+gboolean
+onDragMotion_expand_timeout (GtkTreePath **path)
+{
+        g_return_val_if_fail (  path != NULL, FALSE );
+        g_return_val_if_fail ( *path != NULL, FALSE );
+
+        gtk_tree_view_expand_row(GTK_TREE_VIEW(view), *path, FALSE);
+
+        return FALSE; /* only call once */
+}
+
+
+/***************************************************************************
+ *
+ *   view_onDragMotion: we don't want to expand unexpanded nodes
+ *                      immediately when the mouse pointer passes across
+ *                      them during DnD. Instead, we only want to expand
+ *                      the node if the pointer has been hovering above the
+ *                      node for at least 1.5 seconds or so. To achieve this,
+ *                      we use a timeout that is removed whenever the row
+ *                      in focus changes.
+ *
+ ***************************************************************************/
+
+static gboolean
+view_onDragMotion (GtkWidget *widget, GdkDragContext *context, gint x,
+                   gint y, guint time, gpointer data)
+{
+  static GtkTreePath  *lastpath;  /* NULL */
+  GtkTreePath         *path = NULL;
+
+  if (gtk_tree_view_get_path_at_pos(GTK_TREE_VIEW(widget), x, y, &#38;path, NULL, NULL, NULL))
+  {
+    if (!lastpath || ((lastpath) &#38;&#38; gtk_tree_path_compare(lastpath, path) != 0))
+    {
+      (void) g_source_remove_by_user_data(&#38;lastpath);
+
+      if (!gtk_tree_view_row_expanded(GTK_TREE_VIEW(widget), path))
+      {
+        /* 1500 = 1.5 secs */
+        g_timeout_add(1500, (GSourceFunc) onDragMotion_expand_timeout, &#38;lastpath);
+      }
+    }
+  }
+  else
+  {
+    g_source_remove_by_user_data(&#38;lastpath);
+  }
+
+  if (lastpath)
+    gtk_tree_path_free(lastpath);
+
+  lastpath = path;
+
+  return TRUE;
+}
+</PRE
+></TD
+></TR
+></TABLE
+><P
+>&#13;Connect to the view's <TT
+CLASS="literal"
+>"drag-drop"</TT
+> signal to be called
+when the drop happens. You can translate the coordinates provided into
+a tree path with <A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkTreeView.html#gtk-tree-view-get-path-at-pos"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>gtk_tree_view_get_path_at_pos</TT
+></A
+>.
+</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-misc-glade.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-dnd-rows-within-tree.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Glade and Tree Views</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Dragging Rows Around Within a Tree  **** TODO ***</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

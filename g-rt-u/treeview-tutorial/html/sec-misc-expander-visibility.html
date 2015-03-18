@@ -1,0 +1,232 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>Column Expander Visibility</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="UP"
+TITLE="Miscellaneous"
+HREF="sec-misc.html"><LINK
+REL="PREVIOUS"
+TITLE="Miscellaneous"
+HREF="sec-misc.html"><LINK
+REL="NEXT"
+TITLE="Getting the Cell Renderer a Click Event Happened On"
+HREF="sec-misc-get-renderer-from-click.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-misc.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 9. Miscellaneous</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-misc-get-renderer-from-click.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-misc-expander-visibility"
+>9.2. Column Expander Visibility</A
+></H1
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="sec-misc-expander-visibility-hide"
+>9.2.1. Hiding the Column Expander</A
+></H2
+><P
+>&#13;Is it possible to hide the column expander completely? Yes and no.
+What follows, is probably a dirty hack at best and there is no
+guarantee that it will work with upcoming Gtk+ versions or even with
+all past versions (although the latter is easy enough to test of
+course).
+</P
+><P
+>&#13;What you can do to hide the column expander is to create an empty
+tree view column (containing empty strings, for example) and make
+this the first column in the tree view. Then you can hide that
+column with <A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkTreeViewColumn.html#gtk-tree-view-column-set-visible"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>gtk_tree_view_column_set_visible</TT
+></A
+>. You
+will notice that the expander column will now automatically move
+to the formerly second, now first, visible column in the tree view.
+However, if you call <A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkTreeView.html#gtk-tree-view-set-expander-column"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>gtk_tree_view_set_expander_column</TT
+></A
+> right
+after the call to <TT
+CLASS="literal"
+>_set_visible</TT
+>, then the expander
+will move back to the hidden column, and no expander is visible
+any longer.
+</P
+><P
+>&#13;This means of course that you will have to take care
+of expanding and collapsing rows yourself and use the appropriate
+tree view functions. While it is at last thinkable that one could
+implement custom expanders using custom cell rendereres or pixbuf
+cell renderers, this is probably a task that will keep you busy
+for more than five minutes. Keep those head ache tablets nearby
+if you attempt it anyway...
+</P
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="sec-misc-expander-visibility-force"
+>9.2.2. Forcing Column Expander Visibility</A
+></H2
+><P
+>&#13;There are situations where an expander should be visible even if
+the row in question does not have any children yet, for instance
+when part of a model should only be loaded on request when a node
+gets expanded (e.g. to show the contents of a directory). This
+is not possible. An expander is only shown if a node has children.
+</P
+><P
+>&#13;A work-around for this problem exists however: simply attach an
+empty child row and set the node to collapsed state. Then listen
+for the tree view's <TT
+CLASS="literal"
+>"row-expanded"</TT
+> signal,
+and fill the contents of the already existing row with the first
+new row, then append new child rows. See
+<A
+HREF="http://mail.gnome.org/archives/gtk-app-devel-list/2003-May/msg00241.html"
+TARGET="_top"
+>&#13;this mailing list thread</A
+> for more details.
+</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-misc.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-misc-get-renderer-from-click.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Miscellaneous</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="sec-misc.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Getting the Cell Renderer a Click Event Happened On</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

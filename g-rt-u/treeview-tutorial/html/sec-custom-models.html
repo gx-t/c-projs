@@ -1,0 +1,193 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>Writing Custom Models</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="PREVIOUS"
+TITLE="Dragging Rows from One Tree to Another  **** TODO ***"
+HREF="sec-dnd-rows-between-trees.html"><LINK
+REL="NEXT"
+TITLE="What Does Writing a Custom Model Involve?"
+HREF="sec-custom-models-what.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="chapter"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-dnd-rows-between-trees.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-custom-models-what.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="chapter"
+><H1
+><A
+NAME="sec-custom-models"
+></A
+>Chapter 11. Writing Custom Models</H1
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-custom-models-when"
+>11.1. When is a Custom Model Useful?</A
+></H1
+><P
+>&#13;A custom tree model gives you complete control over your data and how it is
+represented to the outside (e.g. to the tree view widget). It has the advantage
+that you can store, access and modify your data exactly how you need it, and
+you can optimise the way your data is stored and retrieved, as you can write
+your own functions to access your data and need not rely solely on the
+<TT
+CLASS="literal"
+>gtk_tree_model_get</TT
+>. A model tailored to your needs will probably
+also be a lot faster than the generic list and tree stores that come with gtk
+and that have been designed with flexibility in mind.
+</P
+><P
+>&#13;Another case where a custom model might come in handy is when you have all your
+data already stored in an external tree-like structure (for example a libxml2 XML
+tree) and only want to display that structure. Then you could write a custom model
+that maps that structure to a tree model (which is probably not quite as trivial
+as it sounds though).
+</P
+><P
+>&#13;Using a custom model you could also implement a filter model that only displays
+certain rows according to some filter criterion instead of displaying all rows
+(Gtk+-2.4 has a filter model, <TT
+CLASS="literal"
+>&#13;<A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkTreeModelFilter.html"
+TARGET="_top"
+>&#13;GtkTreeModelFilter</A
+></TT
+>, that
+does exactly that and much more, but you might want to implement this yourself 
+anyway. If you need to use GtkTreeModelFilter in Gtk-2.0 or Gtk-2.2,
+check out the code examples of this tutorial - there is GuiTreeModelFilter,
+which is basically just the original GtkTreeModelFilter but has been made 
+to work with earlier Gtk-2.x versions and has a different name space, so that
+it does not clash with Gtk-2.4).
+</P
+><P
+>&#13;However, all this comes at a cost: you are unlikely to write a useful custom model
+in less than a thousand lines, unless you strip all newline characters. Writing a
+custom model is not as difficult as it might sound though, and it may well be worth the
+effort, not least because it will result in much saner code if you have a lot of
+data to keep track of.
+</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-dnd-rows-between-trees.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-custom-models-what.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Dragging Rows from One Tree to Another  **** TODO ***</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>What Does Writing a Custom Model Involve?</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,229 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>How to Make a Whole Row Bold or Coloured</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="UP"
+TITLE="Mapping Data to the Screen: GtkTreeViewColumn and GtkCellRenderer"
+HREF="sec-treeviewcol-renderer.html"><LINK
+REL="PREVIOUS"
+TITLE="A Working Example"
+HREF="sec-treeview-col-example.html"><LINK
+REL="NEXT"
+TITLE="How to Pack Icons into the Tree View"
+HREF="sec-treeview-col-pixbufs.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-treeview-col-example.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 5. Mapping Data to the Screen: GtkTreeViewColumn and GtkCellRenderer</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-treeview-col-pixbufs.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-treeview-col-whole-row"
+>5.7. How to Make a Whole Row Bold or Coloured</A
+></H1
+><P
+>&#13;This seems to be a frequently asked question, so it is worth mentioning it here. You
+have the two approaches mentioned above: either you use cell data functions, and check
+in each whether a particular row should be highlighted in a particular way (bold, coloured, whatever),
+and then set the renderer properties accordingly (and unset them if you want that row to look normal),
+or you use attributes. Cell data functions are most likely not the right choice in this case though.
+</P
+><P
+>&#13;If you only want every second line to have a gray background to make it easier
+for the user to see which data belongs to which line in wide tree views, then
+you do not have to bother with the stuff mentioned here. Instead just set the
+rules hint on the tree view as described in the <A
+HREF="sec-treeview-look.html"
+>&#13;here</A
+>, and everything will be done automatically, in colours that conform
+to the chosen theme even (unless the theme disables rule hints, that is).
+</P
+><P
+>&#13;Otherwise, the most suitable approach for most cases is that you add two columns
+to your model, one for the property itself (e.g. a column COL_ROW_COLOR
+of type <TT
+CLASS="literal"
+>G_TYPE_STRING</TT
+>), and one for the boolean flag
+of the property (e.g. a column COL_ROW_COLOR_SET of type
+<TT
+CLASS="literal"
+>G_TYPE_BOOLEAN</TT
+>). You would then connect these columns
+with the <TT
+CLASS="literal"
+>"foreground"</TT
+> and <TT
+CLASS="literal"
+>"foreground-set"</TT
+>
+properties of each renderer. Now, whenever you set a row's COL_ROW_COLOR
+field to a colour, and set that row's COL_ROW_COLOR_SET field to <TT
+CLASS="literal"
+>TRUE</TT
+>,
+then this column will be rendered in the colour of your choice. If you
+only want either the default text colour or one special other colour,
+you could even achieve the same thing with just one extra model column:
+in this case you could just set all renderer's <TT
+CLASS="literal"
+>"foreground"</TT
+>
+property to whatever special color you want, and only connect the COL_ROW_COLOR_SET
+column to all renderer's <TT
+CLASS="literal"
+>"foreground-set"</TT
+> property using
+attributes. This works similar with any other attribute, only that you need to adjust
+the data type for the property of course (e.g. <TT
+CLASS="literal"
+>"weight"</TT
+> would take a
+<TT
+CLASS="literal"
+>G_TYPE_INT</TT
+>, in form of a <TT
+CLASS="literal"
+>PANGO_WEIGHT_FOO</TT
+>
+define in this case).
+</P
+><P
+>&#13;As a general rule, you should not change the text colour or the background
+colour of a cell unless you have a really good reason for it.
+To <A
+HREF="http://ometer.com/gtk-colors.html"
+TARGET="_top"
+>quote</A
+> Havoc
+Pennington: <SPAN
+CLASS="QUOTE"
+>"Because colors in GTK+ represent a theme the user has chosen, you should never
+set colors purely for aesthetic reasons. If users don't like GTK+ gray, they can change it themselves
+to their favorite shade of orange."</SPAN
+>
+</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-treeview-col-example.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-treeview-col-pixbufs.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>A Working Example</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="sec-treeviewcol-renderer.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>How to Pack Icons into the Tree View</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

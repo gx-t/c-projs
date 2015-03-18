@@ -1,0 +1,839 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>Writing Custom Cell Renderers</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="PREVIOUS"
+TITLE="Working Example: Custom List Model Source Code"
+HREF="sec-custom-model-code.html"><LINK
+REL="NEXT"
+TITLE="Cell Renderers Others Have Written"
+HREF="sec-custom-cell-renderers-external.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="chapter"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-custom-model-code.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-custom-cell-renderers-external.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="chapter"
+><H1
+><A
+NAME="sec-custom-cell-renderers"
+></A
+>Chapter 12. Writing Custom Cell Renderers</H1
+><P
+>&#13;The cell renderers that come with Gtk+ should be sufficient for most purposes,
+but there might be occasions where you want to display something in a tree view
+that you cannot display with the provided cell renderers, or where you want to
+derive from one of the provided cell renderers to extend its functionality.
+</P
+><P
+>&#13;You can do this by writing a new object that derives from
+<TT
+CLASS="literal"
+>GtkCellRenderer</TT
+> (or even one of the other cell renderers
+if you just want to extend an existing one).
+</P
+><P
+>&#13;Three things you need to do in the course of that:
+</P
+><P
+></P
+><UL
+><LI
+><P
+>&#13;      Register some new properties that your renderer needs with the type
+      system and write your own <TT
+CLASS="literal"
+>set_property</TT
+> and
+      <TT
+CLASS="literal"
+>get_property</TT
+> functions to set and get your new
+      renderer's properties.
+    </P
+></LI
+><LI
+><P
+>&#13;      Write your own <TT
+CLASS="literal"
+>cell_renderer_get_size</TT
+> function and
+      override the parent object's function (usually the parent is of type
+      <TT
+CLASS="literal"
+>GtkCellRenderer</TT
+>. Note that you should honour the
+      standard properties for padding and cell alignment of the parent
+      object here.
+    </P
+></LI
+><LI
+><P
+>&#13;      Write your own <TT
+CLASS="literal"
+>cell_renderer_render</TT
+> function and
+      override the parent object's function. This function does
+      the actual rendering.
+    </P
+></LI
+></UL
+><P
+>&#13;The GObject type system stuff of writing a new cell renderer is similar to
+what we have done above when writing a custom tree model, and is relatively
+straight forward in this case. Copy and paste and modify according to your
+own needs.
+</P
+><P
+>&#13;Good examples of cell renderer code to look at or even modify are
+<TT
+CLASS="literal"
+>GtkCellRendererPixbuf</TT
+> and <TT
+CLASS="literal"
+>GtkCellRendererToggle</TT
+>
+in the Gtk+ source code tree. Both cases are less than five hundred lines
+of code to look at and thus should be fairly easy to digest.
+</P
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-custom-cell-renderer-example"
+>12.1. Working Example: a Progress Bar Cell Renderer</A
+></H1
+><P
+>&#13;In the following we will write a custom cell renderer to render progress bars
+into a tree view (the code was "heavily inspired" by Sean Egan's progress bar
+cell renderer implementation in GAIM):
+</P
+><P
+></P
+><UL
+><LI
+><P
+><A
+HREF="sec-custom-cell-renderers.html#sec-custom-cell-renderer-example-header"
+>custom-cell-renderer-progressbar.h</A
+></P
+></LI
+><LI
+><P
+><A
+HREF="sec-custom-cell-renderers.html#sec-custom-cell-renderer-example-body"
+>custom-cell-renderer-progressbar.c</A
+></P
+></LI
+><LI
+><P
+><A
+HREF="sec-custom-cell-renderers.html#sec-custom-cell-renderer-example-test"
+>main.c</A
+></P
+></LI
+></UL
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="sec-custom-cell-renderer-example-header"
+>12.1.1. custom-cell-renderer-progressbar.h</A
+></H2
+><P
+>&#13;The header file consists of the usual GObject type cast and type check defines
+and our <TT
+CLASS="literal"
+>CustomCellRendererProgress</TT
+> structure. As the type
+of the parent indicates, we derive from <TT
+CLASS="literal"
+>GtkCellRenderer</TT
+>. The
+parent object must always be the first item in the structure (note also that it
+is not a pointer to an object, but the parent object structure itself embedded
+in our structure).
+</P
+><P
+>&#13;Our <TT
+CLASS="literal"
+>CustomCellRendererProgress</TT
+> structure is fairly uneventful
+and contains only a double precision float variable in which we store our new
+<TT
+CLASS="literal"
+>"percentage"</TT
+> property (which will determine how long the
+progressbar is going to be).
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;  #ifndef _custom_cell_renderer_progressbar_included_
+  #define _custom_cell_renderer_progressbar_included_
+
+  #include &#60;gtk/gtk.h&#62;
+
+  /* Some boilerplate GObject type check and type cast macros.
+   *  'klass' is used here instead of 'class', because 'class'
+   *  is a c++ keyword */
+
+  #define CUSTOM_TYPE_CELL_RENDERER_PROGRESS             (custom_cell_renderer_progress_get_type())
+  #define CUSTOM_CELL_RENDERER_PROGRESS(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj),  CUSTOM_TYPE_CELL_RENDERER_PROGRESS, CustomCellRendererProgress))
+  #define CUSTOM_CELL_RENDERER_PROGRESS_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST ((klass),  CUSTOM_TYPE_CELL_RENDERER_PROGRESS, CustomCellRendererProgressClass))
+  #define CUSTOM_IS_CELL_PROGRESS_PROGRESS(obj)          (G_TYPE_CHECK_INSTANCE_TYPE ((obj), CUSTOM_TYPE_CELL_RENDERER_PROGRESS))
+  #define CUSTOM_IS_CELL_PROGRESS_PROGRESS_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE ((klass),  CUSTOM_TYPE_CELL_RENDERER_PROGRESS))
+  #define CUSTOM_CELL_RENDERER_PROGRESS_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS ((obj),  CUSTOM_TYPE_CELL_RENDERER_PROGRESS, CustomCellRendererProgressClass))
+
+  typedef struct _CustomCellRendererProgress CustomCellRendererProgress;
+  typedef struct _CustomCellRendererProgressClass CustomCellRendererProgressClass;
+
+  /* CustomCellRendererProgress: Our custom cell renderer
+   *   structure. Extend according to need */
+
+  struct _CustomCellRendererProgress
+  {
+    GtkCellRenderer   parent;
+
+    gdouble           progress;
+  };
+
+
+  struct _CustomCellRendererProgressClass
+  {
+    GtkCellRendererClass  parent_class;
+  };
+
+
+  GType                custom_cell_renderer_progress_get_type (void);
+
+  GtkCellRenderer     *custom_cell_renderer_progress_new (void);
+
+
+  #endif /* _custom_cell_renderer_progressbar_included_ */
+</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="sec-custom-cell-renderer-example-body"
+>12.1.2. custom-cell-renderer-progressbar.c</A
+></H2
+><P
+>&#13;The code contains everything as described above, so let's jump right into it:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;#include "custom-cell-renderer-progressbar.h"
+
+/* This is based mainly on GtkCellRendererProgress
+ *  in GAIM, written and (c) 2002 by Sean Egan
+ *  (Licensed under the GPL), which in turn is
+ *  based on Gtk's GtkCellRenderer[Text|Toggle|Pixbuf]
+ *  implementation by Jonathan Blandford */
+
+/* Some boring function declarations: GObject type system stuff */
+
+static void     custom_cell_renderer_progress_init       (CustomCellRendererProgress      *cellprogress);
+
+static void     custom_cell_renderer_progress_class_init (CustomCellRendererProgressClass *klass);
+
+static void     custom_cell_renderer_progress_get_property  (GObject                    *object,
+                                                             guint                       param_id,
+                                                             GValue                     *value,
+                                                             GParamSpec                 *pspec);
+
+static void     custom_cell_renderer_progress_set_property  (GObject                    *object,
+                                                             guint                       param_id,
+                                                             const GValue               *value,
+                                                             GParamSpec                 *pspec);
+
+static void     custom_cell_renderer_progress_finalize (GObject *gobject);
+
+
+/* These functions are the heart of our custom cell renderer: */
+
+static void     custom_cell_renderer_progress_get_size   (GtkCellRenderer            *cell,
+                                                          GtkWidget                  *widget,
+                                                          GdkRectangle               *cell_area,
+                                                          gint                       *x_offset,
+                                                          gint                       *y_offset,
+                                                          gint                       *width,
+                                                          gint                       *height);
+
+static void     custom_cell_renderer_progress_render     (GtkCellRenderer            *cell,
+                                                          GdkWindow                  *window,
+                                                          GtkWidget                  *widget,
+                                                          GdkRectangle               *background_area,
+                                                          GdkRectangle               *cell_area,
+                                                          GdkRectangle               *expose_area,
+                                                          guint                       flags);
+
+
+enum
+{
+  PROP_PERCENTAGE = 1,
+};
+
+static   gpointer parent_class;
+
+
+/***************************************************************************
+ *
+ *  custom_cell_renderer_progress_get_type: here we register our type with
+ *                                          the GObject type system if we
+ *                                          haven't done so yet. Everything
+ *                                          else is done in the callbacks.
+ *
+ ***************************************************************************/
+
+GType
+custom_cell_renderer_progress_get_type (void)
+{
+  static GType cell_progress_type = 0;
+
+  if (cell_progress_type)
+    return cell_progress_type;
+
+  if (1)
+  {
+    static const GTypeInfo cell_progress_info =
+    {
+      sizeof (CustomCellRendererProgressClass),
+      NULL,                                                     /* base_init */
+      NULL,                                                     /* base_finalize */
+      (GClassInitFunc) custom_cell_renderer_progress_class_init,
+      NULL,                                                     /* class_finalize */
+      NULL,                                                     /* class_data */
+      sizeof (CustomCellRendererProgress),
+      0,                                                        /* n_preallocs */
+      (GInstanceInitFunc) custom_cell_renderer_progress_init,
+    };
+
+    /* Derive from GtkCellRenderer */
+    cell_progress_type = g_type_register_static (GTK_TYPE_CELL_RENDERER,
+                                                 "CustomCellRendererProgress",
+                                                  &#38;cell_progress_info,
+                                                  0);
+  }
+
+  return cell_progress_type;
+}
+
+
+/***************************************************************************
+ *
+ *  custom_cell_renderer_progress_init: set some default properties of the
+ *                                      parent (GtkCellRenderer).
+ *
+ ***************************************************************************/
+
+static void
+custom_cell_renderer_progress_init (CustomCellRendererProgress *cellrendererprogress)
+{
+  GTK_CELL_RENDERER(cellrendererprogress)-&#62;mode = GTK_CELL_RENDERER_MODE_INERT;
+  GTK_CELL_RENDERER(cellrendererprogress)-&#62;xpad = 2;
+  GTK_CELL_RENDERER(cellrendererprogress)-&#62;ypad = 2;
+}
+
+
+/***************************************************************************
+ *
+ *  custom_cell_renderer_progress_class_init:
+ *
+ *  set up our own get_property and set_property functions, and
+ *  override the parent's functions that we need to implement.
+ *  And make our new "percentage" property known to the type system.
+ *  If you want cells that can be activated on their own (ie. not
+ *  just the whole row selected) or cells that are editable, you
+ *  will need to override 'activate' and 'start_editing' as well.
+ *
+ ***************************************************************************/
+
+static void
+custom_cell_renderer_progress_class_init (CustomCellRendererProgressClass *klass)
+{
+  GtkCellRendererClass *cell_class   = GTK_CELL_RENDERER_CLASS(klass);
+  GObjectClass         *object_class = G_OBJECT_CLASS(klass);
+
+  parent_class           = g_type_class_peek_parent (klass);
+  object_class-&#62;finalize = custom_cell_renderer_progress_finalize;
+
+  /* Hook up functions to set and get our
+   *   custom cell renderer properties */
+  object_class-&#62;get_property = custom_cell_renderer_progress_get_property;
+  object_class-&#62;set_property = custom_cell_renderer_progress_set_property;
+
+  /* Override the two crucial functions that are the heart
+   *   of a cell renderer in the parent class */
+  cell_class-&#62;get_size = custom_cell_renderer_progress_get_size;
+  cell_class-&#62;render   = custom_cell_renderer_progress_render;
+
+  /* Install our very own properties */
+  g_object_class_install_property (object_class,
+                                   PROP_PERCENTAGE,
+                                   g_param_spec_double ("percentage",
+                                                        "Percentage",
+                                                         "The fractional progress to display",
+                                                         0, 1, 0,
+                                                         G_PARAM_READWRITE));
+}
+
+
+/***************************************************************************
+ *
+ *  custom_cell_renderer_progress_finalize: free any resources here
+ *
+ ***************************************************************************/
+
+static void
+custom_cell_renderer_progress_finalize (GObject *object)
+{
+/*
+  CustomCellRendererProgress *cellrendererprogress = CUSTOM_CELL_RENDERER_PROGRESS(object);
+*/
+
+  /* Free any dynamically allocated resources here */
+
+  (* G_OBJECT_CLASS (parent_class)-&#62;finalize) (object);
+}
+
+
+/***************************************************************************
+ *
+ *  custom_cell_renderer_progress_get_property: as it says
+ *
+ ***************************************************************************/
+
+static void
+custom_cell_renderer_progress_get_property (GObject    *object,
+                                            guint       param_id,
+                                            GValue     *value,
+                                            GParamSpec *psec)
+{
+  CustomCellRendererProgress  *cellprogress = CUSTOM_CELL_RENDERER_PROGRESS(object);
+
+  switch (param_id)
+  {
+    case PROP_PERCENTAGE:
+      g_value_set_double(value, cellprogress-&#62;progress);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID (object, param_id, psec);
+      break;
+  }
+}
+
+
+/***************************************************************************
+ *
+ *  custom_cell_renderer_progress_set_property: as it says
+ *
+ ***************************************************************************/
+
+static void
+custom_cell_renderer_progress_set_property (GObject      *object,
+                                            guint         param_id,
+                                            const GValue *value,
+                                            GParamSpec   *pspec)
+{
+  CustomCellRendererProgress *cellprogress = CUSTOM_CELL_RENDERER_PROGRESS (object);
+
+  switch (param_id)
+  {
+    case PROP_PERCENTAGE:
+      cellprogress-&#62;progress = g_value_get_double(value);
+      break;
+
+    default:
+      G_OBJECT_WARN_INVALID_PROPERTY_ID(object, param_id, pspec);
+      break;
+  }
+}
+
+/***************************************************************************
+ *
+ *  custom_cell_renderer_progress_new: return a new cell renderer instance
+ *
+ ***************************************************************************/
+
+GtkCellRenderer *
+custom_cell_renderer_progress_new (void)
+{
+  return g_object_new(CUSTOM_TYPE_CELL_RENDERER_PROGRESS, NULL);
+}
+
+
+/***************************************************************************
+ *
+ *  custom_cell_renderer_progress_get_size: crucial - calculate the size
+ *                                          of our cell, taking into account
+ *                                          padding and alignment properties
+ *                                          of parent.
+ *
+ ***************************************************************************/
+
+#define FIXED_WIDTH   100
+#define FIXED_HEIGHT  10
+
+static void
+custom_cell_renderer_progress_get_size (GtkCellRenderer *cell,
+                                        GtkWidget       *widget,
+                                        GdkRectangle    *cell_area,
+                                        gint            *x_offset,
+                                        gint            *y_offset,
+                                        gint            *width,
+                                        gint            *height)
+{
+  gint calc_width;
+  gint calc_height;
+
+  calc_width  = (gint) cell-&#62;xpad * 2 + FIXED_WIDTH;
+  calc_height = (gint) cell-&#62;ypad * 2 + FIXED_HEIGHT;
+
+  if (width)
+    *width = calc_width;
+
+  if (height)
+    *height = calc_height;
+
+  if (cell_area)
+  {
+    if (x_offset)
+    {
+      *x_offset = cell-&#62;xalign * (cell_area-&#62;width - calc_width);
+      *x_offset = MAX (*x_offset, 0);
+    }
+
+    if (y_offset)
+    {
+      *y_offset = cell-&#62;yalign * (cell_area-&#62;height - calc_height);
+      *y_offset = MAX (*y_offset, 0);
+    }
+  }
+}99
+
+
+/***************************************************************************
+ *
+ *  custom_cell_renderer_progress_render: crucial - do the rendering.
+ *
+ ***************************************************************************/
+
+static void
+custom_cell_renderer_progress_render (GtkCellRenderer *cell,
+                                      GdkWindow       *window,
+                                      GtkWidget       *widget,
+                                      GdkRectangle    *background_area,
+                                      GdkRectangle    *cell_area,
+                                      GdkRectangle    *expose_area,
+                                      guint            flags)
+{
+  CustomCellRendererProgress *cellprogress = CUSTOM_CELL_RENDERER_PROGRESS (cell);
+  GtkStateType                state;
+  gint                        width, height;
+  gint                        x_offset, y_offset;
+
+  custom_cell_renderer_progress_get_size (cell, widget, cell_area,
+                                          &#38;x_offset, &#38;y_offset,
+                                          &#38;width, &#38;height);
+
+  if (GTK_WIDGET_HAS_FOCUS (widget))
+    state = GTK_STATE_ACTIVE;
+  else
+    state = GTK_STATE_NORMAL;
+
+  width  -= cell-&#62;xpad*2;
+  height -= cell-&#62;ypad*2;
+
+  gtk_paint_box (widget-&#62;style,
+                 window,
+                 GTK_STATE_NORMAL, GTK_SHADOW_IN,
+                 NULL, widget, "trough",
+                 cell_area-&#62;x + x_offset + cell-&#62;xpad,
+                 cell_area-&#62;y + y_offset + cell-&#62;ypad,
+                 width - 1, height - 1);
+
+  gtk_paint_box (widget-&#62;style,
+                 window,
+                 state, GTK_SHADOW_OUT,
+                 NULL, widget, "bar",
+                 cell_area-&#62;x + x_offset + cell-&#62;xpad,
+                 cell_area-&#62;y + y_offset + cell-&#62;ypad,
+                 width * cellprogress-&#62;progress,
+                 height - 1);
+}
+
+</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="sect2"
+><H2
+CLASS="sect2"
+><A
+NAME="sec-custom-cell-renderer-example-test"
+>12.1.3. main.c</A
+></H2
+><P
+>&#13;And here is a little test that makes use of our new <TT
+CLASS="literal"
+>CustomCellRendererProgress</TT
+>:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;#include "custom-cell-renderer-progressbar.h"
+
+static GtkListStore        *liststore;
+
+static gboolean             increasing = TRUE;   /* direction of progress bar change */
+
+enum
+{
+  COL_PERCENTAGE = 0,
+  COL_TEXT,
+  NUM_COLS
+};
+
+#define STEP  0.01
+
+gboolean
+increase_progress_timeout (GtkCellRenderer *renderer)
+{
+  GtkTreeIter  iter;
+  gfloat       perc = 0.0;
+  gchar        buf[20];
+
+  gtk_tree_model_get_iter_first(GTK_TREE_MODEL(liststore), &#38;iter); /* first and only row */
+
+  gtk_tree_model_get (GTK_TREE_MODEL(liststore), &#38;iter, COL_PERCENTAGE, &#38;perc, -1);
+
+  if ( perc &#62; (1.0-STEP)  ||  (perc &#60; STEP &#38;&#38; perc &#62; 0.0) )
+  {
+    increasing = (!increasing);
+  }
+
+  if (increasing)
+    perc = perc + STEP;
+  else
+    perc = perc - STEP;
+
+  g_snprintf(buf, sizeof(buf), "%u %%", (guint)(perc*100));
+
+  gtk_list_store_set (liststore, &#38;iter, COL_PERCENTAGE, perc, COL_TEXT, buf, -1);
+
+  return TRUE; /* Call again */
+}
+
+
+GtkWidget *
+create_view_and_model (void)
+{
+  GtkTreeViewColumn   *col;
+  GtkCellRenderer     *renderer;
+  GtkTreeIter          iter;
+  GtkWidget           *view;
+
+  liststore = gtk_list_store_new(NUM_COLS, G_TYPE_FLOAT, G_TYPE_STRING);
+  gtk_list_store_append(liststore, &#38;iter);
+  gtk_list_store_set (liststore, &#38;iter, COL_PERCENTAGE, 0.5, -1); /* start at 50% */
+
+  view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(liststore));
+
+  g_object_unref(liststore); /* destroy store automatically with view */
+
+  renderer = gtk_cell_renderer_text_new();
+  col = gtk_tree_view_column_new();
+  gtk_tree_view_column_pack_start (col, renderer, TRUE);
+  gtk_tree_view_column_add_attribute (col, renderer, "text", COL_TEXT);
+  gtk_tree_view_column_set_title (col, "Progress");
+  gtk_tree_view_append_column(GTK_TREE_VIEW(view),col);
+
+  renderer = custom_cell_renderer_progress_new();
+  col = gtk_tree_view_column_new();
+  gtk_tree_view_column_pack_start (col, renderer, TRUE);
+  gtk_tree_view_column_add_attribute (col, renderer, "percentage", COL_PERCENTAGE);
+  gtk_tree_view_column_set_title (col, "Progress");
+  gtk_tree_view_append_column(GTK_TREE_VIEW(view),col);
+
+  g_timeout_add(50, (GSourceFunc) increase_progress_timeout, NULL);
+
+  return view;
+}
+
+
+int
+main (int argc, char **argv)
+{
+  GtkWidget *window, *view;
+
+  gtk_init(&#38;argc,&#38;argv);
+
+  window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_default_size (GTK_WINDOW(window), 150, 100);
+  g_signal_connect(window, "delete_event", gtk_main_quit, NULL);
+
+  view = create_view_and_model();
+
+  gtk_container_add(GTK_CONTAINER(window), view);
+
+  gtk_widget_show_all(window);
+
+  gtk_main();
+
+  return 0;
+}
+
+</PRE
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-custom-model-code.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-custom-cell-renderers-external.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Working Example: Custom List Model Source Code</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Cell Renderers Others Have Written</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

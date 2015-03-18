@@ -1,0 +1,392 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>Revision History</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="UP"
+TITLE="Copyright, License, Credits, and Revision History"
+HREF="sec-treeviewtut-license.html"><LINK
+REL="PREVIOUS"
+TITLE="Credits"
+HREF="sec-treeviewtut-credits.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-treeviewtut-credits.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 14. Copyright, License, Credits, and Revision History</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+>&nbsp;</TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-treeviewtut-history"
+>14.3. Revision History</A
+></H1
+><P
+></P
+><P
+><B
+>5th June 2005</B
+></P
+><UL
+><LI
+><P
+>&#13;      Remove unnecessary col = gtk_tree_view_column_new() im hello world
+      code (leftover from migration to convenience functions).
+    </P
+></LI
+></UL
+><P
+></P
+><P
+><B
+>3rd February 2005</B
+></P
+><UL
+><LI
+><P
+>&#13;      Point out that GObjects such as GdkPixbufs retrieved with
+      gtk_tree_model_get() need to be g_object_unref()'ed after
+      use, as gtk_tree_model_get() adds a reference.
+    </P
+></LI
+><LI
+><P
+>&#13;      Added explicit (gint) event-&#62;x  double to int conversion to
+      code snippet using gtk_tree_view_get_path_at_pos() to avoid
+      compiler warnings.
+    </P
+></LI
+></UL
+><P
+></P
+><P
+><B
+>9th September 2004</B
+></P
+><UL
+><LI
+><P
+>&#13;      Fixed another mistake in tree path explanation: text did not 
+      correspond picture (s/movie clips/movie trailers/); (thanks 
+      to Benjamin Brandt for spotting it).
+    </P
+></LI
+></UL
+><P
+></P
+><P
+><B
+>6th August 2004</B
+></P
+><UL
+><LI
+><P
+>&#13;      Fixed mistake in tree path explanation (s/4th/5th/) 
+      (thanks to both Andrew Kirillov and Benjamin Brandt 
+      for spotting it).
+    </P
+></LI
+></UL
+><P
+></P
+><P
+><B
+>30th April 2004</B
+></P
+><UL
+><LI
+><P
+>&#13;      Added Hello World
+    </P
+></LI
+></UL
+><P
+></P
+><P
+><B
+>31st March 2004</B
+></P
+><UL
+><LI
+><P
+>&#13;      Fixed fatal typo in custom list code: g_assert() in custom_list_init() should be ==, not !=
+      (spotted by mmc).
+    </P
+></LI
+><LI
+><P
+>&#13;      Added link to Owen Taylor's mail on the GtkTreeView Drag'n'Drop API.
+    </P
+></LI
+></UL
+><P
+></P
+><P
+><B
+>24th January 2004</B
+></P
+><UL
+><LI
+><P
+>&#13;      Fixed typo in code example (remove n-th row example)
+      (Thanks to roel for spotting it).
+    </P
+></LI
+><LI
+><P
+>&#13;      Changed 'Context menus' section title
+    </P
+></LI
+></UL
+><P
+></P
+><P
+><B
+>19th January 2004</B
+></P
+><UL
+><LI
+><P
+>&#13;      Expanded section on GtkTreeRowReferences, and on removing multiple rows.
+    </P
+></LI
+></UL
+><P
+></P
+><P
+><B
+>8th January 2004</B
+></P
+><UL
+><LI
+><P
+>&#13;      Added tiny section on Glade and treeviews
+    </P
+></LI
+><LI
+><P
+>&#13;      Added more detail to the section describing GtkTreePath, GtkTreeIter et.al.
+    </P
+></LI
+><LI
+><P
+>&#13;      Reformatted document structure: instead of one single chapter with lots
+       of sections, have multiple chapters (this tutorial is way to big to
+       become part of the Gtk+ tutorial anyway); enumerate chapters and sections.
+    </P
+></LI
+><LI
+><P
+>&#13;      Expanded the section on tree view columns and cell renderers, with help
+       of two diagrams by Owen Taylor (from the GUADEC 2003 Gtk+ tutorial slides).
+    </P
+></LI
+></UL
+><P
+></P
+><P
+><B
+>10th December 2003</B
+></P
+><UL
+><LI
+><P
+>&#13;      Added more information about how to remove a single row, or more specifically, the n-th row of a list store
+    </P
+></LI
+><LI
+><P
+>&#13;      Added a short example about how to pack icons into the tree view.
+    </P
+></LI
+></UL
+><P
+></P
+><P
+><B
+>28th October 2003</B
+></P
+><UL
+><LI
+><P
+>&#13;      Editable cells will work fine even if selection is set to GTK_SELECTION_NONE. Removed sentences that say otherwise.
+    </P
+></LI
+></UL
+><P
+></P
+><P
+><B
+>23rd October 2003</B
+></P
+><UL
+><LI
+><P
+>&#13;      fix 'jumpy' selections in custom model GtkTreeSortable interface implementation. gtk_tree_model_rows_reordered() does not
+      seem to work like the API reference implies (see <A
+HREF="http://bugs.gnome.org/show_bug.cgi?id=124790"
+TARGET="_top"
+>bug #124790</A
+>)
+    </P
+></LI
+><LI
+><P
+>&#13;      added section about how to get the cell renderer a button click happened on
+    </P
+></LI
+><LI
+><P
+>&#13;      added section about editable cells with spin buttons (and a CellRendererSpin implementation to the examples)
+    </P
+></LI
+></UL
+><P
+></P
+><P
+><B
+>10th October 2003</B
+></P
+><UL
+><LI
+><P
+>&#13;      make custom model GtkTreeSortable implementation emit "sort-column-changed" signal when sortid is changed
+    </P
+></LI
+><LI
+><P
+>&#13;      fixed code typo in selection function section; added a paragraph about rule hint to 'make whole row coloured or bold' section
+    </P
+></LI
+></UL
+><P
+></P
+><P
+><B
+>7th October 2003</B
+></P
+><UL
+><LI
+><P
+>&#13;      Reformatted source code to make it fit on pages when generating ps/pdf output
+    </P
+></LI
+><LI
+><P
+>&#13;      Added link to PDF and docbook XML versions.
+    </P
+></LI
+></UL
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-treeviewtut-credits.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Credits</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="sec-treeviewtut-license.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

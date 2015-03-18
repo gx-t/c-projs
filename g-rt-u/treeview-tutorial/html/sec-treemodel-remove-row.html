@@ -1,0 +1,329 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>Removing Rows</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="UP"
+TITLE="GtkTreeModels for Data Storage: GtkListStore and GtkTreeStore"
+HREF="sec-treemodels.html"><LINK
+REL="PREVIOUS"
+TITLE="Retrieving Row Data"
+HREF="sec-treemodel-data-retrieval.html"><LINK
+REL="NEXT"
+TITLE="Removing Multiple Rows"
+HREF="sec-treemodel-remove-many-rows.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-treemodel-data-retrieval.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. GtkTreeModels for Data Storage: GtkListStore and GtkTreeStore</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-treemodel-remove-many-rows.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-treemodel-remove-row"
+>3.6. Removing Rows</A
+></H1
+><P
+>&#13;Rows can easily be removed with <A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkListStore.html#gtk-list-store-remove"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>gtk_list_store_remove</TT
+></A
+> and
+<A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkTreeStore.html#gtk-tree-store-remove"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>gtk_tree_store_remove</TT
+></A
+>. The removed row will
+automatically be removed from the tree view as well, and all data
+stored will automatically be freed, with the exception of
+<TT
+CLASS="literal"
+>G_TYPE_POINTER</TT
+> columns (see above).
+</P
+><P
+>&#13;Removing a single row is fairly straight forward: you need to get the iter that
+identifies the row you want to remove, and then use one of the above functions.
+Here is a simple example that removes a row when you double-click on it (bad from
+a user interface point of view, but then it is just an example):
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;
+  static void
+  onRowActivated (GtkTreeView        *view,
+                  GtkTreePath        *path,
+                  GtkTreeViewColumn  *col,
+                  gpointer            user_data)
+  {
+    GtkTreeModel *model;
+    GtkTreeIter   iter;
+
+    g_print ("Row has been double-clicked. Removing row.\n");
+
+    model = gtk_tree_view_get_model(view);
+
+    if (!gtk_tree_model_get_iter(model, &#38;iter, path))
+      return; /* path describes a non-existing row - should not happen */
+
+    gtk_list_store_remove(GTK_LIST_STORE(model), &#38;iter);
+  }
+
+
+  void
+  create_treeview (void)
+  {
+    ...
+    g_signal_connect(treeview, "row-activated", G_CALLBACK(onRowActivated), NULL);
+    ...
+  }
+
+</PRE
+></TD
+></TR
+></TABLE
+><P
+>&#13;<I
+CLASS="emphasis"
+>Note:</I
+> <A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkListStore.html#gtk-list-store-remove"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>gtk_list_store_remove</TT
+></A
+> and
+<A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkTreeStore.html#gtk-tree-store-remove"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>gtk_tree_store_remove</TT
+></A
+> both have slightly different
+semantics in Gtk+-2.0 and Gtk+-2.2 and later. In Gtk+-2.0, both functions do
+not return a value, while in later Gtk+ versions those functions return either
+<TT
+CLASS="literal"
+>TRUE</TT
+> or <TT
+CLASS="literal"
+>FALSE</TT
+> to indicate whether the
+iter given has been set to the next valid row (or invalidated if there is no
+next row). This is important to keep in mind when writing code that is supposed
+to work with all Gtk+-2.x versions. In that case you should just ignore the
+value returned (as in the call above) and check the iter with
+<A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkListStore.html#gtk-list-store-iter-is-valid"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>gtk_list_store_iter_is_valid</TT
+></A
+> if you need it.
+</P
+><P
+>&#13;If you want to remove the n-th row from a list (or the n-th child of a tree node),
+you have two approaches: either you first create a <TT
+CLASS="literal"
+>GtkTreePath</TT
+>
+that describes that row and then turn it into an iter and remove it; or you take
+the iter of the parent node and use
+<A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkTreeModel.html#gtk-tree-model-iter-nth-child"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>gtk_tree_model_iter_nth_child</TT
+></A
+> (which will also work
+for list stores if you use <TT
+CLASS="literal"
+>NULL</TT
+> as the parent iter. Of course
+you could also start with the iter of the first top-level row, and then step-by-step
+move it to the row you want, although that seems a rather awkward way of doing it.
+</P
+><P
+>&#13;The following code snippet will remove the n-th row of a list if it exists:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;
+   /******************************************************************
+    *
+    *  list_store_remove_nth_row
+    *
+    *  Removes the nth row of a list store if it exists.
+    *
+    *  Returns TRUE on success or FALSE if the row does not exist.
+    *
+    ******************************************************************/
+
+   gboolean
+   list_store_remove_nth_row (GtkListStore *store, gint n)
+   {
+     GtkTreeIter  iter;
+
+     g_return_val_if_fail (GTK_IS_LIST_STORE(store), FALSE);
+
+     /* NULL means the parent is the virtual root node, so the
+      *  n-th top-level element is returned in iter, which is
+      *  the n-th row in a list store (as a list store only has
+      *  top-level elements, and no children) */
+     if (gtk_tree_model_iter_nth_child(GTK_TREE_MODEL(store), &#38;iter, NULL, n))
+     {
+       gtk_list_store_remove(store, &#38;iter);
+       return TRUE;
+     }
+
+     return FALSE;
+   }
+
+</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-treemodel-data-retrieval.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-treemodel-remove-many-rows.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Retrieving Row Data</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="sec-treemodels.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Removing Multiple Rows</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

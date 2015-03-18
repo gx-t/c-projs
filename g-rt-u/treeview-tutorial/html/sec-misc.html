@@ -1,0 +1,318 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>Miscellaneous</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="PREVIOUS"
+TITLE="Editable Spin Button Cells"
+HREF="sec-editable-cells-spin.html"><LINK
+REL="NEXT"
+TITLE="Column Expander Visibility"
+HREF="sec-misc-expander-visibility.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="chapter"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-editable-cells-spin.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-misc-expander-visibility.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="chapter"
+><H1
+><A
+NAME="sec-misc"
+></A
+>Chapter 9. Miscellaneous</H1
+><P
+>&#13;This section deals with issues and questions that did not seem to
+fit in anywhere else. If you can think of something else that should
+be dealt with here, do not hesitate to send a mail to
+<CODE
+CLASS="email"
+>&#60;<A
+HREF="mailto:tim at centricular dot net"
+>tim at centricular dot net</A
+>&#62;</CODE
+>.
+</P
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-misc-column-index"
+>9.1. Getting the Column Number from a Tree View Column Widget</A
+></H1
+><P
+>&#13;Signal callbacks often only get passed a pointer to a
+<TT
+CLASS="literal"
+>GtkTreeViewColumn</TT
+> when the application programmer
+really just wants to know which column <I
+CLASS="emphasis"
+>number</I
+>
+was affected. There are two ways to find out the position of a column
+within the tree view. One way is to write a small helper function that
+looks up the column number from a given tree view column object,
+like this for example:
+
+<A
+NAME="AEN998"
+HREF="#FTN.AEN998"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>.
+
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;  /* Returns column number or -1 if not found or on error */
+
+  gint
+  get_col_number_from_tree_view_column (GtkTreeViewColumn *col)
+  {
+    GList *cols;
+    gint   num;
+
+    g_return_val_if_fail ( col != NULL, -1 );
+    g_return_val_if_fail ( col-&#62;tree_view != NULL, -1 );
+
+    cols = gtk_tree_view_get_columns(GTK_TREE_VIEW(col-&#62;tree_view));
+
+    num = g_list_index(cols, (gpointer) col);
+
+    g_list_free(cols);
+
+    return num;
+  }
+</PRE
+></TD
+></TR
+></TABLE
+><P
+>&#13;Alternatively, it is possible to use <TT
+CLASS="literal"
+>g_object_set_data</TT
+>
+and <TT
+CLASS="literal"
+>g_object_get_data</TT
+> on the tree view column in order
+to identify which column it is. This also has the advantage that you can
+still keep track of your columns even if the columns get re-ordered within
+the tree view (a feature which is usually disabled though). Use like this:
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;  ...
+
+  enum
+  {
+    COL_FIRSTNAME,
+    COL_SURNAME,
+  };
+
+  ...
+
+  void
+  some_callback (GtkWidget *treeview, ..., GtkTreeViewColumn *col, ...)
+  {
+    guint colnum = GPOINTER_TO_UINT(g_object_get_data(G_OBJECT(col), "columnnum"));
+
+    ...
+  }
+
+  void
+  create_view(void)
+  {
+    ...
+    col = gtk_tree_view_column_new();
+    g_object_set_data(G_OBJECT(col), "columnnum", GUINT_TO_POINTER(COL_FIRSTNAME));
+    ...
+    col = gtk_tree_view_column_new();
+    g_object_set_data(G_OBJECT(col), "columnnum", GUINT_TO_POINTER(COL_SURNAME));
+    ...
+  }
+</PRE
+></TD
+></TR
+></TABLE
+><P
+>&#13;<TT
+CLASS="literal"
+>"columnnum"</TT
+> is a random string in the above
+example - you can use whatever string you want instead, or store
+multiple bits of data (with different string identifiers of course).
+Of course you can also combine both approaches, as they do slightly
+different things (the first tracks the 'physical' position of a
+column within the tree view, the second tracks the 'meaning' of a
+column to you, independent of its position within the view).
+</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN998"
+HREF="sec-misc.html#AEN998"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>This function has been inspired by
+  <A
+HREF="http://mail.gnome.org/archives/gtk-list/2003-July/msg00060.html"
+TARGET="_top"
+>&#13;  this</A
+> mailing list message (thanks to Ken Rastatter for the link and
+  the topic suggestion).
+  </P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-editable-cells-spin.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-misc-expander-visibility.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Editable Spin Button Cells</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Column Expander Visibility</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

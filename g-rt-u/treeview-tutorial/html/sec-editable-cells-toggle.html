@@ -1,0 +1,229 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>Editable Toggle and Radio Button Cells</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="UP"
+TITLE="Editable Cells"
+HREF="sec-editable-cells.html"><LINK
+REL="PREVIOUS"
+TITLE="Editable Cells"
+HREF="sec-editable-cells.html"><LINK
+REL="NEXT"
+TITLE="Editable Spin Button Cells"
+HREF="sec-editable-cells-spin.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-editable-cells.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 8. Editable Cells</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-editable-cells-spin.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-editable-cells-toggle"
+>8.2. Editable Toggle and Radio Button Cells</A
+></H1
+><P
+>&#13;Just like you can set a <TT
+CLASS="literal"
+>GtkCellRendererText</TT
+> editable,
+you can specify whether a <TT
+CLASS="literal"
+>GtkCellRendererToggle</TT
+> should
+change its state when clicked by setting the <TT
+CLASS="literal"
+>"activatable"</TT
+>
+property - either when you create the renderer (in which case all cells in
+that column will be clickable) or by connecting the renderer property to a
+model column of boolean type via attributes.
+</P
+><P
+>&#13;Connect to the <TT
+CLASS="literal"
+>"toggled"</TT
+> signal of the toggle cell
+renderer to be notified when the user clicks on a toggle button
+(or radio button). The user click will not change the value in the
+store, or the appearance of the value rendered. The toggle button will
+only change state when you update the value in the store. Until then
+it will be in an "inconsistent" state, which is also why you should
+read the current value of that cell from the model, and not from the
+cell renderer.
+</P
+><P
+>&#13;The callback for the <TT
+CLASS="literal"
+>"toggled"</TT
+> signal looks like this
+(the API reference is a bit lacking in this particular case):
+</P
+><TABLE
+BORDER="0"
+BGCOLOR="#e3e3c4"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="programlisting"
+>&#13;void        cell_toggled_callback (GtkCellRendererToggle *cell,
+                                   gchar                 *path_string,
+                                   gpointer               user_data);
+</PRE
+></TD
+></TR
+></TABLE
+><P
+>&#13;Just like with the <TT
+CLASS="literal"
+>"edited"</TT
+> signal of the text cell renderer,
+the tree path is passed to the <TT
+CLASS="literal"
+>"toggled"</TT
+> signal callback
+in string form. You can convert this into a <TT
+CLASS="literal"
+>GtkTreePath</TT
+> with
+<A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkTreeModel.html#gtk-tree-path-new-from-string"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>gtk_tree_path_new_from_string</TT
+></A
+>, or convert it into an
+iter with <A
+HREF="http://developer.gnome.org/doc/API/2.0/gtk/GtkTreeModel.html#gtk-tree-model-get-iter-from-string"
+TARGET="_top"
+>&#13;<TT
+CLASS="literal"
+>gtk_tree_model_get_iter_from_string</TT
+></A
+>.
+</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-editable-cells.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-editable-cells-spin.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Editable Cells</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="sec-editable-cells.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Editable Spin Button Cells</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

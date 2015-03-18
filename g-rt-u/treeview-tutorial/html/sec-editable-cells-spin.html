@@ -1,0 +1,193 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>Editable Spin Button Cells</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="UP"
+TITLE="Editable Cells"
+HREF="sec-editable-cells.html"><LINK
+REL="PREVIOUS"
+TITLE="Editable Toggle and Radio Button Cells"
+HREF="sec-editable-cells-toggle.html"><LINK
+REL="NEXT"
+TITLE="Miscellaneous"
+HREF="sec-misc.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-editable-cells-toggle.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 8. Editable Cells</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-misc.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-editable-cells-spin"
+>8.3. Editable Spin Button Cells</A
+></H1
+><P
+>&#13;Even though <TT
+CLASS="literal"
+>GtkSpinButton</TT
+> implements the
+<TT
+CLASS="literal"
+>GtkCellEditable</TT
+> interface (as does
+<TT
+CLASS="literal"
+>GtkEntry</TT
+>), there is no easy way to get
+a cell renderer that uses a spin button instead of a normal
+entry when in editing mode.
+</P
+><P
+>&#13;To get this functionality, you need to either write a new
+cell renderer that works very similar to <TT
+CLASS="literal"
+>GtkCellRendererText</TT
+>,
+or you need to write a new cell renderer class that derives from
+the text cell renderer and changes the behaviour in editing mode.
+</P
+><P
+>&#13;The cleanest solution would probably be to write a 'CellRendererNumeric'
+that does everything that the text cell renderer does, only that it
+has a float type property instead of the <TT
+CLASS="literal"
+>"text"</TT
+>
+property, and an additional digits property. However, no one seems
+to have done this yet, so you need to either write one, or find
+another solution to get spin buttons in editing mode.
+</P
+><P
+>&#13;Among this tutorial's code examples there is a hackish CellRendererSpin
+implementation which is based on <TT
+CLASS="literal"
+>GtkCellRendererText</TT
+>
+and shows spin buttons in editing mode. The implementation is not very
+refined though, so you need to make sure it works in your particular
+context, and modify it as needed.
+</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-editable-cells-toggle.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-misc.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Editable Toggle and Radio Button Cells</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="sec-editable-cells.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Miscellaneous</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

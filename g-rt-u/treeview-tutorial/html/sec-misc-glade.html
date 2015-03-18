@@ -1,0 +1,229 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN""http://www.w3.org/TR/html4/loose.dtd">
+<HTML
+><HEAD
+><TITLE
+>Glade and Tree Views</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.79"><LINK
+REL="HOME"
+TITLE="GTK+ 2.0 Tree View Tutorial"
+HREF="treeview-tutorial.html"><LINK
+REL="UP"
+TITLE="Miscellaneous"
+HREF="sec-misc.html"><LINK
+REL="PREVIOUS"
+TITLE="Getting the Cell Renderer a Click Event Happened On"
+HREF="sec-misc-get-renderer-from-click.html"><LINK
+REL="NEXT"
+TITLE="Drag'n'Drop (DnD) **** needs revision ***"
+HREF="sec-dnd.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="./treeview-tutorial.css"></HEAD
+><BODY
+CLASS="sect1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>GTK+ 2.0 Tree View Tutorial</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="sec-misc-get-renderer-from-click.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 9. Miscellaneous</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="sec-dnd.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="95%"></DIV
+><DIV
+CLASS="sect1"
+><H1
+CLASS="sect1"
+><A
+NAME="sec-misc-glade"
+>9.4. Glade and Tree Views</A
+></H1
+><P
+>&#13;A frequently asked question is how you can add columns to a <TT
+CLASS="literal"
+>GtkTreeView</TT
+>
+in <A
+HREF="http://glade.gnome.org"
+TARGET="_top"
+>Glade</A
+>.
+<A
+NAME="AEN1044"
+HREF="#FTN.AEN1044"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+>
+The answer is basically that you don't, and that you can't. The only thing glade/libglade
+can do for you is to create the <TT
+CLASS="literal"
+>GtkTreeView</TT
+> for you with nothing in it.
+You will need to look up the tree view widget at the start of your application (after the
+interface has been created of course), and connect your list store or tree store to it.
+Then you will need to add <TT
+CLASS="literal"
+>GtkTreeViewColumn</TT
+>s and cell renderers to display
+the information from the model as you want it to be displayed. You will need to do all
+that from within your application.
+</P
+><P
+>&#13;An alternative approach is to derive your own special widget from <TT
+CLASS="literal"
+>GtkTreeView</TT
+>
+that sets up everything as you want it to, and then use the 'custom widget' function in glade.
+Of course this still means that you have to write all the code to fill in the columns and
+cell renderers and to create the model yourself.
+</P
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN1044"
+HREF="sec-misc-glade.html#AEN1044"
+><SPAN
+CLASS="footnote"
+>[1]</SPAN
+></A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>&#13; Do <I
+CLASS="emphasis"
+>not</I
+> use Glade to generate code for you. Use Glade to create
+ the interface. It will save the interface into a .glade file in XML format. You can
+ then use libglade2 to construct your interface (windows etc.) from that .glade file.
+ See <A
+HREF="http://lists.ximian.com/archives/public/glade-devel/2003-February/000015.html"
+TARGET="_top"
+>&#13; this mailing list message for a short discussion about why you should avoid Glade
+ code generation</A
+>.
+ </P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="95%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="95%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="sec-misc-get-renderer-from-click.html"
+ACCESSKEY="P"
+>&#60;&#60;&#60; Previous</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="treeview-tutorial.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="sec-dnd.html"
+ACCESSKEY="N"
+>Next &#62;&#62;&#62;</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Getting the Cell Renderer a Click Event Happened On</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="sec-misc.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Drag'n'Drop (DnD) **** needs revision ***</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>
