@@ -34,13 +34,13 @@ static int simple_blink_main(int argc, char* argv[]) {
 		perror("mmap");
 		return 3;
 	}
-	volatile unsigned *portb_sodr = map_base + 0x630;
-	volatile unsigned *portb_codr = map_base + 0x634;
+	*(unsigned*)(map_base + 0x600) = 1; //enable port
+	*(unsigned*)(map_base + 0x610) = 1; //enable output
 	while(1) {
-		*portb_sodr = 1;
-		usleep(200000);
-		*portb_codr = 1;
-		usleep(200000);
+		*(unsigned*)(map_base + 0x630) = 1;
+		usleep(100000);
+		*(unsigned*)(map_base + 0x634) = 1;
+		usleep(100000);
 	}
 	munmap((void*)map_base, MAP_SIZE);
 	return 0;
