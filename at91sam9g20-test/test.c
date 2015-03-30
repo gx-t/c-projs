@@ -16,33 +16,48 @@
 //PIOB_IDR Interrupt disable register
 //http://forum.lazarus.freepascal.org/index.php?topic=21907.0
 //https://www.fbi.h-da.de/fileadmin/personal/m.pester/mps/Termin2/Termin2.pdf
+//http://www.keil.com/dd/docs/arm/atmel/sam9g20/at91sam9g20.h
+//http://forum.arduino.cc/index.php?topic=258619.0
 #define MAP_SIZE 4096UL
+#define IOPB_PER(_b) (*(unsigned*)(_b + 0x600))
+#define IOPB_OER(_b) (*(unsigned*)(_b + 0x610))
+#define IOPB_SODR(_b) (*(unsigned*)(_b + 0x630))
+#define IOPB_CODR(_b) (*(unsigned*)(_b + 0x634))
 
+static void* lib_open_base() {
+	void* map_base = 0;
+	int fd = open("/dev/mem", O_RDWR | O_SYNC);
+	if(fd == -1) {
+		perror("/dev/mem");
+		return 0;
+	}
+	map_base = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0xfffff000);
+	close(fd);
+	if(MAP_FAILED == map_base) {
+		perror("mmap");
+		return 0;
+	}
+	return map_base;
+}
 
+static void lib_close_base(void* map_base) {
+	munmap(map_base, MAP_SIZE);
+}
 
 static int simple_blink_main(int argc, char* argv[]) {
 	(void)argc;
 	(void)argv;
-	int fd = open("/dev/mem", O_RDWR | O_SYNC);
-	if(fd == -1) {
-		perror("/dev/mem");
-		return 2;
-	}
-	volatile void* map_base = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0xfffff000);
-	close(fd);
-	if(MAP_FAILED == map_base) {
-		perror("mmap");
-		return 3;
-	}
-	*(unsigned*)(map_base + 0x600) = 1; //enable port
-	*(unsigned*)(map_base + 0x610) = 1; //enable output
+	volatile void* map_base = lib_open_base();
+	if(!map_base) return 3;
+	IOPB_PER(map_base) = 1;
+	IOPB_OER(map_base) = 1;
 	while(1) {
-		*(unsigned*)(map_base + 0x630) = 1;
+		IOPB_SODR(map_base) = 1;
 		usleep(100000);
-		*(unsigned*)(map_base + 0x634) = 1;
+		IOPB_CODR(map_base) = 1;
 		usleep(100000);
 	}
-	munmap((void*)map_base, MAP_SIZE);
+	lib_close_base((void*)map_base);
 	return 0;
 }
 
