@@ -5,7 +5,6 @@
 #include<stdio.h>
 #include<fcntl.h>
 #include<string.h>
-#include "at91sam9g20.h"
 //
 //PIOB_PER Port Enable Register
 //PIOB_OER Output Enable Register
@@ -18,18 +17,29 @@
 //http://forum.lazarus.freepascal.org/index.php?topic=21907.0
 //https://www.fbi.h-da.de/fileadmin/personal/m.pester/mps/Termin2/Termin2.pdf
 #define MAP_SIZE 4096UL
-#define MAP_MASK (MAP_SIZE - 1)
+
+
 
 static int simple_blink_main(int argc, char* argv[]) {
 	(void)argc;
 	(void)argv;
 	int fd = open("/dev/mem", O_RDWR | O_SYNC);
-	volatile void* map_base = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, PIOB_BASE  & ~MAP_MASK);
+	if(fd == -1) {
+		perror("/dev/mem");
+		return 2;
+	}
+	volatile void* map_base = mmap(0, MAP_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0xfffff000);
 	close(fd);
+	if(MAP_FAILED == map_base) {
+		perror("mmap");
+		return 3;
+	}
+	volatile unsigned *portb_sodr = map_base + 0x630;
+	volatile unsigned *portb_codr = map_base + 0x634;
 	while(1) {
-		*((unsigned long *) (map_base + (PIOB_CODR & MAP_MASK))) = 1;
+		*portb_sodr = 1;
 		usleep(200000);
-		*((unsigned long *) (map_base + (PIOB_SODR & MAP_MASK))) = 1;
+		*portb_codr = 1;
 		usleep(200000);
 	}
 	munmap((void*)map_base, MAP_SIZE);
