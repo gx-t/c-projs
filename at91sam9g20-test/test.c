@@ -24,7 +24,7 @@
 #define IOPB_SODR(_b) (*(unsigned*)(_b + 0x630))
 #define IOPB_CODR(_b) (*(unsigned*)(_b + 0x634))
 
-
+//board pin to bit shift for PIOB
 static int lib_piob_from_pin(int pin) {
 	if(pin < 3 || pin == 17 || pin == 18 || pin > 31) return -1;
 	return pin - 3;
