@@ -24,6 +24,12 @@
 #define IOPB_SODR(_b) (*(unsigned*)(_b + 0x630))
 #define IOPB_CODR(_b) (*(unsigned*)(_b + 0x634))
 
+
+static int lib_piob_from_pin(int pin) {
+	if(pin < 3 || pin == 17 || pin == 18 || pin > 31) return -1;
+	return pin - 3;
+}
+
 static void* lib_open_base() {
 	void* map_base = 0;
 	int fd = open("/dev/mem", O_RDWR | O_SYNC);
@@ -61,11 +67,23 @@ static int simple_blink_main(int argc, char* argv[]) {
 	return 0;
 }
 
+static int piob_onoff_show_usage(int err, const char* msg) {
+	static const char* err_fmt = "%s\nUsage: test piob-onoff on|off <pin>[<pin>...]\n";
+	fprintf(stderr, err_fmt, msg);
+	return err;
+}
+
+static int piob_onoff_main(int argc, char* argv[]) {
+	if(argc < 2) return piob_onoff_show_usage(3, "Not enough arguments for piob-onoff");
+	return 0;
+}
+
 static int show_usage(int err) {
 	const char* msg = "Usage: test <command> <args>\n"\
 	"Commands:\n"\
-	"\tsimple-blink";
-	puts(msg);
+	"\tsimple-blink\n"\
+	"\tpiob-onoff\n";
+	fputs(msg, stderr);
 	return err;
 }
 
@@ -74,6 +92,7 @@ int main(int argc, char* argv[]) {
 	argc --;
 	argv ++;
 	if(!strcmp(*argv, "simple-blink")) return simple_blink_main(argc, argv);
+	if(!strcmp(*argv, "piob-onoff")) return piob_onoff_main(argc, argv);
 	fprintf(stderr, "Unknown command: %s\n", *argv);
 	return show_usage(2);
 }
