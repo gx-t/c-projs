@@ -1,10 +1,11 @@
 #include <stdio.h>
-#include<unistd.h>
-#include<sys/types.h>
-#include<sys/mman.h>
-#include<stdio.h>
-#include<fcntl.h>
-#include<string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <string.h>
+#include <stdlib.h>
 //
 //PIOB_PER Port Enable Register
 //PIOB_OER Output Enable Register
@@ -50,17 +51,26 @@ static void lib_close_base(void* map_base) {
 	munmap(map_base, MAP_SIZE);
 }
 
+static int simple_blink_show_usage(int err, const char* msg) {
+	static const char* err_fmt = "%s\nUsage: test simple-blink <pin>\n";
+	fprintf(stderr, err_fmt, msg);
+	return err;
+}
+
 static int simple_blink_main(int argc, char* argv[]) {
-	(void)argc;
-	(void)argv;
+	if(argc != 2) return simple_blink_show_usage(3, "Invalid number of arguments for simple-blink");
+	argc --;
+	argv ++;
+	int port_bit = lib_piob_from_pin(atoi(*argv));
+	if(port_bit == -1) return simple_blink_show_usage(4, "Invalid pin number. Only \"B\" pins are supported");
 	volatile void* map_base = lib_open_base();
 	if(!map_base) return 3;
 	IOPB_PER(map_base) = 1;
 	IOPB_OER(map_base) = 1;
 	while(1) {
-		IOPB_SODR(map_base) = 1;
+		IOPB_SODR(map_base) = 1 << port_bit;
 		usleep(100000);
-		IOPB_CODR(map_base) = 1;
+		IOPB_CODR(map_base) = 1 << port_bit;
 		usleep(100000);
 	}
 	lib_close_base((void*)map_base);
@@ -75,6 +85,8 @@ static int piob_onoff_show_usage(int err, const char* msg) {
 
 static int piob_onoff_main(int argc, char* argv[]) {
 	if(argc < 2) return piob_onoff_show_usage(3, "Not enough arguments for piob-onoff");
+	argc --;
+	argv ++;
 	return 0;
 }
 
