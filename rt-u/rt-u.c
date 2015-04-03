@@ -1619,50 +1619,63 @@ static int http_main(int argc, char* argv[])
 //jpeg_main
 static int jpeg_main(int argc, char* argv[])
 {
-/*  unsigned read_u16_le()
+  //little endian read unsigned short
+  unsigned read_u16_le()
   {
-    return fgetc(stdin) | fgetc(stdin) << 8;
+    return (unsigned)fgetc(stdin) | (unsigned)fgetc(stdin) << 8;
   }
+  //big endian read unsigned short
   unsigned read_u16_be()
   {
-    return fgetc(stdin) << 8 | fgetc(stdin);
+    return (unsigned)fgetc(stdin) << 8 | (unsigned)fgetc(stdin);
   }
+  //little endian read unsigned int
   unsigned read_u32_le(char* data)
   {
-    return fgetc(stdin) | fgetc(stdin) << 8 | fgetc(stdin) << 16 | fgetc(stdin) << 24);
+    return (unsigned)fgetc(stdin) | (unsigned)fgetc(stdin) << 8 |
+           (unsigned)fgetc(stdin) << 16 | (unsigned)fgetc(stdin) << 24;
   }
+  //big endian read unsigned int
   unsigned read_u32_be(char* data)
   {
-    return fgetc(stdin) << 24 | fgetc(stdin) << 16 | fgetc(stdin) << 8 | fgetc(stdin);
+    return (unsigned)fgetc(stdin) << 24 | (unsigned)fgetc(stdin) << 16 |
+           (unsigned)fgetc(stdin) << 8 | (unsigned)fgetc(stdin);
   }
-  unsigned (*read_u16)(char*);
-  unsigned (*read_u32)(char*);
+  //endian-dependent read for unsigned short and int
+  unsigned (*read_u16)();
+  unsigned (*read_u32)();
   unsigned i, j, a;
-  if(0xFF != fgetc(stdin) || 0xD8 != fgetc(stdin))
+  //JPEG always begins with 0xFF, 0xD8
+  if(0xff != fgetc(stdin) || 0xd8 != fgetc(stdin))
   {
-    fputs("Invalid JPEG input stream - must begin with 0xFF, 0xD8.\n", stderr);
+    fputs("Invalid JPEG input stream - must begin with 0xff, 0xd8.\n", stderr);
     return ERR_JPEG_INVALID_STREAM;
   }
+  //up to 19 sections in JPEG
   for(i = 0; i < 19; i ++)
   {
+    //maximum 7 padding bytes in row
     for(j = 0; j < 8 && 0xFF == (a = fgetc(stdin)); j ++);
-    if(a == 0xFF)
+    if(a == 0xff)
     {
       fputs("Too many padding bytes in input stream.\n", stderr);
       return ERR_JPEG_INVALID_STREAM;
     }
+    //setion length is always big endian
     int sec_len = fgetc(stdin) << 8 | fgetc(stdin);
     if(sec_len < 2)
     {
-      fputs("Invalid marker.\n", stderr);
+      fputs("Invalid section length.\n", stderr);
       return ERR_JPEG_INVALID_STREAM;
     }
-    if(a != 0xE1) //not EXIF
+    //pass section if not EXIF
+    if(a != 0xe1)
     {
       char data[sec_len - 2];
-      fread(...);
+      fread(data, 1, sizeof(data), stdin);
       continue;
     }
+    //EXIF header: 0x45, 0x78, 0x69, 0x66, 0x00, 0x00
     if(fgetc(stdin) != 0x45 || fgetc(stdin) != 0x78 || fgetc(stdin) != 0x69 || fgetc(stdin) != 0x66 || fgetc(stdin) != 0x00 || fgetc(stdin) != 0x00)
     {
       fputs("Invalid EXIF header.\n", stderr);
@@ -1678,12 +1691,15 @@ static int jpeg_main(int argc, char* argv[])
       read_u16 = read_u16_le;
       read_u32 = read_u32_le;
     }
+    //EXIF data start: 0x2a, 0x08
     if(0x2a != read_u16() || 0x08 != read_u32())
     {
       fputs("Invalid EXIF data start.\n", stderr);
       return ERR_JPEG_EXIF;
     }
+    //number of EXIF directories
     unsigned num_dirs = read_u16();
+    //search GPS data directory
     for(j = 0; j < num_dirs; j ++)
     {
       unsigned tag = read_u16();
@@ -1694,12 +1710,19 @@ static int jpeg_main(int argc, char* argv[])
         return ERR_JPEG_EXIF;
       }
       unsigned comp = read_u32();
+      //if tag is not GPSINFO - go ahead
+      if(tag != 0x8825) continue;
       static const unsigned bytes_per_format[] = {0, 1, 1, 2, 4, 8, 1, 1, 2, 4, 8, 4, 8};
       unsigned byte_count = comp * bytes_per_format[format];
+      //if byte count is more than 4 the value is value offset, else it is value itself
+      char data[48];
+      fread(data, 1, sizeof(data) - 1, stdin);
+      data[sizeof(data) - 1] = 0;
+      fputs(data, stderr);
       
     }
     return ERR_OK;
-  }*/
+  }
   return ERR_JPEG_NO_EXIF;
 }
 

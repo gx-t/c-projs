@@ -12,6 +12,9 @@ deb32:
 rel32:
 	gcc -Wall -O2 -m32 -s -o $(NAME) $(NAME).c $(LINK) `pkg-config --cflags --libs sdl`
 
+valgrind:	
+	valgrind --leak-check=full --track-origins=yes ./$(NAME) 2> valgrind.log
+
 clean:
 	rm $(NAME)
 

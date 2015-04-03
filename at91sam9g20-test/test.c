@@ -47,8 +47,8 @@ static void* lib_open_base() {
 	return map_base;
 }
 
-static void lib_close_base(void* map_base) {
-	munmap(map_base, MAP_SIZE);
+static void lib_close_base(volatile void* map_base) {
+	munmap((void*)map_base, MAP_SIZE);
 }
 
 static int simple_blink_show_usage(int err, const char* msg) {
@@ -73,7 +73,7 @@ static int simple_blink_main(int argc, char* argv[]) {
 		IOPB_CODR(map_base) = 1 << port_bit;
 		usleep(100000);
 	}
-	lib_close_base((void*)map_base);
+	lib_close_base(map_base);
 	return 0;
 }
 
@@ -83,11 +83,40 @@ static int piob_onoff_show_usage(int err, const char* msg) {
 	return err;
 }
 
-static int piob_onoff_main(int argc, char* argv[]) {
-	if(argc < 2) return piob_onoff_show_usage(3, "Not enough arguments for piob-onoff");
+static int piob_onoff_state(int func, int argc, char* argv[]) {
 	argc --;
 	argv ++;
+	unsigned flags = 0;
+	while(argc --) {
+		int port_bit = lib_piob_from_pin(atoi(*argv));
+		if(port_bit == -1) {
+			fprintf(stderr, "Invalid pin number: %s. Only \"B\" pins are supported\n", *argv);
+			continue;
+		}
+		argv ++;
+		flags |= (1 << port_bit);
+	}
+	if(!flags) return piob_onoff_show_usage(5, "No ports selected - nothing to do");
+	volatile void* map_base = lib_open_base();
+	if(!map_base) return 6;
+	IOPB_PER(map_base) = flags;
+	IOPB_OER(map_base) = flags;
+	if(func) {
+		IOPB_SODR(map_base) = flags;
+	} else {
+		IOPB_CODR(map_base) = flags;
+	}
+	lib_close_base(map_base);
 	return 0;
+}
+
+static int piob_onoff_main(int argc, char* argv[]) {
+	if(argc < 3) return piob_onoff_show_usage(3, "Not enough arguments for piob-onoff");
+	argc --;
+	argv ++;
+	if(!strcmp(*argv, "on")) return piob_onoff_state(1, argc, argv);
+	if(!strcmp(*argv, "off")) return piob_onoff_state(0, argc, argv);
+	return piob_onoff_show_usage(4, "Illegal state value for port");
 }
 
 static int show_usage(int err) {

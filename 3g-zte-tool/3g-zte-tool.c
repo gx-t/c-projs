@@ -58,7 +58,7 @@ enum
 
 #define RESP_BUFF_SIZE 256
 #define Z_DEF_TRYCOUNT 3
-#define Z_DEF_TIMEOUT 1
+#define Z_DEF_TIMEOUT 2
 #define Z_LISTOPER_TIMEOUT 30
 
 static const char* g_cmd_port = "/dev/ttyUSB1";
