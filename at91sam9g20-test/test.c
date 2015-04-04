@@ -19,11 +19,24 @@
 //https://www.fbi.h-da.de/fileadmin/personal/m.pester/mps/Termin2/Termin2.pdf
 //http://www.keil.com/dd/docs/arm/atmel/sam9g20/at91sam9g20.h
 //http://forum.arduino.cc/index.php?topic=258619.0
+
+enum {
+	ERR_OK = 0,
+	ERR_ARGC,
+	ERR_CMD,
+	ERR_MMAP,
+	ERR_PIN,
+	ERR_VAL,
+};
+
 #define MAP_SIZE 4096UL
-#define IOPB_PER(_b) (*(unsigned*)(_b + 0x600))
-#define IOPB_OER(_b) (*(unsigned*)(_b + 0x610))
-#define IOPB_SODR(_b) (*(unsigned*)(_b + 0x630))
-#define IOPB_CODR(_b) (*(unsigned*)(_b + 0x634))
+#define IOPB_BASE		0x600
+#define IOPB_PER(_b)	(*(unsigned*)(_b + IOPB_BASE + 0x00))
+#define IOPB_OER(_b)	(*(unsigned*)(_b + IOPB_BASE + 0x10))
+#define IOPB_ODR(_b)	(*(unsigned*)(_b + IOPB_BASE + 0x14))
+#define IOPB_SODR(_b)	(*(unsigned*)(_b + IOPB_BASE + 0x30))
+#define IOPB_CODR(_b)	(*(unsigned*)(_b + IOPB_BASE + 0x34))
+#define IOPB_PDSR(_b)	(*(unsigned*)(_b + IOPB_BASE + 0x3C))
 
 //board pin to bit shift for PIOB
 static int lib_piob_from_pin(int pin) {
@@ -58,15 +71,15 @@ static int simple_blink_show_usage(int err, const char* msg) {
 }
 
 static int simple_blink_main(int argc, char* argv[]) {
-	if(argc != 2) return simple_blink_show_usage(3, "Invalid number of arguments for simple-blink");
+	if(argc != 2) return simple_blink_show_usage(ERR_ARGC, "Invalid number of arguments for simple-blink");
 	argc --;
 	argv ++;
 	int port_bit = lib_piob_from_pin(atoi(*argv));
-	if(port_bit == -1) return simple_blink_show_usage(4, "Invalid pin number. Only \"B\" pins are supported");
+	if(port_bit == -1) return simple_blink_show_usage(ERR_PIN, "Invalid pin number. Only \"B\" pins are supported");
 	volatile void* map_base = lib_open_base();
-	if(!map_base) return 3;
-	IOPB_PER(map_base) = 1;
-	IOPB_OER(map_base) = 1;
+	if(!map_base) return ERR_MMAP;
+	IOPB_PER(map_base) = 1 << port_bit;
+	IOPB_OER(map_base) = 1 << port_bit;
 	while(1) {
 		IOPB_SODR(map_base) = 1 << port_bit;
 		usleep(100000);
@@ -74,7 +87,7 @@ static int simple_blink_main(int argc, char* argv[]) {
 		usleep(100000);
 	}
 	lib_close_base(map_base);
-	return 0;
+	return ERR_OK;
 }
 
 static int piob_onoff_show_usage(int err, const char* msg) {
@@ -96,9 +109,9 @@ static int piob_onoff_state(int func, int argc, char* argv[]) {
 		argv ++;
 		flags |= (1 << port_bit);
 	}
-	if(!flags) return piob_onoff_show_usage(5, "No ports selected - nothing to do");
+	if(!flags) return piob_onoff_show_usage(ERR_PIN, "No pins selected - nothing to do");
 	volatile void* map_base = lib_open_base();
-	if(!map_base) return 6;
+	if(!map_base) return ERR_MMAP;
 	IOPB_PER(map_base) = flags;
 	IOPB_OER(map_base) = flags;
 	if(func) {
@@ -107,34 +120,59 @@ static int piob_onoff_state(int func, int argc, char* argv[]) {
 		IOPB_CODR(map_base) = flags;
 	}
 	lib_close_base(map_base);
-	return 0;
+	return ERR_OK;
 }
 
 static int piob_onoff_main(int argc, char* argv[]) {
-	if(argc < 3) return piob_onoff_show_usage(3, "Not enough arguments for piob-onoff");
+	if(argc < 3) return piob_onoff_show_usage(ERR_ARGC, "Not enough arguments for piob-onoff");
 	argc --;
 	argv ++;
 	if(!strcmp(*argv, "on")) return piob_onoff_state(1, argc, argv);
 	if(!strcmp(*argv, "off")) return piob_onoff_state(0, argc, argv);
-	return piob_onoff_show_usage(4, "Illegal state value for port");
+	return piob_onoff_show_usage(ERR_VAL, "Illegal state value for port");
+}
+
+static int piob_read_show_usage(int err, const char* msg) {
+	static const char* err_fmt = "%s\nUsage: test piob-read <pin>\n";
+	fprintf(stderr, err_fmt, msg);
+	return err;
+}
+
+static int piob_read_main(int argc, char* argv[]) {
+	if(argc < 2) return piob_read_show_usage(ERR_ARGC, "Not enough arguments for piob-onoff");
+	argc --;
+	argv ++;
+	int pin = atoi(*argv);
+	int port_bit = lib_piob_from_pin(pin);
+	if(port_bit == -1) return piob_read_show_usage(ERR_PIN, "Invalid pin number. Only \"B\" pins are supported");
+	volatile void* map_base = lib_open_base();
+	if(!map_base) return ERR_MMAP;
+	IOPB_PER(map_base) = 1;
+	IOPB_ODR(map_base) = 1 << port_bit;
+	int data_bit = IOPB_PDSR(map_base) & (1 << port_bit);
+	printf("pin %d %s\n", pin, data_bit ? "on":"off");
+	lib_close_base(map_base);
+	return ERR_OK;
 }
 
 static int show_usage(int err) {
 	const char* msg = "Usage: test <command> <args>\n"\
 	"Commands:\n"\
 	"\tsimple-blink\n"\
-	"\tpiob-onoff\n";
+	"\tpiob-onoff\n"\
+	"\tpiob-read\n";
 	fputs(msg, stderr);
 	return err;
 }
 
 int main(int argc, char* argv[]) {
-	if(argc < 2) return show_usage(1);
+	if(argc < 2) return show_usage(ERR_ARGC);
 	argc --;
 	argv ++;
 	if(!strcmp(*argv, "simple-blink")) return simple_blink_main(argc, argv);
 	if(!strcmp(*argv, "piob-onoff")) return piob_onoff_main(argc, argv);
+	if(!strcmp(*argv, "piob-read")) return piob_read_main(argc, argv);
 	fprintf(stderr, "Unknown command: %s\n", *argv);
-	return show_usage(2);
+	return show_usage(ERR_CMD);
 }
 
