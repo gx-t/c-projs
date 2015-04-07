@@ -4,6 +4,6 @@ deb:
 rel:
 	gcc -O2 -s -o httpcom httpcom.c
 
-httpcom_arm:
-	arm-linux-gcc -O2 -s -o httpcom httpcom.c
+arm:
+	arm-unknown-linux-gnu-gcc -O2 -s -o httpcom httpcom.c
 

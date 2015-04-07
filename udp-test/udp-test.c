@@ -189,8 +189,6 @@ static void u_cmd_message(int ss, struct sockaddr_in* addr, char* data, struct U
     fprintf(stderr, "The name: %s is not registered.\n", dest_name);
     return;
   }
-  ssize_t len = 0;
-  len 
   if(len != sendto(ss, data, len, 0, (struct sockaddr*)&dest->addr, sizeof(dest->addr))) perror("sendto");
 }
 

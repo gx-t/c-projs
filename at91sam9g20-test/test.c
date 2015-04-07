@@ -19,6 +19,7 @@
 //https://www.fbi.h-da.de/fileadmin/personal/m.pester/mps/Termin2/Termin2.pdf
 //http://www.keil.com/dd/docs/arm/atmel/sam9g20/at91sam9g20.h
 //http://forum.arduino.cc/index.php?topic=258619.0
+//https://code.google.com/p/embox/source/browse/trunk/embox/src/include/drivers/at91sam7_tcc.h?spec=svn2952&r=2952
 
 enum {
 	ERR_OK = 0,
@@ -29,7 +30,7 @@ enum {
 	ERR_VAL,
 };
 
-#define MAP_SIZE 4096UL
+#define MAP_SIZE		4096UL
 #define IOPB_BASE		0x600
 #define IOPB_PER(_b)	(*(unsigned*)(_b + IOPB_BASE + 0x00))
 #define IOPB_OER(_b)	(*(unsigned*)(_b + IOPB_BASE + 0x10))
@@ -155,24 +156,43 @@ static int piob_read_main(int argc, char* argv[]) {
 	return ERR_OK;
 }
 
-static int show_usage(int err) {
-	const char* msg = "Usage: test <command> <args>\n"\
+static int count_init_show_usage(int err, const char* msg) {
+	return err;
+}
+
+static int count_init_main(int argc, char* argv[]) {
+	return ERR_OK;
+}
+
+static int count_read_show_usage(int err, const char* msg) {
+	return err;
+}
+
+static int count_read_main(int  argc, char* argv[]) {
+	return ERR_OK;
+}
+
+static int show_usage(int err, const char* msg) {
+	const char* err_fmt = "%s\nUsage: test <command> <args>\n"\
 	"Commands:\n"\
 	"\tsimple-blink\n"\
 	"\tpiob-onoff\n"\
-	"\tpiob-read\n";
-	fputs(msg, stderr);
+	"\tpiob-read\n"\
+	"\tcount-init\n"\
+	"\tcount-read\n";
+	fprintf(stderr, err_fmt, msg);
 	return err;
 }
 
 int main(int argc, char* argv[]) {
-	if(argc < 2) return show_usage(ERR_ARGC);
+	if(argc < 2) return show_usage(ERR_ARGC, "Not enough arguments for test");
 	argc --;
 	argv ++;
-	if(!strcmp(*argv, "simple-blink")) return simple_blink_main(argc, argv);
-	if(!strcmp(*argv, "piob-onoff")) return piob_onoff_main(argc, argv);
-	if(!strcmp(*argv, "piob-read")) return piob_read_main(argc, argv);
-	fprintf(stderr, "Unknown command: %s\n", *argv);
-	return show_usage(ERR_CMD);
+	if(!strcmp(*argv, "simple-blink"))	return simple_blink_main(argc, argv);
+	if(!strcmp(*argv, "piob-onoff"))	return piob_onoff_main(argc, argv);
+	if(!strcmp(*argv, "piob-read"))		return piob_read_main(argc, argv);
+	if(!strcmp(*argv, "count-init"))	return count_init_main(argc, argv);
+	if(!strcmp(*argv, "count-read"))	return count_read_main(argc, argv);
+	return show_usage(ERR_CMD, "Unknown subcommand");
 }
 
