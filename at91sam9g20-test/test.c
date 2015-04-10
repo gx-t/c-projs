@@ -6,6 +6,19 @@
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
+
+
+enum {
+	ERR_OK = 0,
+	ERR_ARGC,
+	ERR_CMD,
+	ERR_MMAP,
+	ERR_PIN,
+	ERR_VAL,
+};
+
+
+
 //
 //PIOB_PER Port Enable Register
 //PIOB_OER Output Enable Register
@@ -28,6 +41,7 @@ typedef volatile unsigned at91_reg_t;
 //*****************************************************************************
 #define PIO_BASE		0xfffff000 //Input Output base address
 #define PIO_B(_b)		((struct AT91S_PIO*)(_b + 0x600))
+
 struct AT91S_PIO {
 	at91_reg_t PIO_PER;       // PIO Enable Register
 	at91_reg_t PIO_PDR;       // PIO Disable Register
@@ -66,38 +80,72 @@ struct AT91S_PIO {
 	at91_reg_t PIO_OWSR;      // Output Write Status Register
 };
 
-enum {
-	ERR_OK = 0,
-	ERR_ARGC,
-	ERR_CMD,
-	ERR_MMAP,
-	ERR_PIN,
-	ERR_VAL,
-};
-
 #define MAP_SIZE		4096UL
 
 //*****************************************************************************
 //** Timer Counter
 //*****************************************************************************
-#define TCB_BASE		0xFFFA0000 //Timer Counter base address
+#define TCB_BASE		0xFFFA0000 //Timer Counter Block base address
 
-#define TC_CCR			0x00 //TC Channel Control Register offset
-#define TC_CLKEN		(0x1 << 0) //TC Clock Enable bit
-#define TC_CLKDIS		(0x1 << 1) //TC Clock Disable bit
-#define TC_SWTRG		(0x1 << 2) //TC Software Trigge
+struct AT91S_TC {
+	at91_reg_t		TC_CCR;		// Channel Control Register
+	at91_reg_t		TC_CMR;		// Channel Mode Register (Capture Mode / Waveform Mode)
+	at91_reg_t		Reserved0[2];//
+	at91_reg_t		TC_CV;		// Counter Value
+	at91_reg_t		TC_RA;		// Register A
+	at91_reg_t		TC_RB;		// Register B
+	at91_reg_t		TC_RC;		// Register C
+	at91_reg_t		TC_SR;		// Status Register
+	at91_reg_t		TC_IER;		// Interrupt Enable Register
+	at91_reg_t		TC_IDR;		// Interrupt Disable Register
+	at91_reg_t		TC_IMR;		// Interrupt Mask Register
+};
 
-#define TC_CMR			0x04 //TC Channel Mode Register offset
-#define TC_CLKS_XC0		0x5 //TC Clock Select: XC0
-#define TC_CLKS_XC1		0x6 //TC Clock Select: XC1
-#define TC_CLKS_XC2		0x7 //TC Clock Select: XC2
-#define TC_ETRGEDG		(0x3 << 8) //TC External Trigger Edge Selection
-#define TC_ETRGEDG_NONE	(0x0 << 8) //TC Edge: None
-#define TC_ETRGEDG_RISING	(0x1 << 8) //TC Edge: Rising
-#define TC_ETRGEDG_FALLING	(0x2 << 8) //TC Edge: Falling
-#define TC_ETRGEDG_BOTH		(0x3 << 8) //TC Edge: Both
 
-#define TC_CV			0x10 //TC Counter Value Register offset
+// -------- TC_CCR : (TC Offset: 0x0) TC Channel Control Register --------
+#define TC_CLKEN					(0x1 << 0)		//TC Clock Enable bit
+#define TC_CLKDIS					(0x1 << 1)		//TC Clock Disable bit
+#define TC_SWTRG					(0x1 << 2)		//TC Software Trigger
+
+// -------- TC_CMR : (TC Offset: 0x4) TC Channel Mode Register: Capture Mode / Waveform Mode --------
+#define TC_CLKS_XC0					0x5				//TC Clock Select: XC0
+#define TC_CLKS_XC1					0x6				//TC Clock Select: XC1
+#define TC_CLKS_XC2					0x7				//TC Clock Select: XC2
+#define TC_ETRGEDG					(0x3 << 8)		//TC External Trigger Edge Selection
+#define TC_ETRGEDG_NONE				(0x0 << 8)		//TC Edge: None
+#define TC_ETRGEDG_RISING			(0x1 << 8)		//TC Edge: Rising
+#define TC_ETRGEDG_FALLING			(0x2 << 8)		//TC Edge: Falling
+#define TC_ETRGEDG_BOTH				(0x3 << 8)		//TC Edge: Both
+
+struct AT91S_TCB {
+	struct AT91S_TC		TCB_TC0;       // TC Channel 0
+	at91_reg_t			Reserved0[4];  //
+	struct AT91S_TC		TCB_TC1;       // TC Channel 1
+	at91_reg_t			Reserved1[4];  //
+	struct AT91S_TC		TCB_TC2;       // TC Channel 2
+	at91_reg_t			Reserved2[4];  //
+	at91_reg_t			TCB_BCR;       // TC Block Control Register
+	at91_reg_t			TCB_BMR;       // TC Block Mode Register
+};
+
+// -------- TCB_BCR : (TCB Offset: 0xc0) TC Block Control Register --------
+#define AT91C_TCB_SYNC				((unsigned int) 0x1 <<  0)	// (TCB) Synchro Command
+// -------- TCB_BMR : (TCB Offset: 0xc4) TC Block Mode Register --------
+#define AT91C_TCB_TC0XC0S			((unsigned int) 0x3 <<  0)	// (TCB) External Clock Signal 0 Selection
+#define	AT91C_TCB_TC0XC0S_TCLK0		((unsigned int) 0x0 <<  0)	// (TCB) TCLK0 connected to XC0
+#define	AT91C_TCB_TC0XC0S_NONE		((unsigned int) 0x1 <<  0)	// (TCB) None signal connected to XC0
+#define AT91C_TCB_TC0XC0S_TIOA1		((unsigned int) 0x2 <<  0)	// (TCB) TIOA1 connected to XC0
+#define AT91C_TCB_TC0XC0S_TIOA2		((unsigned int) 0x3 <<  0)	// (TCB) TIOA2 connected to XC0
+#define AT91C_TCB_TC1XC1S			((unsigned int) 0x3 <<  2)	// (TCB) External Clock Signal 1 Selection
+#define AT91C_TCB_TC1XC1S_TCLK1		((unsigned int) 0x0 <<  2)	// (TCB) TCLK1 connected to XC1
+#define AT91C_TCB_TC1XC1S_NONE		((unsigned int) 0x1 <<  2)	// (TCB) None signal connected to XC1
+#define AT91C_TCB_TC1XC1S_TIOA0		((unsigned int) 0x2 <<  2)	// (TCB) TIOA0 connected to XC1
+#define AT91C_TCB_TC1XC1S_TIOA2		((unsigned int) 0x3 <<  2)	// (TCB) TIOA2 connected to XC1
+#define AT91C_TCB_TC2XC2S			((unsigned int) 0x3 <<  4)	// (TCB) External Clock Signal 2 Selection
+#define AT91C_TCB_TC2XC2S_TCLK2		((unsigned int) 0x0 <<  4)	// (TCB) TCLK2 connected to XC2
+#define AT91C_TCB_TC2XC2S_NONE		((unsigned int) 0x1 <<  4)	// (TCB) None signal connected to XC2
+#define AT91C_TCB_TC2XC2S_TIOA0		((unsigned int) 0x2 <<  4)	// (TCB) TIOA0 connected to XC2
+#define AT91C_TCB_TC2XC2S_TIOA1		((unsigned int) 0x3 <<  4)	// (TCB) TIOA2 connected to XC2
 
 
 //board pin to bit shift for PIOB
