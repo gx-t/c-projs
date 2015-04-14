@@ -34,7 +34,7 @@ enum {
 //http://forum.arduino.cc/index.php?topic=258619.0
 //https://code.google.com/p/embox/source/browse/trunk/embox/src/include/drivers/at91sam7_tcc.h?spec=svn2952&r=2952
 
-typedef volatile unsigned at91_reg_t;
+typedef volatile unsigned AT91_REG;
 
 //*****************************************************************************
 //** GPIO
@@ -43,41 +43,41 @@ typedef volatile unsigned at91_reg_t;
 #define PIO_B(_b)		((struct AT91S_PIO*)(_b + 0x600))
 
 struct AT91S_PIO {
-	at91_reg_t PIO_PER;       // PIO Enable Register
-	at91_reg_t PIO_PDR;       // PIO Disable Register
-	at91_reg_t PIO_PSR;       // PIO Status Register
-	at91_reg_t Reserved0[1];  //
-	at91_reg_t PIO_OER;       // Output Enable Register
-	at91_reg_t PIO_ODR;       // Output Disable Registerr
-	at91_reg_t PIO_OSR;       // Output Status Register
-	at91_reg_t Reserved1[1];  //
-	at91_reg_t PIO_IFER;      // Input Filter Enable Register
-	at91_reg_t PIO_IFDR;      // Input Filter Disable Register
-	at91_reg_t PIO_IFSR;      // Input Filter Status Register
-	at91_reg_t Reserved2[1];  //
-	at91_reg_t PIO_SODR;      // Set Output Data Register
-	at91_reg_t PIO_CODR;      // Clear Output Data Register
-	at91_reg_t PIO_ODSR;      // Output Data Status Register
-	at91_reg_t PIO_PDSR;      // Pin Data Status Register
-	at91_reg_t PIO_IER;       // Interrupt Enable Register
-	at91_reg_t PIO_IDR;       // Interrupt Disable Register
-	at91_reg_t PIO_IMR;       // Interrupt Mask Register
-	at91_reg_t PIO_ISR;       // Interrupt Status Register
-	at91_reg_t PIO_MDER;      // Multi-driver Enable Register
-	at91_reg_t PIO_MDDR;      // Multi-driver Disable Register
-	at91_reg_t PIO_MDSR;      // Multi-driver Status Register
-	at91_reg_t Reserved3[1];  //
-	at91_reg_t PIO_PPUDR;     // Pull-up Disable Register
-	at91_reg_t PIO_PPUER;     // Pull-up Enable Register
-	at91_reg_t PIO_PPUSR;     // Pull-up Status Register
-	at91_reg_t Reserved4[1];  //
-	at91_reg_t PIO_ASR;       // Select A Register
-	at91_reg_t PIO_BSR;       // Select B Register
-	at91_reg_t PIO_ABSR;      // AB Select Status Register
-	at91_reg_t Reserved5[9];  //
-	at91_reg_t PIO_OWER;      // Output Write Enable Register
-	at91_reg_t PIO_OWDR;      // Output Write Disable Register
-	at91_reg_t PIO_OWSR;      // Output Write Status Register
+	AT91_REG PIO_PER;       // PIO Enable Register
+	AT91_REG PIO_PDR;       // PIO Disable Register
+	AT91_REG PIO_PSR;       // PIO Status Register
+	AT91_REG Reserved0[1];  //
+	AT91_REG PIO_OER;       // Output Enable Register
+	AT91_REG PIO_ODR;       // Output Disable Registerr
+	AT91_REG PIO_OSR;       // Output Status Register
+	AT91_REG Reserved1[1];  //
+	AT91_REG PIO_IFER;      // Input Filter Enable Register
+	AT91_REG PIO_IFDR;      // Input Filter Disable Register
+	AT91_REG PIO_IFSR;      // Input Filter Status Register
+	AT91_REG Reserved2[1];  //
+	AT91_REG PIO_SODR;      // Set Output Data Register
+	AT91_REG PIO_CODR;      // Clear Output Data Register
+	AT91_REG PIO_ODSR;      // Output Data Status Register
+	AT91_REG PIO_PDSR;      // Pin Data Status Register
+	AT91_REG PIO_IER;       // Interrupt Enable Register
+	AT91_REG PIO_IDR;       // Interrupt Disable Register
+	AT91_REG PIO_IMR;       // Interrupt Mask Register
+	AT91_REG PIO_ISR;       // Interrupt Status Register
+	AT91_REG PIO_MDER;      // Multi-driver Enable Register
+	AT91_REG PIO_MDDR;      // Multi-driver Disable Register
+	AT91_REG PIO_MDSR;      // Multi-driver Status Register
+	AT91_REG Reserved3[1];  //
+	AT91_REG PIO_PPUDR;     // Pull-up Disable Register
+	AT91_REG PIO_PPUER;     // Pull-up Enable Register
+	AT91_REG PIO_PPUSR;     // Pull-up Status Register
+	AT91_REG Reserved4[1];  //
+	AT91_REG PIO_ASR;       // Select A Register
+	AT91_REG PIO_BSR;       // Select B Register
+	AT91_REG PIO_ABSR;      // AB Select Status Register
+	AT91_REG Reserved5[9];  //
+	AT91_REG PIO_OWER;      // Output Write Enable Register
+	AT91_REG PIO_OWDR;      // Output Write Disable Register
+	AT91_REG PIO_OWSR;      // Output Write Status Register
 };
 
 #define MAP_SIZE		4096UL
@@ -88,17 +88,17 @@ struct AT91S_PIO {
 #define TCB_BASE		0xFFFA0000 //Timer Counter Block base address
 
 struct AT91S_TC {
-	at91_reg_t		TC_CCR;		// Channel Control Register
-	at91_reg_t		TC_CMR;		// Channel Mode Register (Capture Mode / Waveform Mode)
-	at91_reg_t		Reserved0[2];//
-	at91_reg_t		TC_CV;		// Counter Value
-	at91_reg_t		TC_RA;		// Register A
-	at91_reg_t		TC_RB;		// Register B
-	at91_reg_t		TC_RC;		// Register C
-	at91_reg_t		TC_SR;		// Status Register
-	at91_reg_t		TC_IER;		// Interrupt Enable Register
-	at91_reg_t		TC_IDR;		// Interrupt Disable Register
-	at91_reg_t		TC_IMR;		// Interrupt Mask Register
+	AT91_REG		TC_CCR;		// Channel Control Register
+	AT91_REG		TC_CMR;		// Channel Mode Register (Capture Mode / Waveform Mode)
+	AT91_REG		Reserved0[2];//
+	AT91_REG		TC_CV;		// Counter Value
+	AT91_REG		TC_RA;		// Register A
+	AT91_REG		TC_RB;		// Register B
+	AT91_REG		TC_RC;		// Register C
+	AT91_REG		TC_SR;		// Status Register
+	AT91_REG		TC_IER;		// Interrupt Enable Register
+	AT91_REG		TC_IDR;		// Interrupt Disable Register
+	AT91_REG		TC_IMR;		// Interrupt Mask Register
 };
 
 
@@ -116,16 +116,20 @@ struct AT91S_TC {
 #define TC_ETRGEDG_RISING			(0x1 << 8)		//TC Edge: Rising
 #define TC_ETRGEDG_FALLING			(0x2 << 8)		//TC Edge: Falling
 #define TC_ETRGEDG_BOTH				(0x3 << 8)		//TC Edge: Both
+#define TC_ENETRG					(0x1 << 12)		//TC External Event Trigger enable
+#define TC_EEVTEDG_RISING			(0x1 <<  8)		//TC Edge: rising edge
+#define TC_EEVT_XC1					(0x2 << 10)		//TC Signal selected as external event: XC1 TIOB direction: output
+#define TC_ABETRG					(0x1 << 10)		//TC TIOA or TIOB External Trigger Selection
 
 struct AT91S_TCB {
 	struct AT91S_TC		TCB_TC0;       // TC Channel 0
-	at91_reg_t			Reserved0[4];  //
+	AT91_REG			Reserved0[4];  //
 	struct AT91S_TC		TCB_TC1;       // TC Channel 1
-	at91_reg_t			Reserved1[4];  //
+	AT91_REG			Reserved1[4];  //
 	struct AT91S_TC		TCB_TC2;       // TC Channel 2
-	at91_reg_t			Reserved2[4];  //
-	at91_reg_t			TCB_BCR;       // TC Block Control Register
-	at91_reg_t			TCB_BMR;       // TC Block Mode Register
+	AT91_REG			Reserved2[4];  //
+	AT91_REG			TCB_BCR;       // TC Block Control Register
+	AT91_REG			TCB_BMR;       // TC Block Mode Register
 };
 
 // -------- TCB_BCR : (TCB Offset: 0xc0) TC Block Control Register --------
@@ -147,6 +151,35 @@ struct AT91S_TCB {
 #define AT91C_TCB_TC2XC2S_TIOA0		((unsigned int) 0x2 <<  4)	// (TCB) TIOA0 connected to XC2
 #define AT91C_TCB_TC2XC2S_TIOA1		((unsigned int) 0x3 <<  4)	// (TCB) TIOA2 connected to XC2
 
+
+//SOFTWARE API DEFINITION  FOR Power Management Controler
+#define PMC(_b)			((struct AT91S_PMC*)(_b + 0xC00))
+struct AT91S_PMC {
+	AT91_REG		PMC_SCER;			// System Clock Enable Register
+	AT91_REG		PMC_SCDR;			// System Clock Disable Register
+	AT91_REG		PMC_SCSR;			// System Clock Status Register
+	AT91_REG		Reserved0[1];		// 
+	AT91_REG		PMC_PCER;			// Peripheral Clock Enable Register
+	AT91_REG		PMC_PCDR;			// Peripheral Clock Disable Register
+	AT91_REG		PMC_PCSR;			// Peripheral Clock Status Register
+	AT91_REG		Reserved1[1];		// 
+	AT91_REG		PMC_MOR;			// Main Oscillator Register
+	AT91_REG		PMC_MCFR;			// Main Clock  Frequency Register
+	AT91_REG		PMC_PLLAR;			// PLL A Register
+	AT91_REG		PMC_PLLBR;			// PLL B Register
+	AT91_REG		PMC_MCKR;			// Master Clock Register
+	AT91_REG		Reserved2[3];		// 
+	AT91_REG		PMC_PCKR[8];		// Programmable Clock Register
+	AT91_REG		PMC_IER;			// Interrupt Enable Register
+	AT91_REG		PMC_IDR;			// Interrupt Disable Register
+	AT91_REG		PMC_SR;				// Status Register
+	AT91_REG		PMC_IMR;			// Interrupt Mask Register
+};
+
+//PERIPHERAL ID DEFINITIONS FOR AT91SAM9260A
+#define AT91C_ID_TC0				(17)						// Timer Counter 0
+#define AT91C_ID_TC1				(18)						// Timer Counter 1
+#define AT91C_ID_TC2				(19)						// Timer Counter 2
 
 //board pin to bit shift for PIOB
 static int lib_piob_from_pin(int pin) {
@@ -252,21 +285,31 @@ static int piob_read_show_usage(int err, const char* msg) {
 }
 
 static int piob_read_main(int argc, char* argv[]) {
-	if(argc < 2) return piob_read_show_usage(ERR_ARGC, "Not enough arguments for piob-write");
-	argc --;
-	argv ++;
-	int pin = atoi(*argv);
-	int port_bit = lib_piob_from_pin(pin);
-	if(port_bit == -1) return piob_read_show_usage(ERR_PIN, "Invalid pin number. Only \"B\" pins are supported");
+	if(argc < 2) return piob_read_show_usage(ERR_ARGC, "Not enough arguments for piob-read");
 	volatile void* map_base = lib_open_base(PIO_BASE);
 	if(!map_base) return ERR_MMAP;
 	volatile struct AT91S_PIO* piob = PIO_B(map_base);
-	unsigned flags = 1 << port_bit;
-	piob->PIO_PER = flags;
-	piob->PIO_ODR = flags;
-	int data_bit = piob->PIO_PDSR & (1 << port_bit);
-	printf("pin %d %s\n", pin, data_bit ? "on":"off");
+	int cnt = 0;
+	while(--argc) {
+		int pin = atoi(*++argv);
+		int port_bit = lib_piob_from_pin(pin);
+		if(port_bit == -1) {
+			fprintf(stderr, "Invalid pin number: %s. Only \"B\" pins are supported\n", *argv);
+			continue;
+		}
+		cnt ++;
+		int flags = 1 << port_bit;
+		piob->PIO_PER = flags;
+		piob->PIO_ODR = flags;
+		int data_bit = piob->PIO_PDSR & (1 << port_bit);
+		printf("%d %s ", pin, data_bit ? "on":"off");
+	}
 	lib_close_base(map_base);
+	if(cnt) {
+		puts("");
+	} else {
+		return piob_read_show_usage(ERR_PIN, "No pins selected - nothing to do");
+	}
 	return ERR_OK;
 }
 
@@ -276,7 +319,53 @@ static int count_init_show_usage(int err, const char* msg) {
 	return err;
 }
 
+/*void tc_init(uint8_t channel) {
+	assert(channel < 3);
+	REG_STORE(AT91C_PMC_PCER, (1L << (AT91C_ID_TC0 + channel)));
+}
+
+void tc_config_input(uint8_t channel, uint8_t clock_mode ) {
+	assert(channel < 3);
+	REG_STORE((uint8_t *) AT91C_TC0_CMR + channel * sizeof(AT91S_TCB),
+			0xfff & clock_mode);
+}
+
+void tc_reset(uint8_t channel) {
+	//assert(channel < 3);
+	REG_STORE((uint8_t *) AT91C_TC0_CCR + channel * sizeof(AT91S_TCB),
+			AT91C_TC_CLKEN | AT91C_TC_SWTRG);
+}
+
+uint32_t tc_counter_value(uint8_t channel) {
+	assert(channel < 3);
+	return REG_LOAD(((uint8_t *) AT91C_TC0_CV) + channel * sizeof(AT91S_TCB));
+}
+
+void tc_stop(uint8_t channel) {
+	assert(channel < 3);
+	REG_STORE((uint8_t *) AT91C_TC0_CCR + channel * sizeof(AT91S_TCB),
+			AT91C_TC_CLKDIS);
+	//REG_STORE(AT91C_PMC_PCDR, (1L << (AT91C_ID_TC0 + channel)));
+}*/
+
 static int count_init_main(int argc, char* argv[]) {
+	int port_bit = lib_piob_from_pin(3);
+	volatile void* map_base = lib_open_base(PIO_BASE);
+	if(!map_base) return ERR_MMAP;
+	volatile struct AT91S_PIO* piob = PIO_B(map_base);
+	unsigned flags = 1 << port_bit;
+	piob->PIO_PDR = flags;
+	piob->PIO_BSR = flags;
+	fprintf(stderr, ">>>>>> %d\n", piob->PIO_ABSR);
+	lib_close_base(map_base);
+	volatile struct AT91S_TCB *tcb = lib_open_base(TCB_BASE);
+	if(!tcb) return ERR_MMAP;
+	tcb->TCB_TC0.TC_CCR = TC_CLKEN | TC_SWTRG;
+//	tcb->TCB_TC0.TC_CMR = TC_ENETRG | TC_ABETRG;//TC_CLKS_XC1 | TC_ETRGEDG_RISING;
+	tcb->TCB_TC0.TC_CMR = TC_EEVT_XC1 | TC_EEVTEDG_RISING;
+	tcb->TCB_BMR = AT91C_TCB_TC1XC1S_TCLK1;
+	tcb->TCB_BCR = 0;//AT91C_TCB_SYNC;
+	lib_close_base(tcb);
 	return ERR_OK;
 }
 
@@ -285,6 +374,10 @@ static int count_read_show_usage(int err, const char* msg) {
 }
 
 static int count_read_main(int  argc, char* argv[]) {
+	volatile struct AT91S_TCB *tcb = lib_open_base(TCB_BASE);
+	if(!tcb) return ERR_MMAP;
+	printf("counter %d\n", tcb->TCB_TC0.TC_CV);
+	lib_close_base(tcb);
 	return ERR_OK;
 }
 
