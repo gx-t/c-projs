@@ -319,53 +319,18 @@ static int count_init_show_usage(int err, const char* msg) {
 	return err;
 }
 
-/*void tc_init(uint8_t channel) {
-	assert(channel < 3);
-	REG_STORE(AT91C_PMC_PCER, (1L << (AT91C_ID_TC0 + channel)));
-}
-
-void tc_config_input(uint8_t channel, uint8_t clock_mode ) {
-	assert(channel < 3);
-	REG_STORE((uint8_t *) AT91C_TC0_CMR + channel * sizeof(AT91S_TCB),
-			0xfff & clock_mode);
-}
-
-void tc_reset(uint8_t channel) {
-	//assert(channel < 3);
-	REG_STORE((uint8_t *) AT91C_TC0_CCR + channel * sizeof(AT91S_TCB),
-			AT91C_TC_CLKEN | AT91C_TC_SWTRG);
-}
-
-uint32_t tc_counter_value(uint8_t channel) {
-	assert(channel < 3);
-	return REG_LOAD(((uint8_t *) AT91C_TC0_CV) + channel * sizeof(AT91S_TCB));
-}
-
-void tc_stop(uint8_t channel) {
-	assert(channel < 3);
-	REG_STORE((uint8_t *) AT91C_TC0_CCR + channel * sizeof(AT91S_TCB),
-			AT91C_TC_CLKDIS);
-	//REG_STORE(AT91C_PMC_PCDR, (1L << (AT91C_ID_TC0 + channel)));
-}*/
-
 static int count_init_main(int argc, char* argv[]) {
-	int port_bit = lib_piob_from_pin(3);
-	volatile void* map_base = lib_open_base(PIO_BASE);
-	if(!map_base) return ERR_MMAP;
-	volatile struct AT91S_PIO* piob = PIO_B(map_base);
-	unsigned flags = 1 << port_bit;
-	piob->PIO_PDR = flags;
-	piob->PIO_BSR = flags;
-	fprintf(stderr, ">>>>>> %d\n", piob->PIO_ABSR);
-	lib_close_base(map_base);
 	volatile struct AT91S_TCB *tcb = lib_open_base(TCB_BASE);
 	if(!tcb) return ERR_MMAP;
-	tcb->TCB_TC0.TC_CCR = TC_CLKEN | TC_SWTRG;
-//	tcb->TCB_TC0.TC_CMR = TC_ENETRG | TC_ABETRG;//TC_CLKS_XC1 | TC_ETRGEDG_RISING;
-	tcb->TCB_TC0.TC_CMR = TC_EEVT_XC1 | TC_EEVTEDG_RISING;
-	tcb->TCB_BMR = AT91C_TCB_TC1XC1S_TCLK1;
-	tcb->TCB_BCR = 0;//AT91C_TCB_SYNC;
+	tcb->TCB_TC0.TC_CMR = TC_CLKS_XC1 | TC_ETRGEDG_RISING; //XC1 as clock, rising edge
+	tcb->TCB_BMR = AT91C_TCB_TC1XC1S_TCLK1; //connect XC1 to TCLK1 (pin 3)
+	tcb->TCB_TC0.TC_CCR = TC_CLKEN | TC_SWTRG; //enable clock, reset counter
 	lib_close_base(tcb);
+	volatile void* map_base = lib_open_base(PIO_BASE);
+	if(!map_base) return ERR_MMAP;
+	struct AT91S_PMC* pmc = PMC(map_base);
+	pmc->PMC_PCER = (1 << AT91C_ID_TC0); //start periferial clock
+	lib_close_base(map_base);
 	return ERR_OK;
 }
 
