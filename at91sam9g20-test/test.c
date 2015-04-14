@@ -320,6 +320,11 @@ static int count_init_show_usage(int err, const char* msg) {
 }
 
 static int count_init_main(int argc, char* argv[]) {
+	volatile void* map_base = lib_open_base(PIO_BASE);
+	if(!map_base) return ERR_MMAP;
+	struct AT91S_PMC* pmc = PMC(map_base);
+	pmc->PMC_PCER = (1 << AT91C_ID_TC0); //start periferial clock
+	lib_close_base(map_base);
 	volatile struct AT91S_TCB *tcb = lib_open_base(TCB_BASE);
 	if(!tcb) return ERR_MMAP;
 	tcb->TCB_TC0.TC_IDR = 0xFF;//disable all interrupts for TC0
@@ -327,11 +332,6 @@ static int count_init_main(int argc, char* argv[]) {
 	tcb->TCB_BMR = AT91C_TCB_TC1XC1S_TCLK1; //connect XC1 to TCLK1 (pin 3)
 	tcb->TCB_TC0.TC_CCR = TC_CLKEN | TC_SWTRG; //enable clock, reset counter
 	lib_close_base(tcb);
-	volatile void* map_base = lib_open_base(PIO_BASE);
-	if(!map_base) return ERR_MMAP;
-	struct AT91S_PMC* pmc = PMC(map_base);
-	pmc->PMC_PCER = (1 << AT91C_ID_TC0); //start periferial clock
-	lib_close_base(map_base);
 	return ERR_OK;
 }
 
