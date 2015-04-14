@@ -322,6 +322,7 @@ static int count_init_show_usage(int err, const char* msg) {
 static int count_init_main(int argc, char* argv[]) {
 	volatile struct AT91S_TCB *tcb = lib_open_base(TCB_BASE);
 	if(!tcb) return ERR_MMAP;
+	tcb->TCB_TC0.TC_IDR = 0xFF;//disable all interrupts for TC0
 	tcb->TCB_TC0.TC_CMR = TC_CLKS_XC1 | TC_ETRGEDG_RISING; //XC1 as clock, rising edge
 	tcb->TCB_BMR = AT91C_TCB_TC1XC1S_TCLK1; //connect XC1 to TCLK1 (pin 3)
 	tcb->TCB_TC0.TC_CCR = TC_CLKEN | TC_SWTRG; //enable clock, reset counter
