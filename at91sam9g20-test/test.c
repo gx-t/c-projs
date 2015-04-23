@@ -15,6 +15,7 @@ enum {
 	ERR_MMAP,
 	ERR_PIN,
 	ERR_VAL,
+	ERR_RESET,
 };
 
 
@@ -181,6 +182,12 @@ struct AT91S_PMC {
 #define AT91C_ID_TC1				(18)						// Timer Counter 1
 #define AT91C_ID_TC2				(19)						// Timer Counter 2
 
+
+void lib_delay_uS(unsigned period) {
+	volatile unsigned i = 79 * period / 2;
+	while(i --);
+}
+
 //board pin to bit shift for PIOB
 static int lib_piob_from_pin(int pin) {
 	if(pin < 3 || pin == 17 || pin == 18 || pin > 31) return -1;
@@ -301,7 +308,7 @@ static int piob_read_main(int argc, char* argv[]) {
 		int flags = 1 << port_bit;
 		piob->PIO_PER = flags;
 		piob->PIO_ODR = flags;
-		int data_bit = piob->PIO_PDSR & (1 << port_bit);
+		int data_bit = piob->PIO_PDSR & flags;
 		printf("%d %s ", pin, data_bit ? "on":"off");
 	}
 	lib_close_base(map_base);
@@ -347,6 +354,112 @@ static int count_read_main(int  argc, char* argv[]) {
 	return ERR_OK;
 }
 
+static void w1_write_0(volatile struct AT91S_PIO* piob, unsigned flags) {
+	piob->PIO_OER = flags; //enable output
+	piob->PIO_CODR = flags; //level low
+	lib_delay_uS(60);
+	piob->PIO_ODR = flags; //disable output
+	lib_delay_uS(61);
+}
+
+static void w1_write_1(volatile struct AT91S_PIO* piob, unsigned flags) {
+	piob->PIO_OER = flags; //enable output
+	piob->PIO_CODR = flags; //level low
+	lib_delay_uS(1);
+	piob->PIO_ODR = flags; //disable output
+	lib_delay_uS(120);
+}
+
+static unsigned w1_read(volatile struct AT91S_PIO* piob, unsigned flags) {
+	piob->PIO_OER = flags; //enable output
+	piob->PIO_CODR = flags; //level low
+	lib_delay_uS(1);
+	piob->PIO_ODR = flags; //disable output
+	lib_delay_uS(2);
+	unsigned bit_value = piob->PIO_PDSR | flags;
+	lib_delay_uS(60);
+	return bit_value;
+}
+
+static unsigned w1_read_byte(volatile struct AT91S_PIO* piob, unsigned flags) {
+	unsigned result = 0;
+	if(w1_read(piob, flags)) result |= 0x01;
+	if(w1_read(piob, flags)) result |= 0x02;
+	if(w1_read(piob, flags)) result |= 0x04;
+	if(w1_read(piob, flags)) result |= 0x08;
+	if(w1_read(piob, flags)) result |= 0x10;
+	if(w1_read(piob, flags)) result |= 0x20;
+	if(w1_read(piob, flags)) result |= 0x40;
+	if(w1_read(piob, flags)) result |= 0x80;
+	return result;
+}
+
+static void w1_write_byte(volatile struct AT91S_PIO* piob, unsigned flags, unsigned data) {
+	data & 0x01 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
+	data & 0x02 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
+	data & 0x04 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
+	data & 0x08 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
+	data & 0x10 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
+	data & 0x20 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
+	data & 0x40 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
+	data & 0x80 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
+	lib_delay_uS(100);
+}
+
+static unsigned ds18b20_reset(volatile struct AT91S_PIO* piob, unsigned flags) {
+	piob->PIO_PPUER = flags; //enable pull up
+	piob->PIO_PER = flags; //enable pin 10
+	piob->PIO_OER = flags; //enable output
+	piob->PIO_CODR = flags; //level low
+	lib_delay_uS(500);
+	piob->PIO_ODR = flags; //disable output
+	lib_delay_uS(60);
+	int data_bit = piob->PIO_PDSR;
+	lib_delay_uS(480);
+	return data_bit & flags;
+}
+
+#define DS18B20_SKIP_ROM			0xCC
+#define DS18B20_READ_SCRATCHPAD		0xBE
+#define DS18B20_CONVERT_T			0x44
+
+static void ds18b20_read_scratchpad(volatile struct AT91S_PIO* piob, unsigned flags) {
+	w1_write_byte(piob, flags, DS18B20_READ_SCRATCHPAD);
+	unsigned char buff[9];
+	buff[0] = w1_read_byte(piob, flags);
+	buff[1] = w1_read_byte(piob, flags);
+	buff[2] = w1_read_byte(piob, flags);
+	buff[3] = w1_read_byte(piob, flags);
+	buff[4] = w1_read_byte(piob, flags);
+	buff[5] = w1_read_byte(piob, flags);
+	buff[6] = w1_read_byte(piob, flags);
+	buff[7] = w1_read_byte(piob, flags);
+	buff[8] = w1_read_byte(piob, flags);
+	fprintf(stderr, ">>>> %x-%x-%x-%x-%x-%x-%x-%x-%x\n", buff[0], buff[1], buff[2], buff[3], buff[4], buff[5], buff[6], buff[7], buff[8]);
+}
+
+static int temp_read_main(int  argc, char* argv[]) {
+	nice(-10);
+	volatile void* map_base = lib_open_base(PIO_BASE);
+	if(!map_base) return ERR_MMAP;
+	volatile struct AT91S_PIO* piob = PIO_B(map_base);
+	int port_bit = lib_piob_from_pin(7);
+	unsigned flags = 1 << port_bit;
+	unsigned state = ds18b20_reset(piob, flags);
+	if(state) {
+		fprintf(stderr, "Error reseting device: %u\n", state);
+		lib_close_base(map_base);
+		return ERR_RESET;
+	}
+	w1_write_byte(piob, flags, DS18B20_SKIP_ROM);
+	w1_write_byte(piob, flags, DS18B20_CONVERT_T);
+	usleep(1000000);
+	ds18b20_reset(piob, flags);
+	ds18b20_read_scratchpad(piob, flags);
+	lib_close_base(map_base);
+	return ERR_OK;
+}
+
 static int show_usage(int err, const char* msg) {
 	const char* err_fmt = "%s\nUsage: test <command> <args>\n"\
 	"Commands:\n"\
@@ -354,7 +467,8 @@ static int show_usage(int err, const char* msg) {
 	"\tpiob-write\n"\
 	"\tpiob-read\n"\
 	"\tcount-init\n"\
-	"\tcount-read\n";
+	"\tcount-read\n"\
+	"\ttemp-read\n";
 	fprintf(stderr, err_fmt, msg);
 	return err;
 }
@@ -368,6 +482,7 @@ int main(int argc, char* argv[]) {
 	if(!strcmp(*argv, "piob-read"))		return piob_read_main(argc, argv);
 	if(!strcmp(*argv, "count-init"))	return count_init_main(argc, argv);
 	if(!strcmp(*argv, "count-read"))	return count_read_main(argc, argv);
+	if(!strcmp(*argv, "temp-read"))		return temp_read_main(argc, argv);
 	return show_usage(ERR_CMD, "Unknown subcommand");
 }
 
