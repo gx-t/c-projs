@@ -359,7 +359,7 @@ static void w1_write_0(volatile struct AT91S_PIO* piob, unsigned flags) {
 	piob->PIO_CODR = flags; //level low
 	lib_delay_uS(60);
 	piob->PIO_ODR = flags; //disable output
-	lib_delay_uS(61);
+	lib_delay_uS(60);
 }
 
 static void w1_write_1(volatile struct AT91S_PIO* piob, unsigned flags) {
@@ -376,7 +376,7 @@ static unsigned w1_read(volatile struct AT91S_PIO* piob, unsigned flags) {
 	lib_delay_uS(1);
 	piob->PIO_ODR = flags; //disable output
 	lib_delay_uS(2);
-	unsigned bit_value = piob->PIO_PDSR | flags;
+	unsigned bit_value = piob->PIO_PDSR & flags;
 	lib_delay_uS(60);
 	return bit_value;
 }
@@ -419,13 +419,26 @@ static unsigned ds18b20_reset(volatile struct AT91S_PIO* piob, unsigned flags) {
 	return data_bit & flags;
 }
 
+#define DS18B20_READ_ROM			0x33
 #define DS18B20_SKIP_ROM			0xCC
 #define DS18B20_READ_SCRATCHPAD		0xBE
 #define DS18B20_CONVERT_T			0x44
 
+static void ds18b20_read_rom(volatile struct AT91S_PIO* piob, unsigned flags) {
+	unsigned char buff[8];
+	w1_write_byte(piob, flags, DS18B20_READ_ROM);
+	buff[0] = w1_read_byte(piob, flags);
+	buff[1] = w1_read_byte(piob, flags);
+	buff[2] = w1_read_byte(piob, flags);
+	buff[3] = w1_read_byte(piob, flags);
+	buff[4] = w1_read_byte(piob, flags);
+	buff[5] = w1_read_byte(piob, flags);
+	fprintf(stderr, ">>>> %02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X\n", buff[0], buff[1], buff[2], buff[3], buff[4], buff[5], buff[6], buff[7]);
+}
+
 static void ds18b20_read_scratchpad(volatile struct AT91S_PIO* piob, unsigned flags) {
-	w1_write_byte(piob, flags, DS18B20_READ_SCRATCHPAD);
 	unsigned char buff[9];
+	w1_write_byte(piob, flags, DS18B20_READ_SCRATCHPAD);
 	buff[0] = w1_read_byte(piob, flags);
 	buff[1] = w1_read_byte(piob, flags);
 	buff[2] = w1_read_byte(piob, flags);
@@ -435,7 +448,7 @@ static void ds18b20_read_scratchpad(volatile struct AT91S_PIO* piob, unsigned fl
 	buff[6] = w1_read_byte(piob, flags);
 	buff[7] = w1_read_byte(piob, flags);
 	buff[8] = w1_read_byte(piob, flags);
-	fprintf(stderr, ">>>> %x-%x-%x-%x-%x-%x-%x-%x-%x\n", buff[0], buff[1], buff[2], buff[3], buff[4], buff[5], buff[6], buff[7], buff[8]);
+	fprintf(stderr, ">>>> %02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X\n", buff[0], buff[1], buff[2], buff[3], buff[4], buff[5], buff[6], buff[7], buff[8]);
 }
 
 static int temp_read_main(int  argc, char* argv[]) {
@@ -451,10 +464,10 @@ static int temp_read_main(int  argc, char* argv[]) {
 		lib_close_base(map_base);
 		return ERR_RESET;
 	}
+	ds18b20_read_rom(piob, flags);
 	w1_write_byte(piob, flags, DS18B20_SKIP_ROM);
 	w1_write_byte(piob, flags, DS18B20_CONVERT_T);
-	usleep(1000000);
-	ds18b20_reset(piob, flags);
+	sleep(1);
 	ds18b20_read_scratchpad(piob, flags);
 	lib_close_base(map_base);
 	return ERR_OK;
