@@ -349,7 +349,6 @@ static int count_read_main(int  argc, char* argv[]) {
 	return ERR_OK;
 }
 
-
 // calibrated with good accuracy for GESBC-9G20u board
 void lib_delay_us(unsigned us) {
 	volatile unsigned i = 79 * us / 2;
@@ -412,8 +411,6 @@ static void w1_write_byte(volatile struct AT91S_PIO* piob, unsigned flags, unsig
 }
 
 static unsigned ds18b20_reset(volatile struct AT91S_PIO* piob, unsigned flags) {
-	piob->PIO_PPUER = flags; //enable pull up
-	piob->PIO_PER = flags; //enable pin 10
 	piob->PIO_OER = flags; //enable output
 	piob->PIO_CODR = flags; //level low
 	lib_delay_us(500);
@@ -429,53 +426,50 @@ static unsigned ds18b20_reset(volatile struct AT91S_PIO* piob, unsigned flags) {
 #define DS18B20_READ_SCRATCHPAD		0xBE
 #define DS18B20_CONVERT_T			0x44
 
-static void ds18b20_read_rom(volatile struct AT91S_PIO* piob, unsigned flags) {
-	unsigned char buff[8];
-	w1_write_byte(piob, flags, DS18B20_READ_ROM);
-	buff[0] = w1_read_byte(piob, flags);
-	buff[1] = w1_read_byte(piob, flags);
-	buff[2] = w1_read_byte(piob, flags);
-	buff[3] = w1_read_byte(piob, flags);
-	buff[4] = w1_read_byte(piob, flags);
-	buff[5] = w1_read_byte(piob, flags);
-	fprintf(stderr, ">>>> %02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X\n", buff[0], buff[1], buff[2], buff[3], buff[4], buff[5], buff[6], buff[7]);
+static void ds18b20_take_temp(volatile struct AT91S_PIO* piob, unsigned flags) {
+	w1_write_byte(piob, flags, DS18B20_SKIP_ROM);
+	w1_write_byte(piob, flags, DS18B20_CONVERT_T);
+//wait to the end of convertion
+	sleep(1);
+	ds18b20_reset(piob, flags);
+	w1_write_byte(piob, flags, DS18B20_SKIP_ROM);
+	w1_write_byte(piob, flags, DS18B20_READ_SCRATCHPAD);
+	float temp = w1_read_byte(piob, flags) | (w1_read_byte(piob, flags) << 8);
+//skip reading the rest of scratchpad bytes
+	piob->PIO_OER = flags; //enable output
+	piob->PIO_CODR = flags; //level low
+	temp /= 16;
+	printf("%g\n", temp);
+	usleep(1000);
+	piob->PIO_ODR = flags; //disable output
 }
 
-static void ds18b20_read_scratchpad(volatile struct AT91S_PIO* piob, unsigned flags) {
-	unsigned buff[9];
-	w1_write_byte(piob, flags, DS18B20_READ_SCRATCHPAD);
-	buff[0] = w1_read_byte(piob, flags);
-	buff[1] = w1_read_byte(piob, flags);
-	buff[2] = w1_read_byte(piob, flags);
-	buff[3] = w1_read_byte(piob, flags);
-	buff[4] = w1_read_byte(piob, flags);
-	buff[5] = w1_read_byte(piob, flags);
-	buff[6] = w1_read_byte(piob, flags);
-	buff[7] = w1_read_byte(piob, flags);
-	buff[8] = w1_read_byte(piob, flags);
-	fprintf(stderr, ">>>> %02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X\n", buff[0], buff[1], buff[2], buff[3], buff[4], buff[5], buff[6], buff[7], buff[8]);
-	float temp = (float)(buff[1] << 8 | buff[0])  / 16;
-	fprintf(stderr, ">>>> %g\n", temp);
+static int temp_read_show_usage(int err, const char* msg) {
+	static const char* err_fmt = "%s\nUsage: test temp-read <pin>\n";
+	fprintf(stderr, err_fmt, msg);
+	return err;
 }
 
 static int temp_read_main(int  argc, char* argv[]) {
+	if(argc < 2) return temp_read_show_usage(ERR_ARGC, "Not enough arguments for temp-read");
+	argc --;
+	argv ++;
+	int port_bit = lib_piob_from_pin(atoi(*argv));
+	if(port_bit == -1) return temp_read_show_usage(ERR_PIN, "Invalid pin number. Only \"B\" pins are supported");
 	nice(-10);
 	volatile void* map_base = lib_open_base(PIO_BASE);
 	if(!map_base) return ERR_MMAP;
 	volatile struct AT91S_PIO* piob = PIO_B(map_base);
-	int port_bit = lib_piob_from_pin(7);
 	unsigned flags = 1 << port_bit;
+	piob->PIO_PPUER = flags; //enable pull up
+	piob->PIO_PER = flags; //enable pin
 	unsigned state = ds18b20_reset(piob, flags);
 	if(state) {
-		fprintf(stderr, "Error reseting device: %u\n", state);
+		fprintf(stderr, "Error reseting device. Make sure DS18B20 is on pin %s\n", *argv);
 		lib_close_base(map_base);
 		return ERR_RESET;
 	}
-	ds18b20_read_rom(piob, flags);
-	w1_write_byte(piob, flags, DS18B20_SKIP_ROM);
-	w1_write_byte(piob, flags, DS18B20_CONVERT_T);
-	sleep(2);
-	ds18b20_read_scratchpad(piob, flags);
+	ds18b20_take_temp(piob, flags);
 	lib_close_base(map_base);
 	return ERR_OK;
 }
