@@ -183,11 +183,6 @@ struct AT91S_PMC {
 #define AT91C_ID_TC2				(19)						// Timer Counter 2
 
 
-void lib_delay_uS(unsigned period) {
-	volatile unsigned i = 79 * period / 2;
-	while(i --);
-}
-
 //board pin to bit shift for PIOB
 static int lib_piob_from_pin(int pin) {
 	if(pin < 3 || pin == 17 || pin == 18 || pin > 31) return -1;
@@ -354,30 +349,41 @@ static int count_read_main(int  argc, char* argv[]) {
 	return ERR_OK;
 }
 
+
+// calibrated with good accuracy for GESBC-9G20u board
+void lib_delay_us(unsigned us) {
+	volatile unsigned i = 79 * us / 2;
+	while(i --);
+}
+
+// 1 wire timings from here:
+// http://en.wikipedia.org/wiki/1-Wire
+// checked playing with read delays - got stable result for wide range
+
 static void w1_write_0(volatile struct AT91S_PIO* piob, unsigned flags) {
 	piob->PIO_OER = flags; //enable output
 	piob->PIO_CODR = flags; //level low
-	lib_delay_uS(60);
+	lib_delay_us(60);
 	piob->PIO_ODR = flags; //disable output
-	lib_delay_uS(60);
+	lib_delay_us(4);
 }
 
 static void w1_write_1(volatile struct AT91S_PIO* piob, unsigned flags) {
 	piob->PIO_OER = flags; //enable output
 	piob->PIO_CODR = flags; //level low
-	lib_delay_uS(1);
+	lib_delay_us(4);
 	piob->PIO_ODR = flags; //disable output
-	lib_delay_uS(120);
+	lib_delay_us(60);
 }
 
 static unsigned w1_read(volatile struct AT91S_PIO* piob, unsigned flags) {
 	piob->PIO_OER = flags; //enable output
 	piob->PIO_CODR = flags; //level low
-	lib_delay_uS(1);
+	lib_delay_us(4);
 	piob->PIO_ODR = flags; //disable output
-	lib_delay_uS(2);
+	lib_delay_us(10);
 	unsigned bit_value = piob->PIO_PDSR & flags;
-	lib_delay_uS(60);
+	lib_delay_us(45);
 	return bit_value;
 }
 
@@ -403,7 +409,6 @@ static void w1_write_byte(volatile struct AT91S_PIO* piob, unsigned flags, unsig
 	data & 0x20 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
 	data & 0x40 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
 	data & 0x80 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
-	lib_delay_uS(100);
 }
 
 static unsigned ds18b20_reset(volatile struct AT91S_PIO* piob, unsigned flags) {
@@ -411,11 +416,11 @@ static unsigned ds18b20_reset(volatile struct AT91S_PIO* piob, unsigned flags) {
 	piob->PIO_PER = flags; //enable pin 10
 	piob->PIO_OER = flags; //enable output
 	piob->PIO_CODR = flags; //level low
-	lib_delay_uS(500);
+	lib_delay_us(500);
 	piob->PIO_ODR = flags; //disable output
-	lib_delay_uS(60);
+	lib_delay_us(60);
 	int data_bit = piob->PIO_PDSR;
-	lib_delay_uS(480);
+	usleep(1000);
 	return data_bit & flags;
 }
 
@@ -437,7 +442,7 @@ static void ds18b20_read_rom(volatile struct AT91S_PIO* piob, unsigned flags) {
 }
 
 static void ds18b20_read_scratchpad(volatile struct AT91S_PIO* piob, unsigned flags) {
-	unsigned char buff[9];
+	unsigned buff[9];
 	w1_write_byte(piob, flags, DS18B20_READ_SCRATCHPAD);
 	buff[0] = w1_read_byte(piob, flags);
 	buff[1] = w1_read_byte(piob, flags);
@@ -449,6 +454,8 @@ static void ds18b20_read_scratchpad(volatile struct AT91S_PIO* piob, unsigned fl
 	buff[7] = w1_read_byte(piob, flags);
 	buff[8] = w1_read_byte(piob, flags);
 	fprintf(stderr, ">>>> %02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X-%02X\n", buff[0], buff[1], buff[2], buff[3], buff[4], buff[5], buff[6], buff[7], buff[8]);
+	float temp = (float)(buff[1] << 8 | buff[0])  / 16;
+	fprintf(stderr, ">>>> %g\n", temp);
 }
 
 static int temp_read_main(int  argc, char* argv[]) {
@@ -467,7 +474,7 @@ static int temp_read_main(int  argc, char* argv[]) {
 	ds18b20_read_rom(piob, flags);
 	w1_write_byte(piob, flags, DS18B20_SKIP_ROM);
 	w1_write_byte(piob, flags, DS18B20_CONVERT_T);
-	sleep(1);
+	sleep(2);
 	ds18b20_read_scratchpad(piob, flags);
 	lib_close_base(map_base);
 	return ERR_OK;
