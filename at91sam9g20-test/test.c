@@ -6,7 +6,8 @@
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <signal.h>
+#include <time.h>
 
 enum {
 	ERR_OK = 0,
@@ -206,6 +207,7 @@ static void* lib_open_base(off_t offset) {
 }
 
 static void lib_close_base(volatile void* map_base) {
+	if(!map_base) return;
 	munmap((void*)map_base, MAP_SIZE);
 }
 
@@ -474,6 +476,125 @@ static int temp_read_main(int  argc, char* argv[]) {
 	return ERR_OK;
 }
 
+//==============================================
+#define SHELL_LINE_BUFF_SIZE		4096
+#define SHELL_CMD_DELIMITER			" \t\r\n"
+
+static volatile void* io_map_base = 0;
+static volatile struct AT91S_PIO* io_port_b = 0;
+
+static void shell_gpio() {
+	static const char* msg_usage = "gpio context pin [enable | disable | input | output | 1 | 0 | read]\n";
+	char* context = strtok(0, SHELL_CMD_DELIMITER);
+	char* pin_name = strtok(0, SHELL_CMD_DELIMITER);
+	char* pin_action = strtok(0, SHELL_CMD_DELIMITER);
+	if(!pin_action) return (void)fprintf(stderr, "%s\n", msg_usage);
+	int port_bit = lib_piob_from_pin(atoi(pin_name));
+	if(port_bit == -1) {
+		fprintf(stderr, "Invalid pin number (%s). Only GPIO B is supported. %s\n", pin_name, msg_usage);
+		return;
+	}
+	int flags = 1 << port_bit;
+	for(; pin_action; pin_action = strtok(0, SHELL_CMD_DELIMITER)) {
+		if(!strcmp(pin_action, "enable"))	{ io_port_b->PIO_PER = flags; continue; }
+		if(!strcmp(pin_action, "disable"))	{ io_port_b->PIO_PDR = flags; continue; }
+		if(!strcmp(pin_action, "input"))	{ io_port_b->PIO_ODR = flags; continue; }
+		if(!strcmp(pin_action, "output"))	{ io_port_b->PIO_OER = flags; continue; }
+		if(!strcmp(pin_action, "1"))		{ io_port_b->PIO_SODR = flags; continue; }
+		if(!strcmp(pin_action, "0"))		{ io_port_b->PIO_CODR = flags;	continue; }
+		if(!strcmp(pin_action, "read"))	{
+			int data_bit = io_port_b->PIO_PDSR & flags;
+			printf("%lu\t%s\t%c\n", time(0), context, data_bit ? '1' : '0');
+			continue;
+		}
+		fprintf(stderr, "Unknown action: %s, ignoring. %s\n", pin_action, msg_usage);
+	}
+}
+
+static void shell_counter() {
+	fprintf(stderr, "%s\n", __func__);
+}
+
+static void shell_ds18b20_presense(int flags, char* context) {
+	io_port_b->PIO_PER = flags;
+	io_port_b->PIO_PPUER = flags; //enable pull up
+	unsigned state = ds18b20_reset(io_port_b, flags);
+	printf("%lu\t%s\t%c\n", time(0), context, state ? '0' : '1');
+}
+
+static void shell_ds18b20_convert(int flags) {
+	ds18b20_reset(io_port_b, flags);
+	w1_write_byte(io_port_b, flags, DS18B20_SKIP_ROM);
+	w1_write_byte(io_port_b, flags, DS18B20_CONVERT_T);
+}
+
+static void shell_ds18b20_read(int flags, char* context) {
+	ds18b20_reset(io_port_b, flags);
+	w1_write_byte(io_port_b, flags, DS18B20_SKIP_ROM);
+	w1_write_byte(io_port_b, flags, DS18B20_READ_SCRATCHPAD);
+	float temp = w1_read_byte(io_port_b, flags) | (w1_read_byte(io_port_b, flags) << 8);
+	//skip reading the rest of scratchpad bytes
+	io_port_b->PIO_OER = flags; //enable output
+	io_port_b->PIO_CODR = flags; //level low
+	temp /= 16;
+	printf("%lu\t%s\t%g\n", time(0), context, temp);
+	usleep(1000);
+	io_port_b->PIO_ODR = flags; //disable output
+}
+
+static void shell_ds18b20() {
+	static const char* msg_usage = "ds18b20 context pin [presense | convert | read]\n";
+	char* context = strtok(0, SHELL_CMD_DELIMITER);
+	char* pin_name = strtok(0, SHELL_CMD_DELIMITER);
+	char* pin_action = strtok(0, SHELL_CMD_DELIMITER);
+	if(!pin_action) return (void)fprintf(stderr, "%s\n", msg_usage);
+	int port_bit = lib_piob_from_pin(atoi(pin_name));
+	if(port_bit == -1) {
+		fprintf(stderr, "Invalid pin number (%s). Only GPIO B is supported. %s\n", pin_name, msg_usage);
+		return;
+	}
+	int flags = 1 << port_bit;
+	for(; pin_action; pin_action = strtok(0, SHELL_CMD_DELIMITER)) {
+		if(!strcmp(pin_action, "presense"))	{ shell_ds18b20_presense(flags, context); continue; }
+		if(!strcmp(pin_action, "convert"))	{ shell_ds18b20_convert(flags); continue; }
+		if(!strcmp(pin_action, "read"))		{ shell_ds18b20_read(flags, context); continue; }
+		fprintf(stderr, "Unknown action: %s, ignoring. %s\n", pin_action, msg_usage);
+	}
+}
+
+static void shell_ctrl_c(int sig) {
+	(void)sig;
+	fclose(stdin);
+}
+
+static int shell_main(int argc, char* argv[]) {
+	(void)argc;
+	(void)argv;
+	io_map_base = lib_open_base(PIO_BASE);
+	if(!io_map_base) {
+		perror("mmap");
+		return ERR_MMAP;
+	}
+	io_port_b = PIO_B(io_map_base);
+	char line[SHELL_LINE_BUFF_SIZE];
+	fprintf(stderr, "Exit: ctrl+d, help: empty string\n");
+	signal(SIGINT, shell_ctrl_c);
+	while(fprintf(stderr, "> "), fgets(line, sizeof(line), stdin)) {
+		char* cmd = strtok(line, SHELL_CMD_DELIMITER);
+		if(!cmd) {
+			fprintf(stderr, "gpio, counter, ds18b20 <args>, ctlr+d to exit, empty for help\n");
+			continue;
+		}
+		if(!strcmp(cmd, "gpio"))	{shell_gpio(); continue;}
+		if(!strcmp(cmd, "counter"))	{shell_counter(); continue;}
+		if(!strcmp(cmd, "ds18b20"))	{shell_ds18b20(); continue;}
+		fprintf(stderr, "Unknown command: %s\n", cmd);
+	}
+	lib_close_base(io_map_base);
+	fprintf(stderr, "\nshell: cleaning up, exiting.\n");
+	return ERR_OK;
+}
+
 static int show_usage(int err, const char* msg) {
 	const char* err_fmt = "%s\nUsage: test <command> <args>\n"\
 	"Commands:\n"\
@@ -482,7 +603,8 @@ static int show_usage(int err, const char* msg) {
 	"\tpiob-read\n"\
 	"\tcount-init\n"\
 	"\tcount-read\n"\
-	"\ttemp-read\n";
+	"\ttemp-read\n"\
+	"\tshell\n";
 	fprintf(stderr, err_fmt, msg);
 	return err;
 }
@@ -497,6 +619,7 @@ int main(int argc, char* argv[]) {
 	if(!strcmp(*argv, "count-init"))	return count_init_main(argc, argv);
 	if(!strcmp(*argv, "count-read"))	return count_read_main(argc, argv);
 	if(!strcmp(*argv, "temp-read"))		return temp_read_main(argc, argv);
+	if(!strcmp(*argv, "shell"))			return shell_main(argc, argv);
 	return show_usage(ERR_CMD, "Unknown subcommand");
 }
 
