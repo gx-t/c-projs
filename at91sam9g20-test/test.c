@@ -211,146 +211,6 @@ static void lib_close_base(volatile void* map_base) {
 	munmap((void*)map_base, MAP_SIZE);
 }
 
-static int simple_blink_show_usage(int err, const char* msg) {
-	static const char* err_fmt = "%s\nUsage: test simple-blink <pin>\n";
-	fprintf(stderr, err_fmt, msg);
-	return err;
-}
-
-static int simple_blink_main(int argc, char* argv[]) {
-	if(argc != 2) return simple_blink_show_usage(ERR_ARGC, "Invalid number of arguments for simple-blink");
-	argc --;
-	argv ++;
-	int port_bit = lib_piob_from_pin(atoi(*argv));
-	if(port_bit == -1) return simple_blink_show_usage(ERR_PIN, "Invalid pin number. Only \"B\" pins are supported");
-	volatile void* map_base = lib_open_base(PIO_BASE);
-	if(!map_base) return ERR_MMAP;
-	volatile struct AT91S_PIO* piob = PIO_B(map_base);
-	unsigned flags = 1 << port_bit;
-	piob->PIO_PER = flags;
-	piob->PIO_OER = flags;
-	while(1) {
-		piob->PIO_SODR = flags;
-		usleep(100000);
-		piob->PIO_CODR = flags;
-		usleep(100000);
-	}
-	lib_close_base(map_base);
-	return ERR_OK;
-}
-
-static int piob_write_show_usage(int err, const char* msg) {
-	static const char* err_fmt = "%s\nUsage: test piob-write on|off <pin>[<pin>...]\n";
-	fprintf(stderr, err_fmt, msg);
-	return err;
-}
-
-static int piob_write_state(int func, int argc, char* argv[]) {
-	argc --;
-	argv ++;
-	unsigned flags = 0;
-	while(argc --) {
-		int port_bit = lib_piob_from_pin(atoi(*argv));
-		if(port_bit == -1) {
-			fprintf(stderr, "Invalid pin number: %s. Only \"B\" pins are supported\n", *argv);
-			continue;
-		}
-		argv ++;
-		flags |= (1 << port_bit);
-	}
-	if(!flags) return piob_write_show_usage(ERR_PIN, "No pins selected - nothing to do");
-	volatile void* map_base = lib_open_base(PIO_BASE);
-	if(!map_base) return ERR_MMAP;
-	volatile struct AT91S_PIO* piob = PIO_B(map_base);
-	piob->PIO_PER = flags;
-	piob->PIO_OER = flags;
-	if(func) {
-		piob->PIO_SODR = flags;
-	} else {
-		piob->PIO_CODR = flags;
-	}
-	lib_close_base(map_base);
-	return ERR_OK;
-}
-
-static int piob_write_main(int argc, char* argv[]) {
-	if(argc < 3) return piob_write_show_usage(ERR_ARGC, "Not enough arguments for piob-write");
-	argc --;
-	argv ++;
-	if(!strcmp(*argv, "on")) return piob_write_state(1, argc, argv);
-	if(!strcmp(*argv, "off")) return piob_write_state(0, argc, argv);
-	return piob_write_show_usage(ERR_VAL, "Illegal state value for port");
-}
-
-static int piob_read_show_usage(int err, const char* msg) {
-	static const char* err_fmt = "%s\nUsage: test piob-read <pin>\n";
-	fprintf(stderr, err_fmt, msg);
-	return err;
-}
-
-static int piob_read_main(int argc, char* argv[]) {
-	if(argc < 2) return piob_read_show_usage(ERR_ARGC, "Not enough arguments for piob-read");
-	volatile void* map_base = lib_open_base(PIO_BASE);
-	if(!map_base) return ERR_MMAP;
-	volatile struct AT91S_PIO* piob = PIO_B(map_base);
-	int cnt = 0;
-	while(--argc) {
-		int pin = atoi(*++argv);
-		int port_bit = lib_piob_from_pin(pin);
-		if(port_bit == -1) {
-			fprintf(stderr, "Invalid pin number: %s. Only \"B\" pins are supported\n", *argv);
-			continue;
-		}
-		cnt ++;
-		int flags = 1 << port_bit;
-		piob->PIO_PER = flags;
-		piob->PIO_ODR = flags;
-		int data_bit = piob->PIO_PDSR & flags;
-		printf("%d %s ", pin, data_bit ? "on":"off");
-	}
-	lib_close_base(map_base);
-	if(cnt) {
-		puts("");
-	} else {
-		return piob_read_show_usage(ERR_PIN, "No pins selected - nothing to do");
-	}
-	return ERR_OK;
-}
-
-//TCLK1 == PB6 == PIN9 connected to PB0 == PIN3
-
-static int count_init_show_usage(int err, const char* msg) {
-	return err;
-}
-
-static int count_init_main(int argc, char* argv[]) {
-	volatile void* map_base = lib_open_base(PIO_BASE);
-	if(!map_base) return ERR_MMAP;
-	struct AT91S_PMC* pmc = PMC(map_base);
-	pmc->PMC_PCER = (1 << AT91C_ID_TC0); //start periferial clock
-	lib_close_base(map_base);
-	volatile struct AT91S_TCB *tcb = lib_open_base(TCB_BASE);
-	if(!tcb) return ERR_MMAP;
-	tcb->TCB_TC0.TC_IDR = 0xFF;//disable all interrupts for TC0
-	tcb->TCB_TC0.TC_CMR = TC_CLKS_XC1 | TC_ETRGEDG_RISING; //XC1 as clock, rising edge
-	tcb->TCB_BMR = AT91C_TCB_TC1XC1S_TCLK1; //connect XC1 to TCLK1 (pin 3)
-	tcb->TCB_TC0.TC_CCR = TC_CLKEN | TC_SWTRG; //enable clock, reset counter
-	lib_close_base(tcb);
-	return ERR_OK;
-}
-
-static int count_read_show_usage(int err, const char* msg) {
-	return err;
-}
-
-static int count_read_main(int  argc, char* argv[]) {
-	volatile struct AT91S_TCB *tcb = lib_open_base(TCB_BASE);
-	if(!tcb) return ERR_MMAP;
-	printf("counter %d\n", tcb->TCB_TC0.TC_CV);
-	lib_close_base(tcb);
-	return ERR_OK;
-}
-
 // calibrated with good accuracy for GESBC-9G20u board
 void lib_delay_us(unsigned us) {
 	volatile unsigned i = 79 * us / 2;
@@ -428,60 +288,13 @@ static unsigned ds18b20_reset(volatile struct AT91S_PIO* piob, unsigned flags) {
 #define DS18B20_READ_SCRATCHPAD		0xBE
 #define DS18B20_CONVERT_T			0x44
 
-static void ds18b20_take_temp(volatile struct AT91S_PIO* piob, unsigned flags) {
-	w1_write_byte(piob, flags, DS18B20_SKIP_ROM);
-	w1_write_byte(piob, flags, DS18B20_CONVERT_T);
-//wait to the end of convertion
-	sleep(1);
-	ds18b20_reset(piob, flags);
-	w1_write_byte(piob, flags, DS18B20_SKIP_ROM);
-	w1_write_byte(piob, flags, DS18B20_READ_SCRATCHPAD);
-	float temp = w1_read_byte(piob, flags) | (w1_read_byte(piob, flags) << 8);
-//skip reading the rest of scratchpad bytes
-	piob->PIO_OER = flags; //enable output
-	piob->PIO_CODR = flags; //level low
-	temp /= 16;
-	printf("%g\n", temp);
-	usleep(1000);
-	piob->PIO_ODR = flags; //disable output
-}
-
-static int temp_read_show_usage(int err, const char* msg) {
-	static const char* err_fmt = "%s\nUsage: test temp-read <pin>\n";
-	fprintf(stderr, err_fmt, msg);
-	return err;
-}
-
-static int temp_read_main(int  argc, char* argv[]) {
-	if(argc < 2) return temp_read_show_usage(ERR_ARGC, "Not enough arguments for temp-read");
-	argc --;
-	argv ++;
-	int port_bit = lib_piob_from_pin(atoi(*argv));
-	if(port_bit == -1) return temp_read_show_usage(ERR_PIN, "Invalid pin number. Only \"B\" pins are supported");
-	nice(-10);
-	volatile void* map_base = lib_open_base(PIO_BASE);
-	if(!map_base) return ERR_MMAP;
-	volatile struct AT91S_PIO* piob = PIO_B(map_base);
-	unsigned flags = 1 << port_bit;
-	piob->PIO_PPUER = flags; //enable pull up
-	piob->PIO_PER = flags; //enable pin
-	unsigned state = ds18b20_reset(piob, flags);
-	if(state) {
-		fprintf(stderr, "Error reseting device. Make sure DS18B20 is on pin %s\n", *argv);
-		lib_close_base(map_base);
-		return ERR_RESET;
-	}
-	ds18b20_take_temp(piob, flags);
-	lib_close_base(map_base);
-	return ERR_OK;
-}
-
 //==============================================
 #define SHELL_LINE_BUFF_SIZE		4096
 #define SHELL_CMD_DELIMITER			" \t\r\n"
 
 static volatile void* io_map_base = 0;
 static volatile struct AT91S_PIO* io_port_b = 0;
+static volatile struct AT91S_TCB* tcb_base = 0;
 
 static void shell_gpio() {
 	static const char* msg_usage = "gpio context pin [enable | disable | input | output | 1 | 0 | read]\n";
@@ -509,10 +322,6 @@ static void shell_gpio() {
 		}
 		fprintf(stderr, "Unknown action: %s, ignoring. %s\n", pin_action, msg_usage);
 	}
-}
-
-static void shell_counter() {
-	fprintf(stderr, "%s\n", __func__);
 }
 
 static void shell_ds18b20_presense(int flags, char* context) {
@@ -562,17 +371,42 @@ static void shell_ds18b20() {
 	}
 }
 
+static int shell_counter_init() {
+	PMC(io_map_base)->PMC_PCER = (1 << AT91C_ID_TC0); //start periferial clock
+	tcb_base->TCB_TC0.TC_IDR = 0xFF;//disable all interrupts for TC0
+	tcb_base->TCB_TC0.TC_CMR = TC_CLKS_XC1 | TC_ETRGEDG_RISING; //XC1 as clock, rising edge
+	tcb_base->TCB_BMR = AT91C_TCB_TC1XC1S_TCLK1; //connect XC1 to TCLK1 (pin 9)
+	tcb_base->TCB_TC0.TC_CCR = TC_CLKEN | TC_SWTRG; //enable clock, reset counter
+	return ERR_OK;
+}
+
+static void shell_counter() {
+	static const char* msg_usage = "counter context [init | read]\n";
+	char* context = strtok(0, SHELL_CMD_DELIMITER);
+	char* pin_action = strtok(0, SHELL_CMD_DELIMITER);
+	if(!pin_action) return (void)fprintf(stderr, "%s\n", msg_usage);
+	for(; pin_action; pin_action = strtok(0, SHELL_CMD_DELIMITER)) {
+		if(!strcmp(pin_action, "init"))		{ shell_counter_init(); continue; }
+		if(!strcmp(pin_action, "read"))		{ printf("%lu\t%s\t%d\n", time(0), context, tcb_base->TCB_TC0.TC_CV); continue; }
+		fprintf(stderr, "Unknown action: %s, ignoring. %s\n", pin_action, msg_usage);
+	}
+}
+
 static void shell_ctrl_c(int sig) {
 	(void)sig;
 	fclose(stdin);
 }
 
-static int shell_main(int argc, char* argv[]) {
-	(void)argc;
-	(void)argv;
+int main() {
 	io_map_base = lib_open_base(PIO_BASE);
 	if(!io_map_base) {
-		perror("mmap");
+		perror("io_map_base - mmap");
+		return ERR_MMAP;
+	}
+	tcb_base = lib_open_base(TCB_BASE);
+	if(!tcb_base) {
+		lib_close_base(io_map_base);
+		perror("tcp_base - mmap");
 		return ERR_MMAP;
 	}
 	io_port_b = PIO_B(io_map_base);
@@ -591,35 +425,8 @@ static int shell_main(int argc, char* argv[]) {
 		fprintf(stderr, "Unknown command: %s\n", cmd);
 	}
 	lib_close_base(io_map_base);
+	lib_close_base(tcb_base);
 	fprintf(stderr, "\nshell: cleaning up, exiting.\n");
 	return ERR_OK;
-}
-
-static int show_usage(int err, const char* msg) {
-	const char* err_fmt = "%s\nUsage: test <command> <args>\n"\
-	"Commands:\n"\
-	"\tsimple-blink\n"\
-	"\tpiob-write\n"\
-	"\tpiob-read\n"\
-	"\tcount-init\n"\
-	"\tcount-read\n"\
-	"\ttemp-read\n"\
-	"\tshell\n";
-	fprintf(stderr, err_fmt, msg);
-	return err;
-}
-
-int main(int argc, char* argv[]) {
-	if(argc < 2) return show_usage(ERR_ARGC, "Not enough arguments for test");
-	argc --;
-	argv ++;
-	if(!strcmp(*argv, "simple-blink"))	return simple_blink_main(argc, argv);
-	if(!strcmp(*argv, "piob-write"))	return piob_write_main(argc, argv);
-	if(!strcmp(*argv, "piob-read"))		return piob_read_main(argc, argv);
-	if(!strcmp(*argv, "count-init"))	return count_init_main(argc, argv);
-	if(!strcmp(*argv, "count-read"))	return count_read_main(argc, argv);
-	if(!strcmp(*argv, "temp-read"))		return temp_read_main(argc, argv);
-	if(!strcmp(*argv, "shell"))			return shell_main(argc, argv);
-	return show_usage(ERR_CMD, "Unknown subcommand");
 }
 
