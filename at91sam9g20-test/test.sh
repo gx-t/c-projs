@@ -29,3 +29,8 @@ done) | ./test shell | sqlite3 sensors.db
 #echo "create table sensors (id INTEGER PRIMARY KEY, time TIMESTAMP, board TEXT, device TEXT, value TEXT);"
 #echo "select time,value,device from sensors where device='board0.counter';" | sqlite3 sensors.db
 #echo "select time,value,device from sensors where id between 10 and 15;" | sqlite3 sensors.db
+#delete from sensors where id between 0 and 35000
+#select * from sensors where id between (select min("id") from sensors)  and (select min("id")+2 from sensors);
+#select * from sensors where id between (select max("id")-16 from sensors) and (select max("id") from sensors) and device="board0.term0";
+#select datetime(time, 'unixepoch'),device,value from sensors where id between (select max("id")-16 from sensors) and (select max("id") from sensors) and device="board0.term0";
+
