@@ -317,7 +317,7 @@ static void shell_gpio() {
 		if(!strcmp(pin_action, "0"))		{ io_port_b->PIO_CODR = flags;	continue; }
 		if(!strcmp(pin_action, "read"))	{
 			int data_bit = io_port_b->PIO_PDSR & flags;
-			printf("insert into sensors (time,device,value) values (\'%lu\',\'%s\',\'%c\');\n", time(0), context, data_bit ? '1' : '0');
+			printf("insert into outbox (time,devid,value) values (\'%lu\',\'%s\',\'%c\');\n", time(0), context, data_bit ? '1' : '0');
 			continue;
 		}
 		fprintf(stderr, "Unknown action: %s, ignoring. %s\n", pin_action, msg_usage);
@@ -328,7 +328,7 @@ static void shell_ds18b20_presense(int flags, char* context) {
 	io_port_b->PIO_PER = flags;
 	io_port_b->PIO_PPUER = flags; //enable pull up
 	unsigned state = ds18b20_reset(io_port_b, flags);
-	printf("insert into sensors (time,device,value) values (\'%lu\',\'%s\',\'%c\');\n", time(0), context, state ? '0' : '1');
+	printf("insert into outbox (time,devid,value) values (\'%lu\',\'%s\',\'%c\');\n", time(0), context, state ? '0' : '1');
 }
 
 static void shell_ds18b20_convert(int flags) {
@@ -346,7 +346,7 @@ static void shell_ds18b20_read(int flags, char* context) {
 	io_port_b->PIO_OER = flags; //enable output
 	io_port_b->PIO_CODR = flags; //level low
 	temp /= 16;
-	printf("insert into sensors (time,device,value) values (\'%lu\',\'%s\',\'%g\');\n", time(0), context, temp);
+	printf("insert into outbox (time,devid,value) values (\'%lu\',\'%s\',\'%g\');\n", time(0), context, temp);
 	usleep(1000);
 	io_port_b->PIO_ODR = flags; //disable output
 }
@@ -387,7 +387,7 @@ static void shell_counter() {
 	if(!pin_action) return (void)fprintf(stderr, "%s\n", msg_usage);
 	for(; pin_action; pin_action = strtok(0, SHELL_CMD_DELIMITER)) {
 		if(!strcmp(pin_action, "init"))		{ shell_counter_init(); continue; }
-		if(!strcmp(pin_action, "read"))		{ printf("insert into sensors (time,device,value) values (\'%lu\',\'%s\',\'%d\');\n", time(0), context, tcb_base->TCB_TC0.TC_CV); continue; }
+		if(!strcmp(pin_action, "read"))		{ printf("insert into outbox (time,devid,value) values (\'%lu\',\'%s\',\'%d\');\n", time(0), context, tcb_base->TCB_TC0.TC_CV); continue; }
 		fprintf(stderr, "Unknown action: %s, ignoring. %s\n", pin_action, msg_usage);
 	}
 }
