@@ -8,25 +8,30 @@ PERIOD=1
 
 
 init() {
-	echo gpio $LED 7 enable output 0
-		echo gpio $PULSE 3 enable output 0
-		echo ds18b20 $TERM 4 presense
-		echo counter $COUNTER init
+	echo "gpio $LED 7 enable output 0
+		gpio $PULSE 3 enable output 0
+		ds18b20 $TERM 4 presense
+		counter $COUNTER init" | ./test
 }
 
 prepare() {
-	echo gpio $LED 7 1
-		echo gpio $PULSE 3 1
-		echo ds18b20 $TERM 4 convert
+	echo "gpio $LED 7 1
+		gpio $PULSE 3 1
+		ds18b20 $TERM 4 convert" | ./test
 }
 
 collect() {
-	echo gpio $LED 7 0
-		echo gpio $PULSE 3 0
-		echo '.begin transaction;'
-		echo ds18b20 $TERM 4 read
-		echo counter $COUNTER read
-		echo '.end transaction;'
+	echo "gpio $LED 7 0
+		gpio $PULSE 3 0
+.		begin transaction;
+		ds18b20 $TERM 4 read
+		counter $COUNTER read
+.		end transaction;" |
+		./test |
+		awk '{
+				if($1 == "begin" || $1 == "end") {print $0; continue;}
+				printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3);
+			}' | curl --upload-file - http://shah32768.sdf.org/cgi-bin/sql-test.cgi
 }
 
 send() {
@@ -37,12 +42,12 @@ delete() {
 	echo "delete from outbox;"
 }
 
-init | ./test
+init
 while true
 do
-	prepare | ./test
+	prepare
 	sleep $PERIOD
-	collect | ./test | curl --upload-file - http://shah32768.sdf.org/cgi-bin/sql-test.cgi
+	collect
 	sleep $PERIOD
 done
 
