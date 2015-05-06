@@ -31,23 +31,29 @@ collect() {
 		awk '{
 				if($1 == "begin" || $1 == "end") {print $0; continue;}
 				printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3);
-			}' | curl --upload-file - http://shah32768.sdf.org/cgi-bin/sql-test.cgi
+			}' | sqlite3 sensors.db
 }
 
 send() {
-	echo ".dump outbox"
+	(echo begin transaction
+	echo "select time,devid,value from outbox;" | sqlite3 sensors.db |
+	awk -F '|' '{ printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3); }'
+	echo end transaction) | curl --upload-file - http://shah32768.sdf.org/cgi-bin/sql-test.cgi
 }
 
 delete() {
-	echo "delete from outbox;"
+	echo "delete from outbox;" | sqlite3 sensors.db
 }
 
 init
+cnt=0
 while true
 do
 	prepare
 	sleep $PERIOD
 	collect
+	cnt=`expr $cnt + 1`
+	[[ $cnt == 10 ]] && cnt=0 && send && delete
 	sleep $PERIOD
 done
 
