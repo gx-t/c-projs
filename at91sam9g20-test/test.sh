@@ -5,7 +5,8 @@ TERM="board0.term0"
 PULSE="board0.counter-input"
 COUNTER="board0.counter"
 PERIOD=1
-
+SEND_PERIOD=10
+SQLCGI="http://shah32768.sdf.org/cgi-bin/sql-test.cgi"
 
 init() {
 	echo "gpio $LED 7 enable output 0
@@ -38,7 +39,7 @@ send() {
 	(echo begin transaction
 	echo "select time,devid,value from outbox;" | sqlite3 sensors.db |
 	awk -F '|' '{ printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3); }'
-	echo end transaction) | curl --upload-file - http://shah32768.sdf.org/cgi-bin/sql-test.cgi
+	echo end transaction) | curl --upload-file - $SQLCGI
 }
 
 delete() {
@@ -53,7 +54,7 @@ do
 	sleep $PERIOD
 	collect
 	cnt=`expr $cnt + 1`
-	[[ $cnt == 10 ]] && cnt=0 && send && delete
+	[[ $cnt == $SEND_PERIOD ]] && cnt=0 && send && delete
 	sleep $PERIOD
 done
 
