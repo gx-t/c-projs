@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <time.h>
+#include <sys/ioctl.h>
+#include <linux/i2c-dev.h>
 
 enum {
 	ERR_OK = 0,
@@ -296,6 +298,8 @@ static volatile void* io_map_base = 0;
 static volatile struct AT91S_PIO* io_port_b = 0;
 static volatile struct AT91S_TCB* tcb_base = 0;
 
+//=============================================================================
+
 static void shell_gpio() {
 	static const char* msg_usage = "gpio context pin [enable | disable | input | output | 1 | 0 | read]\n";
 	char* context = strtok(0, SHELL_CMD_DELIMITER);
@@ -323,6 +327,8 @@ static void shell_gpio() {
 		fprintf(stderr, "Unknown action: %s, ignoring. %s\n", pin_action, msg_usage);
 	}
 }
+
+//=============================================================================
 
 static void shell_ds18b20_presense(int flags, char* context) {
 	io_port_b->PIO_PER = flags;
@@ -371,6 +377,8 @@ static void shell_ds18b20() {
 	}
 }
 
+//=============================================================================
+
 static int shell_counter_init() {
 	PMC(io_map_base)->PMC_PCER = (1 << AT91C_ID_TC0); //start periferial clock
 	tcb_base->TCB_TC0.TC_IDR = 0xFF;//disable all interrupts for TC0
@@ -390,6 +398,44 @@ static void shell_counter() {
 		if(!strcmp(pin_action, "read"))		{ printf("%lu\t%s\t%d\n", time(0), context, tcb_base->TCB_TC0.TC_CV); continue; }
 		fprintf(stderr, "Unknown action: %s, ignoring. %s\n", pin_action, msg_usage);
 	}
+}
+
+//=============================================================================
+
+static void shell_lm75_read(int fd) {
+	char buff[2];
+	buff[0] = 0;
+	if(1 != write(fd, buff, 1) || 2 != read(fd, buff, 2)) {
+		fprintf(stderr, "lm75 temperature read failed\n");
+		return;
+	}
+	printf("%g\n", (float)((short)buff[0] << 8 | buff[1]) / 256);
+}
+
+static void shell_lm75() {
+	static const char* msg_usage = "lm75 context address read\n";
+	char* context = strtok(0, SHELL_CMD_DELIMITER);
+	char* address = strtok(0, SHELL_CMD_DELIMITER);
+	char* action = strtok(0, SHELL_CMD_DELIMITER);
+	int addr_i = -1;
+	sscanf(address, "%i", &addr_i);
+	if(addr_i < 0 || addr_i > 0x77) {
+		fprintf(stderr, "Invalid i2c device addressi (%s). Must be between 0x00 and 0x77\n", address);
+		return;
+	}
+	int fd = open("/dev/i2c-0", O_RDWR);
+	if(fd < 0) {
+		perror("/dev/i2c-0");
+		return;
+	}
+	do {
+		if(ioctl(fd, I2C_SLAVE, addr_i) < 0) {
+			perror("Failed to acquire slave address");
+			break;
+		}
+		shell_lm75_read(fd);
+	}while(0);
+	close(fd);
 }
 
 static void shell_ctrl_c(int sig) {
@@ -417,12 +463,13 @@ int main() {
 		if(*line == '.') {printf("%s", line + 1); continue;}
 		char* cmd = strtok(line, SHELL_CMD_DELIMITER);
 		if(!cmd) {
-			fprintf(stderr, "gpio, counter, ds18b20 <args>, ctlr+d to exit, .<any text> - comment, empty for help\n");
+			fprintf(stderr, "gpio, counter, ds18b20, lm75 <args>, ctlr+d to exit, .<any text> - comment, empty for help\n");
 			continue;
 		}
 		if(!strcmp(cmd, "gpio"))	{shell_gpio(); continue;}
 		if(!strcmp(cmd, "counter"))	{shell_counter(); continue;}
 		if(!strcmp(cmd, "ds18b20"))	{shell_ds18b20(); continue;}
+		if(!strcmp(cmd, "lm75"))	{shell_lm75(); continue;}
 		fprintf(stderr, "Unknown command: %s\n", cmd);
 	}
 	lib_close_base(io_map_base);
