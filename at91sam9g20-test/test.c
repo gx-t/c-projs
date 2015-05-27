@@ -402,14 +402,16 @@ static void shell_counter() {
 
 //=============================================================================
 
-static void shell_lm75_read(int fd) {
+static void shell_lm75_read(int fd, char* context) {
+	float temp;
 	char buff[2];
 	buff[0] = 0;
 	if(1 != write(fd, buff, 1) || 2 != read(fd, buff, 2)) {
 		fprintf(stderr, "lm75 temperature read failed\n");
 		return;
 	}
-	printf("%g\n", (float)((short)buff[0] << 8 | buff[1]) / 256);
+	temp = (float)((short)buff[0] << 8 | buff[1]) / 256;
+	printf("%lu\t%s\t%g\n", time(0), context, temp);
 }
 
 static void shell_lm75() {
@@ -417,10 +419,11 @@ static void shell_lm75() {
 	char* context = strtok(0, SHELL_CMD_DELIMITER);
 	char* address = strtok(0, SHELL_CMD_DELIMITER);
 	char* action = strtok(0, SHELL_CMD_DELIMITER);
+	if(!action) return (void)fprintf(stderr, "%s\n", msg_usage);
 	int addr_i = -1;
 	sscanf(address, "%i", &addr_i);
 	if(addr_i < 0 || addr_i > 0x77) {
-		fprintf(stderr, "Invalid i2c device addressi (%s). Must be between 0x00 and 0x77\n", address);
+		fprintf(stderr, "Invalid i2c device addressi (%s). Must be between 0x00 and 0x77. %s\n", address, msg_usage);
 		return;
 	}
 	int fd = open("/dev/i2c-0", O_RDWR);
@@ -433,7 +436,7 @@ static void shell_lm75() {
 			perror("Failed to acquire slave address");
 			break;
 		}
-		shell_lm75_read(fd);
+		shell_lm75_read(fd, context);
 	}while(0);
 	close(fd);
 }
