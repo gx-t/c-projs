@@ -1,7 +1,8 @@
 #!/bin/sh
 
 LED="board0.led0"
-TERM="board0.term0"
+TERM0="board0.ds18b20"
+TERM1="board0.lm75"
 PULSE="board0.counter-input"
 COUNTER="board0.counter"
 PERIOD=1
@@ -11,21 +12,21 @@ SQLCGI="http://shah32768.sdf.org/cgi-bin/sql-test.cgi"
 init() {
 	echo "gpio $LED 7 enable output 0
 		gpio $PULSE 3 enable output 0
-		ds18b20 $TERM 4 presense
+		ds18b20 $TERM0 4 presense
 		counter $COUNTER init" | ./test
 }
 
 prepare() {
 	echo "gpio $LED 7 1
 		gpio $PULSE 3 1
-		ds18b20 $TERM 4 convert" | ./test
+		ds18b20 $TERM0 4 convert" | ./test
 }
 
 collect() {
 	echo "gpio $LED 7 0
 		gpio $PULSE 3 0
 .		begin transaction;
-		ds18b20 $TERM 4 read
+		ds18b20 $TERM0 4 read
 		counter $COUNTER read
 .		end transaction;" |
 		./test |
