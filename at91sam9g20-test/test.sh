@@ -23,7 +23,7 @@ init() {
 }
 
 prepare() {
-	echo "gpio . 29 0
+	echo "gpio . 29 1
 		gpio . 31 0
 		gpio $PULSE 3 1
 		ds18b20 $THERM0 4 convert" | ./test
@@ -31,7 +31,7 @@ prepare() {
 
 collect() {
 	echo "gpio . 29 0
-		gpio . 31 0
+		gpio . 31 1
 		gpio $PULSE 3 0
 .		begin transaction;
 		ds18b20 $THERM0 4 read
@@ -46,8 +46,8 @@ collect() {
 }
 
 send() {
-	echo "gpio . 29 0
-		gpio . 31 0" | ./test
+	echo "gpio . 29 1
+		gpio . 31 1" | ./test
 	(echo begin transaction
 	echo "select time,devid,value from outbox;" | sqlite3 sensors.db |
 	awk -F '|' '{ printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3); }'
