@@ -414,6 +414,7 @@ static void shell_lm75_read(int fd, char* context) {
 	printf("%lu\t%s\t%g\n", time(0), context, temp);
 }
 
+//i2c pins: 17,18 
 static void shell_lm75() {
 	static const char* msg_usage = "lm75 context address read\n";
 	char* context = strtok(0, SHELL_CMD_DELIMITER);
