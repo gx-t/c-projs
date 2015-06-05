@@ -1,6 +1,11 @@
 #!/bin/sh
 
-LED="board0.led0"
+#2 LEDS: pin 29, 31
+#GENERATOR(PULSE) pin 3
+#COUNTER pin 9
+#DS18B20 pin 4
+#LM75 pins 17,18
+
 THERM0="board0.therm-ds18b20"
 THERM1="board0.therm-lm75"
 PULSE="board0.counter-input"
@@ -10,20 +15,23 @@ SEND_PERIOD=10
 SQLCGI="http://shah32768.sdf.org/cgi-bin/sql-test.cgi"
 
 init() {
-	echo "gpio $LED 7 enable output 0
+	echo "gpio . 29 enable output 0
+		gpio . 31 enable output 0
 		gpio $PULSE 3 enable output 0
 		ds18b20 $THERM0 4 presense
 		counter $COUNTER init" | ./test
 }
 
 prepare() {
-	echo "gpio $LED 7 1
+	echo "gpio . 29 0
+		gpio . 31 0
 		gpio $PULSE 3 1
 		ds18b20 $THERM0 4 convert" | ./test
 }
 
 collect() {
-	echo "gpio $LED 7 0
+	echo "gpio . 29 0
+		gpio . 31 0
 		gpio $PULSE 3 0
 .		begin transaction;
 		ds18b20 $THERM0 4 read
@@ -38,6 +46,8 @@ collect() {
 }
 
 send() {
+	echo "gpio . 29 0
+		gpio . 31 0" | ./test
 	(echo begin transaction
 	echo "select time,devid,value from outbox;" | sqlite3 sensors.db |
 	awk -F '|' '{ printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3); }'
@@ -45,6 +55,8 @@ send() {
 }
 
 delete() {
+	echo "gpio . 29 0
+		gpio . 31 0" | ./test
 	echo "delete from outbox;" | sqlite3 sensors.db
 }
 
