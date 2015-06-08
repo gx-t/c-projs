@@ -50,8 +50,8 @@ send() {
 		gpio . 31 1" | ./test
 	(echo begin transaction
 	echo "select time,devid,value from outbox;" | sqlite3 sensors.db |
-	awk -F '|' '{ printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3); }'
-	echo end transaction) | curl --upload-file - $SQLCGI
+	awk -F '|' '{ printf("insert into data (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3); }'
+	echo end transaction) | [[ `curl --upload-file - $SQLCGI` == "OK" ]]
 }
 
 delete() {
@@ -80,3 +80,5 @@ done
 #select * from outbox where id between (select min("id") from outbox)  and (select min("id")+2 from outbox);
 #select * from outbox where id between (select max("id")-16 from outbox) and (select max("id") from outbox) and devid="board0.term0";
 #select id,datetime(time, 'unixepoch'),devid,value from outbox where id between (select max(id)-32 from outbox) and (select max(id) from outbox);
+#insert into data (time,devid,value) select"0", devid,"2.02" from devices where devid="invalid.sensor" and status="0";
+#create table devices (id integer primary key, devid text, status integer, description text, unique(devid) on conflict replace);
