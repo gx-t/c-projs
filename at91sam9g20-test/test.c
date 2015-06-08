@@ -329,7 +329,7 @@ static void shell_gpio() {
 }
 
 //=============================================================================
-
+//TODO: use int sched_yield(void); at the beginning of ds18b20 functions
 static void shell_ds18b20_presense(int flags, char* context) {
 	io_port_b->PIO_PER = flags;
 	io_port_b->PIO_PPUER = flags; //enable pull up
