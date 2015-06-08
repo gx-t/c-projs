@@ -51,7 +51,7 @@ send() {
 	(echo begin transaction
 	echo "select time,devid,value from outbox;" | sqlite3 sensors.db |
 	awk -F '|' '{ printf("insert into data (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3); }'
-	echo end transaction) | [[ `curl --upload-file - $SQLCGI` == "OK" ]]
+	echo end transaction) | [[ `curl -s --upload-file - $SQLCGI` == "OK" ]]
 }
 
 delete() {
