@@ -39,7 +39,7 @@ collect() {
 		lm75 $THERM1 0x4F read
 .		end transaction;" |
 		./test |
-		awk '{
+		awk 'BEGIN {printf(".timeout 1000\n");} {
 			if($1 == "begin" || $1 == "end") {print $0; continue;}
 			printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3);
 		}' | sqlite3 sensors.db
@@ -82,3 +82,4 @@ done
 #select id,datetime(time, 'unixepoch'),devid,value from outbox where id between (select max(id)-32 from outbox) and (select max(id) from outbox);
 #insert into data (time,devid,value) select"0", devid,"2.02" from devices where devid="invalid.sensor" and status="0";
 #create table devices (id integer primary key, devid text, status integer, description text, unique(devid) on conflict replace);
+#select distinct value from data where devid="board0.therm-ds18b20";

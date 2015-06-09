@@ -10,6 +10,7 @@
 #include <time.h>
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
+#include <sched.h>
 
 enum {
 	ERR_OK = 0,
@@ -331,6 +332,7 @@ static void shell_gpio() {
 //=============================================================================
 //TODO: use int sched_yield(void); at the beginning of ds18b20 functions
 static void shell_ds18b20_presense(int flags, char* context) {
+	sched_yield();
 	io_port_b->PIO_PER = flags;
 	io_port_b->PIO_PPUER = flags; //enable pull up
 	unsigned state = ds18b20_reset(io_port_b, flags);
