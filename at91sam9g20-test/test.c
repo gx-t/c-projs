@@ -301,6 +301,13 @@ static volatile struct AT91S_TCB* tcb_base = 0;
 
 //=============================================================================
 
+static int (*log)(FILE*, const char*, ...) = fprintf;
+static int empty_log(FILE* ff, const char* fmt, ...) {
+	(void)ff;
+	(void)fmt;
+	return 0;
+}
+
 static void shell_gpio() {
 	static const char* msg_usage = "gpio context pin [enable | disable | input | output | 1 | 0 | read]\n";
 	char* context = strtok(0, SHELL_CMD_DELIMITER);
@@ -406,8 +413,7 @@ static void shell_counter() {
 
 static void shell_lm75_read(int fd, char* context) {
 	float temp;
-	char buff[2];
-	buff[0] = 0;
+	char buff[2] = {0};
 	if(1 != write(fd, buff, 1) || 2 != read(fd, buff, 2)) {
 		fprintf(stderr, "lm75 temperature read failed\n");
 		return;
@@ -449,7 +455,8 @@ static void shell_ctrl_c(int sig) {
 	fclose(stdin);
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+	if(argc > 1 && !strcmp(argv[1], "-q")) log = empty_log;
 	io_map_base = lib_open_base(PIO_BASE);
 	if(!io_map_base) {
 		perror("io_map_base - mmap");
@@ -463,7 +470,7 @@ int main() {
 	}
 	io_port_b = PIO_B(io_map_base);
 	char line[SHELL_LINE_BUFF_SIZE];
-	fprintf(stderr, "Exit: ctrl+d, help: empty string\n");
+	log(stderr, "Exit: ctrl+d, help: empty string\n");
 	signal(SIGINT, shell_ctrl_c);
 	while(fgets(line, sizeof(line), stdin)) {
 		if(*line == '.') {printf("%s", line + 1); continue;}
@@ -480,7 +487,7 @@ int main() {
 	}
 	lib_close_base(io_map_base);
 	lib_close_base(tcb_base);
-	fprintf(stderr, "\nshell: cleaning up, exiting.\n");
+	log(stderr, "\nshell: cleaning up, exiting.\n");
 	return ERR_OK;
 }
 
