@@ -16,11 +16,12 @@ get_config() {
 }
 
 send_config() {
-	curl -X PUT -d "$(echo 'begin transaction;'
-	echo '.mode insert
-	select * from config;' | sqlite3 sensors.db
-	echo 'end transaction;')
-	" `get_config config-cgi`
+	curl -X PUT -d "$(echo 'select * from config;' | sqlite3 sensors.db |
+		awk -F '|' '
+		BEGIN {printf("begin transaction;\n");}
+		{printf("insert into config (name,value) values (\"%s\",\"%s\");\n", $1, $2);}
+		END {printf("end transaction;\n\n")}
+		')" `get_config config-cgi`
 }
 
 init() {
@@ -42,26 +43,26 @@ collect() {
 	echo "gpio . 29 0
 		gpio . 31 1
 		gpio $PULSE 3 0
-.		begin transaction;
 		ds18b20 $THERM0 4 read
 		counter $COUNTER read
-		lm75 $THERM1 0x4F read
-.		end transaction;" |
+		lm75 $THERM1 0x4F read" |
 		./test -q |
-		awk 'BEGIN {printf(".timeout 1000\n");} {
-			if($1 == "begin" || $1 == "end") {print $0; continue;}
-			printf("insert into outbox values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3);
-		}' | sqlite3 sensors.db
+		awk '
+		BEGIN {printf("begin transaction;\n");}
+		{ printf("insert into outbox values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3);}
+		END {printf("end transaction;\n\n")}
+		' | sqlite3 sensors.db
 }
 
 send() {
 	echo "gpio . 29 1
 		gpio . 31 1" | ./test -q
-	curl -X PUT -d "$(echo begin transaction
-	echo "select time,devid,value from outbox;" | sqlite3 sensors.db |
-	awk -F '|' '{ printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3); }'
-	echo 'end transaction;')
-	" `get_config data-cgi`
+		curl -X PUT -d "$(echo "select * from outbox;" | sqlite3 sensors.db |
+		awk -F '|' '
+		BEGIN {printf("begin transaction;\n");} {
+		printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3);
+		} END {printf("end transaction;\n\n")}
+		' )" `get_config data-cgi`
 #	| [[ `curl -s --upload-file - $(get_config data-cgi)` == "OK" ]]
 }
 
