@@ -50,10 +50,10 @@ collect() {
 send() {
 	echo "gpio . 29 1
 		gpio . 31 1" | ./test
-	(echo begin transaction
+	curl -X PUT -d "$(echo begin transaction
 	echo "select time,devid,value from outbox;" | sqlite3 sensors.db |
 	awk -F '|' '{ printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3); }'
-	echo end transaction)
+	echo end transaction)" `get_config data-cgi`
 #	| [[ `curl -s --upload-file - $(get_config data-cgi)` == "OK" ]]
 }
 
@@ -71,7 +71,7 @@ do
 	sleep `get_config measure-period`
 	collect
 	cnt=`expr $cnt + 1`
-	[[ $cnt == `get_config send-period` ]] && cnt=0 && curl -X PUT -d "$(send)" `get_config data-cgi`  && delete
+	[[ $cnt == `get_config send-period` ]] && cnt=0 && send && delete
 	sleep `get_config measure-period`
 done
 
