@@ -19,9 +19,9 @@ send_config() {
 	curl -X PUT -d "$(echo 'select * from config;' | sqlite3 sensors.db |
 		awk -F '|' '
 		BEGIN {printf("begin transaction;\n");}
-		{printf("insert into config (name,value) values (\"%s\",\"%s\");\n", $1, $2);}
-		END {printf("end transaction;\n\n")}
-		')" `get_config config-cgi`
+	{printf("insert into config (name,value) values (\"%s\",\"%s\");\n", $1, $2);}
+	END {printf("end transaction;\n\n")}
+	')" `get_config config-cgi`
 }
 
 init() {
@@ -49,9 +49,9 @@ collect() {
 		./test -q |
 		awk '
 		BEGIN {printf("begin transaction;\n");}
-		{ printf("insert into outbox values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3);}
-		END {printf("end transaction;\n\n")}
-		' | sqlite3 sensors.db
+	{ printf("insert into outbox values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3);}
+	END {printf("end transaction;\n\n")}
+	' | sqlite3 sensors.db
 }
 
 send() {
@@ -60,16 +60,16 @@ send() {
 		curl -X PUT -d "$(echo "select * from outbox;" | sqlite3 sensors.db |
 		awk -F '|' '
 		BEGIN {printf("begin transaction;\n");} {
-		printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3);
+			printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3);
 		} END {printf("end transaction;\n\n")}
-		' )" `get_config data-cgi`
+	' )" `get_config data-cgi`
 #	| [[ `curl -s --upload-file - $(get_config data-cgi)` == "OK" ]]
 }
 
 delete() {
 	echo "gpio . 29 0
 		gpio . 31 0" | ./test -q
-	echo "delete from outbox;" | sqlite3 sensors.db
+		echo "delete from outbox;" | sqlite3 sensors.db
 }
 
 send_config
@@ -77,11 +77,11 @@ init
 cnt=0
 while true
 do
-	prepare
-	sleep `get_config measure-period`
-	collect
-	cnt=`expr $cnt + 1`
-	[[ $cnt == `get_config send-period` ]] && cnt=0 && send && delete
+prepare
+sleep `get_config measure-period`
+collect
+cnt=`expr $cnt + 1`
+[[ $cnt == `get_config send-period` ]] && cnt=0 && send && delete
 #	sleep `get_config measure-period`
 done
 
