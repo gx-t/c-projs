@@ -10,10 +10,11 @@ THERM0="board1.therm-ds18b20"
 THERM1="board1.therm-lm75"
 PULSE="board1.counter-input"
 COUNTER="board1.counter0"
-PERIOD=1
-SEND_PERIOD=10
-#SQLCGI="http://shah32768.sdf.org/cgi-bin/sql-test.cgi"
-SQLCGI="http://seismo.firewall.am/insert.php"
+
+get_config() {
+	echo "select value from config where name=\"$1\";" | sqlite3 sensors.db 
+}
+
 
 init() {
 	echo "gpio . 29 enable output 0
@@ -53,7 +54,7 @@ send() {
 	echo "select time,devid,value from outbox;" | sqlite3 sensors.db |
 	awk -F '|' '{ printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3); }'
 	echo end transaction)
-#	| [[ `curl -s --upload-file - $SQLCGI` == "OK" ]]
+#	| [[ `curl -s --upload-file - $(get_config data-cgi)` == "OK" ]]
 }
 
 delete() {
@@ -67,15 +68,16 @@ cnt=0
 while true
 do
 	prepare
-	sleep $PERIOD
+	sleep `get_config measure-period`
 	collect
 	cnt=`expr $cnt + 1`
-	[[ $cnt == $SEND_PERIOD ]] && cnt=0 && curl -X PUT -d "$(send)" "$SQLCGI" && delete
-	sleep $PERIOD
+	[[ $cnt == `get_config send-period` ]] && cnt=0 && curl -X PUT -d "$(send)" `get_config data-cgi`  && delete
+	sleep `get_config measure-period`
 done
 
 
 #echo "create table data (time timestamp, devid text, value float);"
+#echo "create table config (name text, value text);"
 #echo "select time,value,devid from outbox where devid='board1.counter';" | sqlite3 sensors.db
 #echo "select time,value,devid from outbox where id between 10 and 15;" | sqlite3 sensors.db
 #delete from outbox where id between 0 and 35000
