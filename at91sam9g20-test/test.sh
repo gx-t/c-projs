@@ -82,7 +82,7 @@ do
 	collect
 	cnt=`expr $cnt + 1`
 	[[ $cnt == `get_config send-period` ]] && cnt=0 && send && delete
-	sleep `get_config measure-period`
+#	sleep `get_config measure-period`
 done
 
 
