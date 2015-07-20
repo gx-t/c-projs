@@ -19,18 +19,23 @@ Sensors:
 devid, type
 
 ===BOARD DATABASE===
-
+====config:
 PRAGMA foreign_keys=OFF;
 BEGIN TRANSACTION;
 CREATE TABLE config (name text, value text, unique(name) on conflict replace);
-INSERT INTO "config" VALUES('board','Second test board (prefix - board1)');
+INSERT INTO "config" VALUES('board','xxx test board (prefix - boardxxx)');
 INSERT INTO "config" VALUES('send-period','10');
 INSERT INTO "config" VALUES('measure-period','1');
-INSERT INTO "config" VALUES('description','Second board multiline
+INSERT INTO "config" VALUES('description','xxx board multiline
 description is here');
-INSERT INTO "config" VALUES('key','9a5a9f7d-efe5-447f-9894-06fb91750ba6');
+INSERT INTO "config" VALUES('key','xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx');
 INSERT INTO "config" VALUES('data-cgi','http://www.seismoinstruments.am/insert.php');
 INSERT INTO "config" VALUES('config-cgi','http://www.seismoinstruments.am/insert.php');
+COMMIT;
+====outbox:
+PRAGMA foreign_keys=OFF;
+BEGIN TRANSACTION;
+CREATE TABLE outbox (time timestamp, devid text, value float);
 COMMIT;
 
 2 tables: key.data (as "9a5a9f7d-efe5-447f-9894-06fb91750ba6.data") and key.config (as "9a5a9f7d-efe5-447f-9894-06fb91750ba6.config")
