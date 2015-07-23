@@ -55,7 +55,7 @@ collect() {
 		BEGIN {
 			printf("begin transaction;\n");
 		} {
-			printf("insert into outbox values (CURRENT_TIMESTAMP,\"%s\",\"%s\");\n", $2, $3);
+			printf("insert into outbox values (CURRENT_TIMESTAMP,\"%s\",\"%s\");\n", $1, $2);
 		} END {
 			printf("end transaction;\n\n")
 		}
