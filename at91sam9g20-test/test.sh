@@ -6,26 +6,17 @@
 #DS18B20 pin 4
 #LM75 pins 17,18
 
-THERM0="board1.therm-ds18b20"
-THERM1="board1.therm-lm75"
-PULSE="board1.counter-input"
-COUNTER="board1.counter0"
-
 get_config() {
 	echo "select value from config where name=\"$1\";" | sqlite3 sensors.db 
 }
 
+THERM0="$(get_config key).therm-ds18b20"
+THERM1="$(get_config key).therm-lm75"
+PULSE="$(get_config key).counter-input"
+COUNTER="$(get_config key).counter0"
+
 send_config() {
-	curl -X PUT -d "$(echo 'select * from config;' | sqlite3 sensors.db |
-		awk -F '|' '
-		BEGIN {
-			printf("begin transaction;\n");
-		} {
-			printf("insert into config (name,value) values (\"%s\",\"%s\");\n", $1, $2);
-		} END {
-			printf("end transaction;\n\n")
-		}
-	')" `get_config config-cgi`
+	curl -X PUT -d "$(echo '.dump config' | sqlite3 sensors.db)" `get_config config-cgi`
 }
 
 init() {
