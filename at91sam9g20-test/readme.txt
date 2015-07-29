@@ -60,6 +60,14 @@ Board requests must have the following format: <server php>?key=<key> Example:
 http://seismo.firewall.am/insert.php?key="9a5a9f7d-efe5-447f-9894-06fb91750ba6"
 Server checks if the key is registered key, if no - ignores the request.
 Key is also used on server to identify the user that the board belongs to.
-
-
+===
+On server side
+	table: keys
+	table: key.data
+	table: key.config
+	board-list.c gi
+	new-board.sh (to be converted to CGI)
+TODO: Adopt board script to new table names, use "key" file
+TODO: Add board-config.cgi
+TODO: Add board-data.cgi
 
