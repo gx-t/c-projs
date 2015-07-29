@@ -21,8 +21,7 @@ insert into "$config" values("data-cgi", "http://shah32768.sdf.org/cgi-bin/senso
 insert into "$config" values("config-cgi", "http://shah32768.sdf.org/cgi-bin/sensor-data.cgi");
 
 create table "$data" (time TIMESTAMP, devid text, value real, key text);
-
+select "$key";
 end transaction;
 EOT
-echo $key
 
