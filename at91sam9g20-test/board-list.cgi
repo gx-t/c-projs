@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-sqlite3 sensors.db << EOT
+sqlite3 ~/data/sensors.db << EOT
 .separator " "
 select "Content-type: text/html
 
@@ -8,20 +8,24 @@ select "Content-type: text/html
 <header>
 <style>
 tr:nth-child(even) {
-	background: #CCC
+	background: #CCC;
+}
+td {
+	text-align: center;
 }
 </style>
 </header>
 <body>
-<table border='1' style='width:100%'>
+<table border='1'>
+<caption><h3>List of Registered Boards</h3></caption>
 <tr>
-	<td>Board Key</td>
-	<td>Board Display Name</td>
-	<td>Board Description</td>
-	<td>Board Status</td>
-	<td>Board Registration Date/Time</td>
-	<td>View Config</td>
-	<td>View Data</td>
+	<td><b>Board Key</b></td>
+	<td><b>Board Display Name</b></td>
+	<td><b>Board Description</b></td>
+	<td><b>Board Status</b></td>
+	<td><b>Board Registration Date/Time</b></td>
+	<td><b>View Config</b></td>
+	<td><b>View Data</b></td>
 </tr>";
 select "<tr>
 <td>"||key||"</td>
