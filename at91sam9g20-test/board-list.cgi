@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-cat << EOT
-EOT
 sqlite3 sensors.db << EOT
 .separator " "
 select "Content-type: text/html
