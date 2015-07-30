@@ -40,11 +40,13 @@ select "Content-type: text/html
 				<table border='1' class='dtable'>
 					<caption><h3>Board Sensor Data</h3></caption>
 					<tr>
+						<th>N</th>
 						<th>Date/Time</th>
 						<th>Device ID</th>
 						<th>Value</th>
 					</tr>";
 					select "<tr>
+						<th>"||rowid||"</th>
 						<td>"||time||"</td>
 						<td>"||devid||"</td>
 						<td>"||value||"</td>
