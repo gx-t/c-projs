@@ -6,13 +6,13 @@ select "Content-type: text/html
 <html>
 	<header>
 		<style>
-		.dtable {
-			width:100%;
-			border-collapse:collapse;
-		}
-		.dtable tr:nth-child(odd) {
-			background: #ccc;
-		}
+			.dtable {
+				width:100%;
+				border-collapse:collapse;
+			}
+			.dtable tr:nth-child(odd) {
+				background: #ccc;
+			}
 		</style>
 	</header>
 	<body>
