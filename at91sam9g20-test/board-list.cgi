@@ -25,7 +25,8 @@ select "Content-type: text/html
 				<th>Board Registration Date/Time</th>
 				<th>View Data</th>
 			</tr>";
-			select "<tr>
+			select "
+			<tr>
 				<td>"||key||"</td>
 				<td>"||name||"</td>
 				<td>"||descr||"</td>
@@ -33,7 +34,8 @@ select "Content-type: text/html
 				<td>"||time||"</td>
 				<td><a href=board-data.cgi?"||key||">...</a></td>
 			</tr>" from keys;
-		select "</table>
+		select "
+		</table>
 	</body>
 </html>";
 EOT

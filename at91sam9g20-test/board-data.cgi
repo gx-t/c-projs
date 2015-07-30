@@ -28,13 +28,15 @@ select "Content-type: text/html
 					<tr><td><b>Board Status</b></td><td>"||status||"</td></tr>
 					<tr><td><b>Board Registration Date/Time</b></td><td>"||time||"</td></tr>"
 					from keys where key="$1";
-				select "</table>
+				select "
+				</table>
 				<table border='1' class='dtable'>
 					<caption><h3>Board Configuration</h3></caption>";
 					select "
 					<tr><td><b>"||name||"</b></td><td>"||value||"</td></tr>"
 					from "$1.config";
-				select "</table>
+				select "
+				</table>
 			</td>
 			<td>
 				<table border='1' class='dtable'>
@@ -45,13 +47,15 @@ select "Content-type: text/html
 						<th>Device ID</th>
 						<th>Value</th>
 					</tr>";
-					select "<tr>
+					select "
+					<tr>
 						<th>"||rowid||"</th>
 						<td>"||time||"</td>
 						<td>"||devid||"</td>
 						<td>"||value||"</td>
 					</tr>" from "$1.data" where rowid between (select max(rowid)-16 from "$1.data") and (select max(rowid) from "$1.data");
-				select "</table>
+				select "
+				</table>
 			</td>
 		</tr>
 	</body>
