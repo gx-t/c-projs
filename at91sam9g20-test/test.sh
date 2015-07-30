@@ -6,7 +6,14 @@
 #DS18B20 pin 4
 #LM75 pins 17,18
 
-
+./test -q << EOT
+gpio . 29 enable output 1
+gpio . 31 enable output 1
+gpio . 3 enable output 0
+counter . init
+gpio . 3 1
+ds18b20 . 4 presense
+EOT
 
 #read board key
 key=$(cat key)
@@ -15,99 +22,42 @@ config="$key.config"
 #data table name
 data="$key.data"
 #ask server for board configuration
-echo ".dump $config" | curl -s --upload-file - http://shah32768.sdf.org/cgi-bin/board-get-config.cgi | sqlite3 sensors.db 2> /dev/null
+echo ".dump \"$config\"" | curl -s --upload-file - http://shah32768.sdf.org/cgi-bin/board-get-config.cgi | sqlite3 sensors.db 2> /dev/null
 echo "create table \"$data\" (time timestamp, devid text, value float, key text);" | sqlite3 sensors.db 2> /dev/null
 
 get_config() {
 	echo "select value from \"$config\" where name=\"$1\";" | sqlite3 sensors.db 
 }
 
-THERM0="therm-ds18b20"
-THERM1="therm-lm75"
-PULSE="counter-input"
-COUNTER="counter0"
-
-#init() {
-#	echo "gpio . 29 enable output 0
-#		gpio . 31 enable output 0
-#		gpio $PULSE 3 enable output 0
-#		ds18b20 $THERM0 4 presense
-#		counter $COUNTER init" | ./test -q
-#}
-#
-#prepare() {
-#	echo "gpio . 29 1
-#		gpio . 31 0
-#		gpio $PULSE 3 1
-#		ds18b20 $THERM0 4 convert" | ./test -q
-#}
-#
-#collect() {
-#	echo "gpio . 29 0
-#		gpio . 31 1
-#		gpio $PULSE 3 0
-#		ds18b20 $THERM0 4 read
-#		counter $COUNTER read
-#		lm75 $THERM1 0x4F read" |
-#		./test -q |
-#		awk '
-#		BEGIN {
-#			printf("begin transaction;\n");
-#		} {
-#			printf("insert into outbox values (CURRENT_TIMESTAMP,\"%s\",\"%s\");\n", $1, $2);
-#		} END {
-#			printf("end transaction;\n\n")
-#		}
-#	' | sqlite3 sensors.db
-#}
-#
-#send() {
-#	echo "gpio . 29 1
-#		gpio . 31 1" | ./test -q
-#		curl -X PUT -d "$(echo "select * from outbox;" | sqlite3 sensors.db |
-#		awk -F '|' '
-#		BEGIN {
-#			printf("begin transaction;\n");
-#		} {
-#			printf("insert into outbox (time,devid,value) values (\"%s\",\"%s\",\"%s\");\n", $1, $2, $3);
-#		} END {
-#			printf("end transaction;\n\n")
-#		}
-#	' )" `get_config data-cgi`
-##	| [[ `curl -s --upload-file - $(get_config data-cgi)` == "OK" ]]
-#}
-#
-#delete() {
-#	echo "gpio . 29 0
-#		gpio . 31 0" | ./test -q
-#		echo "delete from outbox;" | sqlite3 sensors.db
-#}
-#
-
-
-
-#init
 ./test -q << EOT
-gpio . 29 enable output 0
-gpio . 31 enable output 0
-gpio . 3 enable output 0
-ds18b20 . 4 presense
-counter . init
-EOT
-
-cnt=0
-while true
-do
-#prepare
-./test -q << EOT
-gpio . 29 1
+gpio . 29 0
 gpio . 31 0
 gpio . 3 1
-ds18b20 . 4 convert
 EOT
+
 sleep `get_config measure-period`
-#collect
-./test -q << EOT | awk -v data="$data" -v key="$key" '
+
+
+THERM0="therm-ds18b20"
+THERM1="therm-lm75"
+COUNTER="counter0"
+
+prepare() {
+	echo "gpio . 29 1
+		gpio . 31 0
+		gpio . 3 1
+		ds18b20 . 4 convert" | ./test -q
+}
+
+collect() {
+	echo "gpio . 29 0
+		gpio . 31 1
+		gpio . 3 0
+		ds18b20 $THERM0 4 read
+		counter $COUNTER read
+		lm75 $THERM1 0x4F read" |
+		./test -q |
+		awk -v data=$data -v key=$key '
 		BEGIN {
 			printf("begin transaction;\n");
 		} {
@@ -116,21 +66,28 @@ sleep `get_config measure-period`
 			printf("end transaction;\n\n")
 		}
 	' | sqlite3 sensors.db
-gpio . 29 0
-gpio . 31 1
-gpio $PULSE 3 0
-ds18b20 $THERM0 4 read
-counter $COUNTER read
-lm75 $THERM1 0x4F read
-EOT
-cnt=`expr $cnt + 1`
-[[ $cnt == `get_config send-period` ]] && cnt=0 &&
-echo "gpio . 29 1
-gpio . 31 1" | ./test -q &&
-echo ".dump \"$data\"" | sqlite3 sensors.db | curl --upload-file - $(get_config data-cgi) &&
-echo "delete from \"$data\";" | sqlite3 sensors.db
-#./test -q << EOT &&  | [[ `curl -s --upload-file - $(get_config data-cgi)` == "OK" ]] &&
+}
+
+send() {
+	echo "gpio . 29 1
+		gpio . 31 1" | ./test -q
+		echo ".dump \"$data\"" | sqlite3 sensors.db | [[ `curl -s --upload-file - $(get_config data-cgi)` == "OK" ]]
+}
+
+delete() {
+	echo "gpio . 29 0
+		gpio . 31 0" | ./test -q
+		echo "delete from \"$data\";" | sqlite3 sensors.db
+}
+
+cnt=0
+while true
+do
+prepare
 sleep `get_config measure-period`
+collect
+cnt=`expr $cnt + 1`
+[[ $cnt == `get_config send-period` ]] && cnt=0 && send && delete
 done
 
 
