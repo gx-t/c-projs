@@ -6,11 +6,11 @@ select "Content-type: text/html
 <html>
 	<header>
 		<style>
-			.dtable {
+			table.dd {
 				width:100%;
 				border-collapse:collapse;
 			}
-			.dtable tr:nth-child(odd) {
+			table.dd tr:nth-child(odd) {
 				background: #ccc;
 			}
 		</style>
@@ -19,7 +19,7 @@ select "Content-type: text/html
 		<table>
 			<tr>
 			<td valign='top'>
-				<table border='1' class='dtable'>
+				<table border='1' class='dd'>
 					<caption><h3>Board Information</h3></caption>";
 					select "
 					<tr><td><b>Board Key</b></td><td>"||key||"</td></tr>
@@ -30,7 +30,7 @@ select "Content-type: text/html
 					from keys where key="$1";
 				select "
 				</table>
-				<table border='1' class='dtable'>
+				<table border='1' class='dd'>
 					<caption><h3>Board Configuration</h3></caption>";
 					select "
 					<tr><td><b>"||name||"</b></td><td>"||value||"</td></tr>"
@@ -39,7 +39,7 @@ select "Content-type: text/html
 				</table>
 			</td>
 			<td>
-				<table border='1' class='dtable'>
+				<table border='1' class='dd'>
 					<caption><h3>Board Sensor Data</h3></caption>
 					<tr>
 						<th>Count</th>
