@@ -53,7 +53,7 @@ select "Content-type: text/html
 						<td>"||time||"</td>
 						<td>"||devid||"</td>
 						<td>"||value||"</td>
-					</tr>" from "$1.data" where rowid between (select max(rowid)-16 from "$1.data") and (select max(rowid) from "$1.data");
+					</tr>" from "$1.data" where rowid between (select max(rowid)-32 from "$1.data") and (select max(rowid) from "$1.data");
 				select "
 				</table>
 			</td>
