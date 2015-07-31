@@ -38,7 +38,10 @@ select "Content-type: text/html
 						from "$1.config";
 					select "
 					</table>
-					<iframe src=http://maps.google.com/maps?q=40.1920773,44.5099267&z=15&output=embed style='width:100%;height:70%'></iframe>
+					<iframe src=http://maps.google.com/maps?q="||
+						(select value from "$1.config" where name="latitude")||","||
+						(select value from "$1.config" where name="longitude")||
+						"&z=15&output=embed style='width:100%;height:70%'></iframe>
 				</td>
 				<td>";
 					select "
@@ -56,7 +59,8 @@ select "Content-type: text/html
 							<td>"||time||"</td>
 							<td>"||devid||"</td>
 							<td>"||value||"</td>
-						</tr>" from "$1.data" where rowid between (select max(rowid)-32 from "$1.data") and (select max(rowid) from "$1.data");
+						</tr>" from "$1.data" where rowid between (select max(rowid)-32 from "$1.data") and
+							(select max(rowid) from "$1.data");
 					select "
 					</table>
 				</td>
