@@ -19,9 +19,9 @@ select "Content-type: text/html
 		<table>
 			<tr>
 				<td valign='top'>
-					<table border='1' class='dd'>
-						<caption><h3>Board Information</h3></caption>";
+					<table border='1' class='dd'>";
 						select "
+						<caption><h1>"||name||" Information</h1></caption>
 						<tr><td><b>Board Key</b></td><td>"||key||"</td></tr>
 						<tr><td><b>Board Display Name</b></td><td>"||name||"</td></tr>
 						<tr><td><b>Board Description</b></td><td>"||descr||"</td></tr>
@@ -32,7 +32,7 @@ select "Content-type: text/html
 					select "
 					</table>
 					<table border='1' class='dd'>
-						<caption><h3>Board Configuration</h3></caption>";
+						<caption><h3>Configuration</h3></caption>";
 						select "
 						<tr><td><b>"||name||"</b></td><td>"||value||"</td></tr>"
 						from "$1.config";
@@ -46,7 +46,7 @@ select "Content-type: text/html
 				<td>";
 					select "
 					<table border='1' class='dd'>
-						<caption><h3>Board Sensor Data</h3></caption>
+						<caption><h3>Sensor Data</h3></caption>
 						<tr>
 							<th>Count</th>
 							<th>Date/Time</th>
