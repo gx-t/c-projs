@@ -28,6 +28,7 @@ select "Content-type: text/html
 						<tr><td><b>Board Status</b></td><td>"||status||"</td></tr>
 						<tr><td><b>Board Registration Date/Time</b></td><td>"||time||"</td></tr>
 						<tr><td><b>Group</b></td><td>"||parent||"</td></tr>"
+						<tr><td><b>Type</b></td><td>"||type||"</td></tr>"
 						from keys where key="$1";
 					select "
 					</table>
