@@ -34,6 +34,7 @@ select "Content-type: text/html
 				<td>"||descr||"</td>
 				<td>"||status||"</td>
 				<td>"||time||"</td>
+				<td>"||parent||"</td>
 				<td>"||type||"</td>
 				<td><a href=board-data.cgi?"||key||">...</a></td>
 			</tr>" from keys;
