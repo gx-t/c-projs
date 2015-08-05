@@ -7,12 +7,12 @@
 #LM75 pins 17,18
 
 ./test -q << EOT
-gpio . 29 enable output 1
-gpio . 31 enable output 1
-gpio . 3 enable output 0
-counter . init
-gpio . 3 1
-ds18b20 . 4 presense
+gpio 29 enable gpio 29 output gpio 29 1
+gpio 31 enable gpio 31 output gpio 31 1
+gpio 3 enable gpio 3 output gpio 3 0
+counter init
+gpio 3 1
+ds18b20 4 presense
 EOT
 
 #read board key
@@ -30,9 +30,7 @@ get_config() {
 }
 
 ./test -q << EOT
-gpio . 29 0
-gpio . 31 0
-gpio . 3 1
+gpio 29 0 gpio 31 0 gpio 3 1
 EOT
 
 sleep `get_config measure-period`
@@ -43,41 +41,30 @@ THERM1="therm-lm75"
 COUNTER="counter0"
 
 prepare() {
-	echo "gpio . 29 1
-		gpio . 31 0
-		gpio . 3 1
-		ds18b20 . 4 convert" | ./test -q
+	./test -q << EOT
+	gpio 29 1 gpio 31 0 gpio 3 1 ds18b20 4 convert
+EOT
 }
 
 collect() {
-	echo "gpio . 29 0
-		gpio . 31 1
-		gpio . 3 0
-		ds18b20 $THERM0 4 read
-		counter $COUNTER read
-		lm75 $THERM1 0x4F read" |
-		./test -q |
-		awk -v data=$data -v key=$key '
-		BEGIN {
-			printf("begin transaction;\n");
-		} {
-			printf("insert into \"%s\" values (CURRENT_TIMESTAMP,\"%s\",\"%s\",\"%s\");\n", data, $1, $2, key);
-		} END {
-			printf("end transaction;\n\n")
-		}
-	' | sqlite3 sensors.db
+	./test -q << EOT | sqlite3 sensors.db
+	gpio 29 0 gpio 31 1 gpio 3 0
+	begin transaction;
+		insert into "$data" values( CURRENT_TIMESTAMP , "$THERM0" , ds18b20 4 read , "$key" ); 
+		insert into "$data" values( CURRENT_TIMESTAMP , "$COUNTER" , counter read , "$key" ); 
+		insert into "$data" values( CURRENT_TIMESTAMP , "$THERM1" , lm75 0x4F read , "$key" ); 
+	end transaction;
+EOT
 }
 
 send() {
-	echo "gpio . 29 1
-		gpio . 31 1" | ./test -q
-		echo ".dump \"$data\"" | sqlite3 sensors.db | [[ `curl -s --upload-file - $(get_config data-cgi)` == "OK" ]]
+	echo "gpio 29 1	gpio 31 1" | ./test -q
+	echo ".dump \"$data\"" | sqlite3 sensors.db | [[ `curl -s --upload-file - $(get_config data-cgi)` == "OK" ]]
 }
 
 delete() {
-	echo "gpio . 29 0
-		gpio . 31 0" | ./test -q
-		echo "delete from \"$data\";" | sqlite3 sensors.db
+	echo "gpio 29 0 gpio 31 0" | ./test -q
+	echo "delete from \"$data\";" | sqlite3 sensors.db
 }
 
 cnt=0

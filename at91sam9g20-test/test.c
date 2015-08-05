@@ -309,8 +309,7 @@ static int empty_log(FILE* ff, const char* fmt, ...) {
 }
 
 static void shell_gpio() {
-	static const char* msg_usage = "gpio context pin [enable | disable | input | output | 1 | 0 | read]\n";
-	char* context = strtok(0, SHELL_CMD_DELIMITER);
+	static const char* msg_usage = "gpio pin [enable | disable | input | output | 1 | 0 | read]\n";
 	char* pin_name = strtok(0, SHELL_CMD_DELIMITER);
 	char* pin_action = strtok(0, SHELL_CMD_DELIMITER);
 	if(!pin_action) return (void)fprintf(stderr, "%s\n", msg_usage);
@@ -320,30 +319,27 @@ static void shell_gpio() {
 		return;
 	}
 	int flags = 1 << port_bit;
-	for(; pin_action; pin_action = strtok(0, SHELL_CMD_DELIMITER)) {
-		if(!strcmp(pin_action, "enable"))	{ io_port_b->PIO_PER = flags; continue; }
-		if(!strcmp(pin_action, "disable"))	{ io_port_b->PIO_PDR = flags; continue; }
-		if(!strcmp(pin_action, "input"))	{ io_port_b->PIO_ODR = flags; continue; }
-		if(!strcmp(pin_action, "output"))	{ io_port_b->PIO_OER = flags; continue; }
-		if(!strcmp(pin_action, "1"))		{ io_port_b->PIO_SODR = flags; continue; }
-		if(!strcmp(pin_action, "0"))		{ io_port_b->PIO_CODR = flags;	continue; }
-		if(!strcmp(pin_action, "read"))	{
-			int data_bit = io_port_b->PIO_PDSR & flags;
-			printf("%s\t%c\n", context, data_bit ? '1' : '0');
-			continue;
-		}
-		fprintf(stderr, "Unknown action: %s, ignoring. %s\n", pin_action, msg_usage);
+	if(!strcmp(pin_action, "enable"))	{ io_port_b->PIO_PER = flags; return; }
+	if(!strcmp(pin_action, "disable"))	{ io_port_b->PIO_PDR = flags; return; }
+	if(!strcmp(pin_action, "input"))	{ io_port_b->PIO_ODR = flags; return; }
+	if(!strcmp(pin_action, "output"))	{ io_port_b->PIO_OER = flags; return; }
+	if(!strcmp(pin_action, "1"))		{ io_port_b->PIO_SODR = flags; return; }
+	if(!strcmp(pin_action, "0"))		{ io_port_b->PIO_CODR = flags;	return; }
+	if(!strcmp(pin_action, "read"))	{
+		int data_bit = io_port_b->PIO_PDSR & flags;
+		printf("\'%c\' ", data_bit ? '1' : '0');
+		return;
 	}
 }
 
 //=============================================================================
 //TODO: use int sched_yield(void); at the beginning of ds18b20 functions
-static void shell_ds18b20_presense(int flags, char* context) {
+static void shell_ds18b20_presense(int flags) {
 	sched_yield();
 	io_port_b->PIO_PER = flags;
 	io_port_b->PIO_PPUER = flags; //enable pull up
 	unsigned state = ds18b20_reset(io_port_b, flags);
-	printf("%s\t%c\n", context, state ? '0' : '1');
+	printf("\'%c\' ", state ? '0' : '1');
 }
 
 static void shell_ds18b20_convert(int flags) {
@@ -352,7 +348,7 @@ static void shell_ds18b20_convert(int flags) {
 	w1_write_byte(io_port_b, flags, DS18B20_CONVERT_T);
 }
 
-static void shell_ds18b20_read(int flags, char* context) {
+static void shell_ds18b20_read(int flags) {
 	ds18b20_reset(io_port_b, flags);
 	w1_write_byte(io_port_b, flags, DS18B20_SKIP_ROM);
 	w1_write_byte(io_port_b, flags, DS18B20_READ_SCRATCHPAD);
@@ -361,14 +357,13 @@ static void shell_ds18b20_read(int flags, char* context) {
 	io_port_b->PIO_OER = flags; //enable output
 	io_port_b->PIO_CODR = flags; //level low
 	temp /= 16;
-	printf("%s\t%g\n", context, temp);
+	printf("\'%g\' ", temp);
 	usleep(1000);
 	io_port_b->PIO_ODR = flags; //disable output
 }
 
 static void shell_ds18b20() {
-	static const char* msg_usage = "ds18b20 context pin [presense | convert | read]\n";
-	char* context = strtok(0, SHELL_CMD_DELIMITER);
+	static const char* msg_usage = "ds18b20 pin [presense | convert | read]\n";
 	char* pin_name = strtok(0, SHELL_CMD_DELIMITER);
 	char* pin_action = strtok(0, SHELL_CMD_DELIMITER);
 	if(!pin_action) return (void)fprintf(stderr, "%s\n", msg_usage);
@@ -378,12 +373,9 @@ static void shell_ds18b20() {
 		return;
 	}
 	int flags = 1 << port_bit;
-	for(; pin_action; pin_action = strtok(0, SHELL_CMD_DELIMITER)) {
-		if(!strcmp(pin_action, "presense"))	{ shell_ds18b20_presense(flags, context); continue; }
-		if(!strcmp(pin_action, "convert"))	{ shell_ds18b20_convert(flags); continue; }
-		if(!strcmp(pin_action, "read"))		{ shell_ds18b20_read(flags, context); continue; }
-		fprintf(stderr, "Unknown action: %s, ignoring. %s\n", pin_action, msg_usage);
-	}
+	if(!strcmp(pin_action, "presense"))	{ shell_ds18b20_presense(flags); return; }
+	if(!strcmp(pin_action, "convert"))	{ shell_ds18b20_convert(flags); return; }
+	if(!strcmp(pin_action, "read"))		{ shell_ds18b20_read(flags); return; }
 }
 
 //=============================================================================
@@ -398,20 +390,16 @@ static int shell_counter_init() {
 }
 
 static void shell_counter() {
-	static const char* msg_usage = "counter context [init | read]\n";
-	char* context = strtok(0, SHELL_CMD_DELIMITER);
+	static const char* msg_usage = "counter [init | read]\n";
 	char* pin_action = strtok(0, SHELL_CMD_DELIMITER);
 	if(!pin_action) return (void)fprintf(stderr, "%s\n", msg_usage);
-	for(; pin_action; pin_action = strtok(0, SHELL_CMD_DELIMITER)) {
-		if(!strcmp(pin_action, "init"))		{ shell_counter_init(); continue; }
-		if(!strcmp(pin_action, "read"))		{ printf("%s\t%d\n", context, tcb_base->TCB_TC0.TC_CV); continue; }
-		fprintf(stderr, "Unknown action: %s, ignoring. %s\n", pin_action, msg_usage);
-	}
+	if(!strcmp(pin_action, "init"))		{ shell_counter_init(); return; }
+	if(!strcmp(pin_action, "read"))		{ printf("%d ", tcb_base->TCB_TC0.TC_CV); return; }
 }
 
 //=============================================================================
 
-static void shell_lm75_read(int fd, char* context) {
+static void shell_lm75_read(int fd) {
 	float temp;
 	char buff[2] = {0};
 	if(1 != write(fd, buff, 1) || 2 != read(fd, buff, 2)) {
@@ -419,13 +407,12 @@ static void shell_lm75_read(int fd, char* context) {
 		return;
 	}
 	temp = (float)((short)buff[0] << 8 | buff[1]) / 256;
-	printf("%s\t%g\n", context, temp);
+	printf("\'%g\' ", temp);
 }
 
 //i2c pins: 17,18 
 static void shell_lm75() {
-	static const char* msg_usage = "lm75 context address read\n";
-	char* context = strtok(0, SHELL_CMD_DELIMITER);
+	static const char* msg_usage = "lm75 address read\n";
 	char* address = strtok(0, SHELL_CMD_DELIMITER);
 	char* action = strtok(0, SHELL_CMD_DELIMITER);
 	if(!action) return (void)fprintf(stderr, "%s\n", msg_usage);
@@ -445,7 +432,7 @@ static void shell_lm75() {
 			perror("Failed to acquire slave address");
 			break;
 		}
-		shell_lm75_read(fd, context);
+		shell_lm75_read(fd);
 	}while(0);
 	close(fd);
 }
@@ -473,17 +460,19 @@ int main(int argc, char* argv[]) {
 	log(stderr, "Exit: ctrl+d, help: empty string\n");
 	signal(SIGINT, shell_ctrl_c);
 	while(fgets(line, sizeof(line), stdin)) {
-		if(*line == '.') {printf("%s", line + 1); continue;}
 		char* cmd = strtok(line, SHELL_CMD_DELIMITER);
 		if(!cmd) {
 			fprintf(stderr, "gpio, counter, ds18b20, lm75 <args>, ctlr+d to exit, .<any text> - comment, empty for help\n");
 			continue;
 		}
-		if(!strcmp(cmd, "gpio"))	{shell_gpio(); continue;}
-		if(!strcmp(cmd, "counter"))	{shell_counter(); continue;}
-		if(!strcmp(cmd, "ds18b20"))	{shell_ds18b20(); continue;}
-		if(!strcmp(cmd, "lm75"))	{shell_lm75(); continue;}
-		fprintf(stderr, "Unknown command: %s\n", cmd);
+		for(; cmd; cmd = strtok(0, SHELL_CMD_DELIMITER)) {
+			if(!strcmp(cmd, "gpio"))	{shell_gpio(); continue;}
+			if(!strcmp(cmd, "counter"))	{shell_counter(); continue;}
+			if(!strcmp(cmd, "ds18b20"))	{shell_ds18b20(); continue;}
+			if(!strcmp(cmd, "lm75"))	{shell_lm75(); continue;}
+			printf("%s ", cmd);
+		}
+		printf("\n");
 	}
 	lib_close_base(io_map_base);
 	lib_close_base(tcb_base);
