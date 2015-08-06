@@ -36,7 +36,7 @@ select "Content-type: text/html
 				<td>"||time||"</td>
 				<td>"||parent||"</td>
 				<td>"||type||"</td>
-				<td><a href=board-data.cgi?"||key||">...</a></td>
+				<td><a href=board-"||(select case when type="board" then "data" else "group" end)||".cgi?"||key||">...</a></td>
 			</tr>" from keys order by type desc, time desc, name;
 		select "
 		</table>
