@@ -50,9 +50,9 @@ collect() {
 	./test -q << EOT | sqlite3 sensors.db
 	gpio 29 0 gpio 31 1 gpio 3 0
 	begin transaction;
-		insert into "$data" values( CURRENT_TIMESTAMP , "$THERM0" , ds18b20 4 read , "$key" ); 
-		insert into "$data" values( CURRENT_TIMESTAMP , "$COUNTER" , counter read , "$key" ); 
-		insert into "$data" values( CURRENT_TIMESTAMP , "$THERM1" , lm75 0x4F read , "$key" ); 
+		insert into "$data" values( CURRENT_TIMESTAMP , "$THERM0" , ds18b20 4 read , "$key" , "temp" ); 
+		insert into "$data" values( CURRENT_TIMESTAMP , "$COUNTER" , counter read , "$key" , "count" ); 
+		insert into "$data" values( CURRENT_TIMESTAMP , "$THERM1" , lm75 0x4F read , "$key" , "temp" ); 
 	end transaction;
 EOT
 }

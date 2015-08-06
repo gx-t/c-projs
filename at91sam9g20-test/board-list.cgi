@@ -16,7 +16,7 @@ select "Content-type: text/html
 	</header>
 	<body>
 		<table border='1'>
-			<caption><h3>List of Registered Boards</h3></caption>
+			<caption><h3>List of Registered Boards and Groups</h3></caption>
 			<tr>
 				<th>Board Key</th>
 				<th>Board Display Name</th>
@@ -37,7 +37,7 @@ select "Content-type: text/html
 				<td>"||parent||"</td>
 				<td>"||type||"</td>
 				<td><a href=board-data.cgi?"||key||">...</a></td>
-			</tr>" from keys;
+			</tr>" from keys order by type desc, time desc, name;
 		select "
 		</table>
 	</body>

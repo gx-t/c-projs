@@ -53,6 +53,7 @@ select "Content-type: text/html
 							<th>Date/Time</th>
 							<th>Device ID</th>
 							<th>Value</th>
+							<th>Type</th>
 						</tr>";
 						select "
 						<tr>
@@ -60,6 +61,7 @@ select "Content-type: text/html
 							<td>"||time||"</td>
 							<td>"||devid||"</td>
 							<td>"||value||"</td>
+							<td>"||type||"</td>
 						</tr>" from "$1.data" order by rowid desc limit 32;
 					select "
 					</table>
