@@ -16,16 +16,16 @@ select "Content-type: text/html
 	</header>
 	<body>
 		<table border='1'>
-			<caption><h3>List of Registered Boards</h3></caption>
+			<caption><h3>List of Groups</h3></caption>
 			<tr>
-				<th>Board Key</th>
-				<th>Board Display Name</th>
-				<th>Board Description</th>
-				<th>Board Status</th>
-				<th>Board Registration Date/Time</th>
-				<th>Group</th>
+				<th>Group Key</th>
+				<th>Group Display Name</th>
+				<th>Group Description</th>
+				<th>Group Status</th>
+				<th>Group Registration Date/Time</th>
+				<th>Parent Group</th>
 				<th>Type</th>
-				<th>View Data</th>
+				<th>Child Nodes</th>
 			</tr>";
 			select "
 			<tr>
@@ -36,8 +36,8 @@ select "Content-type: text/html
 				<td>"||time||"</td>
 				<td>"||parent||"</td>
 				<td>"||type||"</td>
-				<td><a href=board-data.cgi?"||key||">...</a></td>
-			</tr>" from keys where type="board" order by type desc, time desc, name;
+				<td><a href=group-data.cgi?"||key||">...</a></td>
+			</tr>" from keys where type="group" order by type desc, time desc, name;
 		select "
 		</table>
 	</body>
