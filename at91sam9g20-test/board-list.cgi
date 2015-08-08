@@ -23,7 +23,6 @@ select "Content-type: text/html
 				<th>Board Description</th>
 				<th>Board Status</th>
 				<th>Board Registration Date/Time</th>
-				<th>Group</th>
 				<th>Type</th>
 				<th>View Data</th>
 			</tr>";
@@ -34,7 +33,6 @@ select "Content-type: text/html
 				<td>"||descr||"</td>
 				<td>"||status||"</td>
 				<td>"||time||"</td>
-				<td>"||parent||"</td>
 				<td>"||type||"</td>
 				<td><a href=board-data.cgi?"||key||">...</a></td>
 			</tr>" from keys where type="board" order by type desc, time desc, name;

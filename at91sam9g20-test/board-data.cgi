@@ -21,15 +21,21 @@ select "Content-type: text/html
 				<td valign='top'>
 					<table border='1' class='dl'>";
 						select "
-						<caption><h1>"||name||" Information</h1></caption>
+						<caption><h1>"||name||" (Board) Information</h1></caption>
 						<tr><td><b>Board Key</b></td><td>"||key||"</td></tr>
 						<tr><td><b>Board Display Name</b></td><td>"||name||"</td></tr>
 						<tr><td><b>Board Description</b></td><td>"||descr||"</td></tr>
 						<tr><td><b>Board Status</b></td><td>"||status||"</td></tr>
 						<tr><td><b>Board Registration Date/Time</b></td><td>"||time||"</td></tr>
-						<tr><td><b>Group</b></td><td>"||parent||"</td></tr>
 						<tr><td><b>Type</b></td><td>"||type||"</td></tr>"
 						from keys where key="$1";
+					select "
+					</table>
+					<table border='1' class='dl'>
+						<caption><h3>Member Of</h3></caption>";
+						select "
+						<tr><td><a href=group-data.cgi?"||groups.parent||">"||keys.name||"</a></td></tr>"
+						from keys join groups where keys.key=groups.parent and groups.child="$1";
 					select "
 					</table>
 					<table border='1' class='dl'>

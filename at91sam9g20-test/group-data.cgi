@@ -32,15 +32,21 @@ select "Content-type: text/html
 				<td valign='top'>
 					<table border='1' class='dl'>";
 						select "
-						<caption><h1>"||name||" Information</h1></caption>
+						<caption><h1>"||name||" (Group) Information</h1></caption>
 						<tr><td><b>Board Key</b></td><td>"||key||"</td></tr>
 						<tr><td><b>Board Display Name</b></td><td>"||name||"</td></tr>
 						<tr><td><b>Board Description</b></td><td>"||descr||"</td></tr>
 						<tr><td><b>Board Status</b></td><td>"||status||"</td></tr>
 						<tr><td><b>Board Registration Date/Time</b></td><td>"||time||"</td></tr>
-						<tr><td><b>Group</b></td><td>"||parent||"</td></tr>
 						<tr><td><b>Type</b></td><td>"||type||"</td></tr>"
 						from keys where key="$1";
+					select "
+					</table>
+					<table border='1' class='dl'>
+						<caption><h3>Member Of</h3></caption>";
+						select "
+						<tr><td><a href=group-data.cgi?"||groups.parent||">"||keys.name||"</a></td></tr>"
+						from keys join groups where keys.key=groups.parent and groups.child="$1";
 					select "
 					</table>
 				</td>
@@ -54,21 +60,19 @@ select "Content-type: text/html
 							<th>Description</th>
 							<th>Status</th>
 							<th>Registration Date/Time</th>
-							<th>Parent Group</th>
 							<th>Type</th>
 							<th>View Data</th>
 						</tr>";
 						select "
 						<tr>
-							<td>"||key||"</td>
-							<td>"||name||"</td>
-							<td>"||descr||"</td>
-							<td>"||status||"</td>
-							<td>"||time||"</td>
-							<td>"||parent||"</td>
-							<td>"||type||"</td>
-							<td><a href=board-data.cgi?"||key||">...</a></td>
-						</tr>" from keys where parent="$1" and type="board" order by time desc;
+							<td>"||keys.key||"</td>
+							<th>"||keys.name||"</th>
+							<td>"||keys.descr||"</td>
+							<td>"||keys.status||"</td>
+							<td>"||keys.time||"</td>
+							<td>"||keys.type||"</td>
+							<td><a href=board-data.cgi?"||keys.key||">...</a></td>
+						</tr>" from keys join groups where keys.type='board' and keys.key=groups.child and groups.parent="$1";
 					select "
 					</table>
 					<table border='1' class='dd'>
@@ -79,21 +83,19 @@ select "Content-type: text/html
 							<th>Description</th>
 							<th>Status</th>
 							<th>Registration Date/Time</th>
-							<th>Parent Group</th>
 							<th>Type</th>
 							<th>View Data</th>
 						</tr>";
 						select "
 						<tr>
-							<td>"||key||"</td>
-							<td>"||name||"</td>
-							<td>"||descr||"</td>
-							<td>"||status||"</td>
-							<td>"||time||"</td>
-							<td>"||parent||"</td>
-							<td>"||type||"</td>
-							<td><a href=group-data.cgi?"||key||">...</a></td>
-						</tr>" from keys where parent="$1" and type="group" order by time desc;
+							<td>"||keys.key||"</td>
+							<th>"||keys.name||"</th>
+							<td>"||keys.descr||"</td>
+							<td>"||keys.status||"</td>
+							<td>"||keys.time||"</td>
+							<td>"||keys.type||"</td>
+							<td><a href=group-data.cgi?"||keys.key||">...</a></td>
+						</tr>" from keys join groups where keys.type='group' and keys.key=groups.child and groups.parent="$1";
 					select "
 					</table>
 				</td>

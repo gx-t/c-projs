@@ -23,7 +23,6 @@ select "Content-type: text/html
 				<th>Group Description</th>
 				<th>Group Status</th>
 				<th>Group Registration Date/Time</th>
-				<th>Parent Group</th>
 				<th>Type</th>
 				<th>Child Nodes</th>
 			</tr>";
@@ -34,7 +33,6 @@ select "Content-type: text/html
 				<td>"||descr||"</td>
 				<td>"||status||"</td>
 				<td>"||time||"</td>
-				<td>"||parent||"</td>
 				<td>"||type||"</td>
 				<td><a href=group-data.cgi?"||key||">...</a></td>
 			</tr>" from keys where type="group" order by type desc, time desc, name;
