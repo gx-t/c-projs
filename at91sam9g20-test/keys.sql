@@ -1,0 +1,10 @@
+PRAGMA foreign_keys=OFF;
+BEGIN TRANSACTION;
+CREATE TABLE "keys" (key text, name text, descr text, status text, time timestamp, type text, unique(key) on conflict abort);
+INSERT INTO "keys" VALUES('22265df2-1e31-4f8f-a778-53d724c8ff9c','Test Board 0','Description of Test Board 0, script generated','enabled','2015-07-30 20:29:21','board');
+INSERT INTO "keys" VALUES('c893b811-352e-4667-b740-0d6ed91d0f95','Test Board 1','Description of Test Board 1','enabled','2015-07-30 20:32:08','board');
+INSERT INTO "keys" VALUES('00000000-0000-0000-0000-000000000000','Root','Parent for All Groups and Devices','enabled','2015-08-05 11:36:09','group');
+INSERT INTO "keys" VALUES('6accc6d5-c6cd-4083-bd7b-7aeede51db21','Testing','Temporary Group Created for Testing','enabled','2015-08-08 16:56:40','group');
+INSERT INTO "keys" VALUES('0d2acecb-ecf2-49ba-824b-8870971d1925','Yerevan','Group of boards located in Yerevan and part of Testing group','enabled','2015-08-08 16:59:31','group');
+INSERT INTO "keys" VALUES('abe67128-6f0c-44b5-99a4-f0b87d46cf46','Gyumri','Group of boards located in Gyumri and part of Testing group','enabled','2015-08-08 17:00:38','group');
+COMMIT;
