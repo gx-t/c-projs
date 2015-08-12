@@ -1,0 +1,11 @@
+PRAGMA foreign_keys=OFF;
+BEGIN TRANSACTION;
+CREATE TABLE groups (parent text, child text, unique(parent, child) on conflict abort);
+INSERT INTO "groups" VALUES('00000000-0000-0000-0000-000000000000','6accc6d5-c6cd-4083-bd7b-7aeede51db21');
+INSERT INTO "groups" VALUES('6accc6d5-c6cd-4083-bd7b-7aeede51db21','0d2acecb-ecf2-49ba-824b-8870971d1925');
+INSERT INTO "groups" VALUES('6accc6d5-c6cd-4083-bd7b-7aeede51db21','abe67128-6f0c-44b5-99a4-f0b87d46cf46');
+INSERT INTO "groups" VALUES('6accc6d5-c6cd-4083-bd7b-7aeede51db21','c893b811-352e-4667-b740-0d6ed91d0f95');
+INSERT INTO "groups" VALUES('6accc6d5-c6cd-4083-bd7b-7aeede51db21','22265df2-1e31-4f8f-a778-53d724c8ff9c');
+INSERT INTO "groups" VALUES('abe67128-6f0c-44b5-99a4-f0b87d46cf46','c893b811-352e-4667-b740-0d6ed91d0f95');
+INSERT INTO "groups" VALUES('0d2acecb-ecf2-49ba-824b-8870971d1925','22265df2-1e31-4f8f-a778-53d724c8ff9c');
+COMMIT;
