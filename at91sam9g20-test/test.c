@@ -11,6 +11,7 @@
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
 #include <sched.h>
+#include "at91sam9g20.h"
 
 enum {
 	ERR_OK = 0,
@@ -24,66 +25,19 @@ enum {
 
 
 
-//
-//PIOB_PER Port Enable Register
-//PIOB_OER Output Enable Register
-//PIOB_SODR Set Output Data Register
-//PIOB_CODR PIOB Clear Output Data Register
-//PIOB_IFER Glitch filter enable register
-//PIOB_PUDR Pull up disable register
-//PIOB_PUER Pull up enable register
-//PIOB_IDR Interrupt disable register
 //http://forum.lazarus.freepascal.org/index.php?topic=21907.0
 //https://www.fbi.h-da.de/fileadmin/personal/m.pester/mps/Termin2/Termin2.pdf
 //http://www.keil.com/dd/docs/arm/atmel/sam9g20/at91sam9g20.h
 //http://forum.arduino.cc/index.php?topic=258619.0
 //https://code.google.com/p/embox/source/browse/trunk/embox/src/include/drivers/at91sam7_tcc.h?spec=svn2952&r=2952
 
-typedef volatile unsigned AT91_REG;
+//typedef volatile unsigned AT91_REG;
 
 //*****************************************************************************
 //** GPIO
 //*****************************************************************************
-#define PIO_BASE		0xfffff000 //Input Output base address
-#define PIO_B(_b)		((struct AT91S_PIO*)(_b + 0x600))
-
-struct AT91S_PIO {
-	AT91_REG PIO_PER;       // PIO Enable Register
-	AT91_REG PIO_PDR;       // PIO Disable Register
-	AT91_REG PIO_PSR;       // PIO Status Register
-	AT91_REG Reserved0[1];  //
-	AT91_REG PIO_OER;       // Output Enable Register
-	AT91_REG PIO_ODR;       // Output Disable Registerr
-	AT91_REG PIO_OSR;       // Output Status Register
-	AT91_REG Reserved1[1];  //
-	AT91_REG PIO_IFER;      // Input Filter Enable Register
-	AT91_REG PIO_IFDR;      // Input Filter Disable Register
-	AT91_REG PIO_IFSR;      // Input Filter Status Register
-	AT91_REG Reserved2[1];  //
-	AT91_REG PIO_SODR;      // Set Output Data Register
-	AT91_REG PIO_CODR;      // Clear Output Data Register
-	AT91_REG PIO_ODSR;      // Output Data Status Register
-	AT91_REG PIO_PDSR;      // Pin Data Status Register
-	AT91_REG PIO_IER;       // Interrupt Enable Register
-	AT91_REG PIO_IDR;       // Interrupt Disable Register
-	AT91_REG PIO_IMR;       // Interrupt Mask Register
-	AT91_REG PIO_ISR;       // Interrupt Status Register
-	AT91_REG PIO_MDER;      // Multi-driver Enable Register
-	AT91_REG PIO_MDDR;      // Multi-driver Disable Register
-	AT91_REG PIO_MDSR;      // Multi-driver Status Register
-	AT91_REG Reserved3[1];  //
-	AT91_REG PIO_PPUDR;     // Pull-up Disable Register
-	AT91_REG PIO_PPUER;     // Pull-up Enable Register
-	AT91_REG PIO_PPUSR;     // Pull-up Status Register
-	AT91_REG Reserved4[1];  //
-	AT91_REG PIO_ASR;       // Select A Register
-	AT91_REG PIO_BSR;       // Select B Register
-	AT91_REG PIO_ABSR;      // AB Select Status Register
-	AT91_REG Reserved5[9];  //
-	AT91_REG PIO_OWER;      // Output Write Enable Register
-	AT91_REG PIO_OWDR;      // Output Write Disable Register
-	AT91_REG PIO_OWSR;      // Output Write Status Register
-};
+#define PIO_B(_b)		((AT91S_PIO*)(_b + 0x600))
+#define PMC(_b)			((AT91S_PMC*)(_b + 0xC00))
 
 #define MAP_SIZE		4096UL
 
@@ -91,100 +45,6 @@ struct AT91S_PIO {
 //** Timer Counter
 //*****************************************************************************
 #define TCB_BASE		0xFFFA0000 //Timer Counter Block base address
-
-struct AT91S_TC {
-	AT91_REG		TC_CCR;		// Channel Control Register
-	AT91_REG		TC_CMR;		// Channel Mode Register (Capture Mode / Waveform Mode)
-	AT91_REG		Reserved0[2];//
-	AT91_REG		TC_CV;		// Counter Value
-	AT91_REG		TC_RA;		// Register A
-	AT91_REG		TC_RB;		// Register B
-	AT91_REG		TC_RC;		// Register C
-	AT91_REG		TC_SR;		// Status Register
-	AT91_REG		TC_IER;		// Interrupt Enable Register
-	AT91_REG		TC_IDR;		// Interrupt Disable Register
-	AT91_REG		TC_IMR;		// Interrupt Mask Register
-};
-
-
-// -------- TC_CCR : (TC Offset: 0x0) TC Channel Control Register --------
-#define TC_CLKEN					(0x1 << 0)		//TC Clock Enable bit
-#define TC_CLKDIS					(0x1 << 1)		//TC Clock Disable bit
-#define TC_SWTRG					(0x1 << 2)		//TC Software Trigger
-
-// -------- TC_CMR : (TC Offset: 0x4) TC Channel Mode Register: Capture Mode / Waveform Mode --------
-#define TC_CLKS_XC0					0x5				//TC Clock Select: XC0
-#define TC_CLKS_XC1					0x6				//TC Clock Select: XC1
-#define TC_CLKS_XC2					0x7				//TC Clock Select: XC2
-#define TC_ETRGEDG					(0x3 << 8)		//TC External Trigger Edge Selection
-#define TC_ETRGEDG_NONE				(0x0 << 8)		//TC Edge: None
-#define TC_ETRGEDG_RISING			(0x1 << 8)		//TC Edge: Rising
-#define TC_ETRGEDG_FALLING			(0x2 << 8)		//TC Edge: Falling
-#define TC_ETRGEDG_BOTH				(0x3 << 8)		//TC Edge: Both
-#define TC_ENETRG					(0x1 << 12)		//TC External Event Trigger enable
-#define TC_EEVTEDG_RISING			(0x1 <<  8)		//TC Edge: rising edge
-#define TC_EEVT_XC1					(0x2 << 10)		//TC Signal selected as external event: XC1 TIOB direction: output
-#define TC_ABETRG					(0x1 << 10)		//TC TIOA or TIOB External Trigger Selection
-
-struct AT91S_TCB {
-	struct AT91S_TC		TCB_TC0;       // TC Channel 0
-	AT91_REG			Reserved0[4];  //
-	struct AT91S_TC		TCB_TC1;       // TC Channel 1
-	AT91_REG			Reserved1[4];  //
-	struct AT91S_TC		TCB_TC2;       // TC Channel 2
-	AT91_REG			Reserved2[4];  //
-	AT91_REG			TCB_BCR;       // TC Block Control Register
-	AT91_REG			TCB_BMR;       // TC Block Mode Register
-};
-
-// -------- TCB_BCR : (TCB Offset: 0xc0) TC Block Control Register --------
-#define AT91C_TCB_SYNC				((unsigned int) 0x1 <<  0)	// (TCB) Synchro Command
-// -------- TCB_BMR : (TCB Offset: 0xc4) TC Block Mode Register --------
-#define AT91C_TCB_TC0XC0S			((unsigned int) 0x3 <<  0)	// (TCB) External Clock Signal 0 Selection
-#define	AT91C_TCB_TC0XC0S_TCLK0		((unsigned int) 0x0 <<  0)	// (TCB) TCLK0 connected to XC0
-#define	AT91C_TCB_TC0XC0S_NONE		((unsigned int) 0x1 <<  0)	// (TCB) None signal connected to XC0
-#define AT91C_TCB_TC0XC0S_TIOA1		((unsigned int) 0x2 <<  0)	// (TCB) TIOA1 connected to XC0
-#define AT91C_TCB_TC0XC0S_TIOA2		((unsigned int) 0x3 <<  0)	// (TCB) TIOA2 connected to XC0
-#define AT91C_TCB_TC1XC1S			((unsigned int) 0x3 <<  2)	// (TCB) External Clock Signal 1 Selection
-#define AT91C_TCB_TC1XC1S_TCLK1		((unsigned int) 0x0 <<  2)	// (TCB) TCLK1 connected to XC1
-#define AT91C_TCB_TC1XC1S_NONE		((unsigned int) 0x1 <<  2)	// (TCB) None signal connected to XC1
-#define AT91C_TCB_TC1XC1S_TIOA0		((unsigned int) 0x2 <<  2)	// (TCB) TIOA0 connected to XC1
-#define AT91C_TCB_TC1XC1S_TIOA2		((unsigned int) 0x3 <<  2)	// (TCB) TIOA2 connected to XC1
-#define AT91C_TCB_TC2XC2S			((unsigned int) 0x3 <<  4)	// (TCB) External Clock Signal 2 Selection
-#define AT91C_TCB_TC2XC2S_TCLK2		((unsigned int) 0x0 <<  4)	// (TCB) TCLK2 connected to XC2
-#define AT91C_TCB_TC2XC2S_NONE		((unsigned int) 0x1 <<  4)	// (TCB) None signal connected to XC2
-#define AT91C_TCB_TC2XC2S_TIOA0		((unsigned int) 0x2 <<  4)	// (TCB) TIOA0 connected to XC2
-#define AT91C_TCB_TC2XC2S_TIOA1		((unsigned int) 0x3 <<  4)	// (TCB) TIOA2 connected to XC2
-
-
-//SOFTWARE API DEFINITION  FOR Power Management Controler
-#define PMC(_b)			((struct AT91S_PMC*)(_b + 0xC00))
-struct AT91S_PMC {
-	AT91_REG		PMC_SCER;			// System Clock Enable Register
-	AT91_REG		PMC_SCDR;			// System Clock Disable Register
-	AT91_REG		PMC_SCSR;			// System Clock Status Register
-	AT91_REG		Reserved0[1];		// 
-	AT91_REG		PMC_PCER;			// Peripheral Clock Enable Register
-	AT91_REG		PMC_PCDR;			// Peripheral Clock Disable Register
-	AT91_REG		PMC_PCSR;			// Peripheral Clock Status Register
-	AT91_REG		Reserved1[1];		// 
-	AT91_REG		PMC_MOR;			// Main Oscillator Register
-	AT91_REG		PMC_MCFR;			// Main Clock  Frequency Register
-	AT91_REG		PMC_PLLAR;			// PLL A Register
-	AT91_REG		PMC_PLLBR;			// PLL B Register
-	AT91_REG		PMC_MCKR;			// Master Clock Register
-	AT91_REG		Reserved2[3];		// 
-	AT91_REG		PMC_PCKR[8];		// Programmable Clock Register
-	AT91_REG		PMC_IER;			// Interrupt Enable Register
-	AT91_REG		PMC_IDR;			// Interrupt Disable Register
-	AT91_REG		PMC_SR;				// Status Register
-	AT91_REG		PMC_IMR;			// Interrupt Mask Register
-};
-
-//PERIPHERAL ID DEFINITIONS FOR AT91SAM9260A
-#define AT91C_ID_TC0				(17)						// Timer Counter 0
-#define AT91C_ID_TC1				(18)						// Timer Counter 1
-#define AT91C_ID_TC2				(19)						// Timer Counter 2
 
 
 //board pin to bit shift for PIOB
@@ -224,7 +84,7 @@ void lib_delay_us(unsigned us) {
 // http://en.wikipedia.org/wiki/1-Wire
 // checked playing with read delays - got stable result for wide range
 
-static void w1_write_0(volatile struct AT91S_PIO* piob, unsigned flags) {
+static void w1_write_0(volatile AT91S_PIO* piob, unsigned flags) {
 	piob->PIO_OER = flags; //enable output
 	piob->PIO_CODR = flags; //level low
 	lib_delay_us(60);
@@ -232,7 +92,7 @@ static void w1_write_0(volatile struct AT91S_PIO* piob, unsigned flags) {
 	lib_delay_us(4);
 }
 
-static void w1_write_1(volatile struct AT91S_PIO* piob, unsigned flags) {
+static void w1_write_1(volatile AT91S_PIO* piob, unsigned flags) {
 	piob->PIO_OER = flags; //enable output
 	piob->PIO_CODR = flags; //level low
 	lib_delay_us(4);
@@ -240,7 +100,7 @@ static void w1_write_1(volatile struct AT91S_PIO* piob, unsigned flags) {
 	lib_delay_us(60);
 }
 
-static unsigned w1_read(volatile struct AT91S_PIO* piob, unsigned flags) {
+static unsigned w1_read(volatile AT91S_PIO* piob, unsigned flags) {
 	piob->PIO_OER = flags; //enable output
 	piob->PIO_CODR = flags; //level low
 	lib_delay_us(4);
@@ -251,7 +111,7 @@ static unsigned w1_read(volatile struct AT91S_PIO* piob, unsigned flags) {
 	return bit_value;
 }
 
-static unsigned w1_read_byte(volatile struct AT91S_PIO* piob, unsigned flags) {
+static unsigned w1_read_byte(volatile AT91S_PIO* piob, unsigned flags) {
 	unsigned result = 0;
 	if(w1_read(piob, flags)) result |= 0x01;
 	if(w1_read(piob, flags)) result |= 0x02;
@@ -264,7 +124,7 @@ static unsigned w1_read_byte(volatile struct AT91S_PIO* piob, unsigned flags) {
 	return result;
 }
 
-static void w1_write_byte(volatile struct AT91S_PIO* piob, unsigned flags, unsigned data) {
+static void w1_write_byte(volatile AT91S_PIO* piob, unsigned flags, unsigned data) {
 	data & 0x01 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
 	data & 0x02 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
 	data & 0x04 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
@@ -275,7 +135,7 @@ static void w1_write_byte(volatile struct AT91S_PIO* piob, unsigned flags, unsig
 	data & 0x80 ? w1_write_1(piob, flags) : w1_write_0(piob, flags);
 }
 
-static unsigned ds18b20_reset(volatile struct AT91S_PIO* piob, unsigned flags) {
+static unsigned ds18b20_reset(volatile AT91S_PIO* piob, unsigned flags) {
 	piob->PIO_OER = flags; //enable output
 	piob->PIO_CODR = flags; //level low
 	lib_delay_us(500);
@@ -296,8 +156,8 @@ static unsigned ds18b20_reset(volatile struct AT91S_PIO* piob, unsigned flags) {
 #define SHELL_CMD_DELIMITER			" \t\r\n"
 
 static volatile void* io_map_base = 0;
-static volatile struct AT91S_PIO* io_port_b = 0;
-static volatile struct AT91S_TCB* tcb_base = 0;
+static volatile AT91S_PIO* io_port_b = 0;
+static volatile AT91S_TCB* tcb_base = 0;
 
 //=============================================================================
 
@@ -383,9 +243,9 @@ static void shell_ds18b20() {
 static int shell_counter_init() {
 	PMC(io_map_base)->PMC_PCER = (1 << AT91C_ID_TC0); //start periferial clock
 	tcb_base->TCB_TC0.TC_IDR = 0xFF;//disable all interrupts for TC0
-	tcb_base->TCB_TC0.TC_CMR = TC_CLKS_XC1 | TC_ETRGEDG_RISING; //XC1 as clock, rising edge
+	tcb_base->TCB_TC0.TC_CMR = AT91C_TC_CLKS_XC1 | AT91C_TC_ETRGEDG_RISING; //XC1 as clock, rising edge
 	tcb_base->TCB_BMR = AT91C_TCB_TC1XC1S_TCLK1; //connect XC1 to TCLK1 (pin 9)
-	tcb_base->TCB_TC0.TC_CCR = TC_CLKEN | TC_SWTRG; //enable clock, reset counter
+	tcb_base->TCB_TC0.TC_CCR = AT91C_TC_CLKEN | AT91C_TC_SWTRG; //enable clock, reset counter
 	return ERR_OK;
 }
 
@@ -444,12 +304,12 @@ static void shell_ctrl_c(int sig) {
 
 int main(int argc, char* argv[]) {
 	if(argc > 1 && !strcmp(argv[1], "-q")) log = empty_log;
-	io_map_base = lib_open_base(PIO_BASE);
+	io_map_base = lib_open_base((off_t)AT91C_BASE_AIC);
 	if(!io_map_base) {
 		perror("io_map_base - mmap");
 		return ERR_MMAP;
 	}
-	tcb_base = lib_open_base(TCB_BASE);
+	tcb_base = lib_open_base((off_t)AT91C_BASE_TC0);
 	if(!tcb_base) {
 		lib_close_base(io_map_base);
 		perror("tcp_base - mmap");
