@@ -2,7 +2,6 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/mman.h>
-#include <stdio.h>
 #include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
@@ -10,7 +9,6 @@
 #include <time.h>
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
-#include <sched.h>
 #include "at91sam9g20.h"
 
 enum {
@@ -193,9 +191,7 @@ static void shell_gpio() {
 }
 
 //=============================================================================
-//TODO: use int sched_yield(void); at the beginning of ds18b20 functions
 static void shell_ds18b20_presense(int flags) {
-	sched_yield();
 	io_port_b->PIO_PER = flags;
 	io_port_b->PIO_PPUER = flags; //enable pull up
 	unsigned state = ds18b20_reset(io_port_b, flags);
