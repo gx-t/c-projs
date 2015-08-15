@@ -16,7 +16,7 @@ select "Content-type: text/html
 		</style>
 	</header>
 	<body>
-		<table>
+		<table style='width:100%;'>
 			<tr>
 				<td valign='top'>
 					<table border='1' class='dl'>";
@@ -48,7 +48,7 @@ select "Content-type: text/html
 					<iframe src=http://maps.google.com/maps?q="||
 						(select value from "$1.config" where name="latitude")||","||
 						(select value from "$1.config" where name="longitude")||
-						"&z=15&output=embed style='width:100%;height:70%'></iframe>
+						"&z=15&output=embed style='width:99%;height:80%'></iframe>
 				</td>
 				<td>";
 					select "
@@ -68,7 +68,7 @@ select "Content-type: text/html
 							<td>"||devid||"</td>
 							<td>"||value||"</td>
 							<td>"||type||"</td>
-						</tr>" from "$1.data" order by rowid desc limit 32;
+						</tr>" from "$1.data" order by rowid desc limit 128;
 					select "
 					</table>
 				</td>
