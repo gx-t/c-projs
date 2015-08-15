@@ -12,7 +12,7 @@ key=`uuidgen`
 config="$key.config"
 data="$key.data"
 
-sqlite3 sensors.db << EOT
+sqlite3 -batch sensors.db << EOT
 begin transaction;
 
 create table "keys" (key text, name text, descr text, status text, time timestamp, parent text, unique(key) on conflict abort);

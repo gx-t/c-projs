@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-sqlite3 ~/data/sensors.db << EOT
+sqlite3 -batch ~/data/sensors.db << EOT
 select "Content-type: text/html
 
 <html>
