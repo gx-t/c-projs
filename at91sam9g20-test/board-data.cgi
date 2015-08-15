@@ -45,10 +45,12 @@ select "Content-type: text/html
 						from "$1.config";
 					select "
 					</table>
+					<p align=center>
 					<iframe src=http://maps.google.com/maps?q="||
 						(select value from "$1.config" where name="latitude")||","||
 						(select value from "$1.config" where name="longitude")||
-						"&z=15&output=embed style='width:99%;height:80%'></iframe>
+						"&z=15&output=embed width=600 height=600></iframe>
+					</p>
 				</td>
 				<td>";
 					select "
