@@ -14,6 +14,7 @@ counter init
 gpio 3 1
 ds18b20 4 presense
 EOT
+echo 1 > /sys/class/misc/adc/ch0_enable
 
 #read board key
 key=$(cat key)
@@ -39,6 +40,7 @@ sleep `get_config measure-period`
 THERM0="therm-ds18b20"
 THERM1="therm-lm75"
 COUNTER="counter0"
+ADCLIGHT0="adc-light0"
 
 prepare() {
 	./test -q << EOT
@@ -53,6 +55,7 @@ collect() {
 		insert into "$data" values( CURRENT_TIMESTAMP , "$THERM0" , ds18b20 4 read , "$key" , "temp" ); 
 		insert into "$data" values( CURRENT_TIMESTAMP , "$COUNTER" , counter read , "$key" , "count" ); 
 		insert into "$data" values( CURRENT_TIMESTAMP , "$THERM1" , lm75 0x4F read , "$key" , "temp" ); 
+		insert into "$data" values( CURRENT_TIMESTAMP , "$ADCLIGHT0" , `cat /sys/class/misc/adc/ch0_value`, "$key" , "light" ); 
 	end transaction;
 EOT
 }
