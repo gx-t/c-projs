@@ -61,7 +61,7 @@ EOT
 
 send() {
 	echo "gpio 29 1	gpio 31 1" | ./test -q
-	echo ".dump \"$data\"" | sqlite3 -batch sensors.db | [[ `curl -s --upload-file - $(get_config data-cgi)` == "OK" ]]
+	echo ".dump \"$data\"" | sqlite3 -batch sensors.db | gzip -fc | [[ `curl -s --upload-file - $(get_config data-cgi)` == "OK" ]]
 }
 
 delete() {
