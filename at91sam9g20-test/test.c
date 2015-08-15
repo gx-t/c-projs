@@ -29,21 +29,10 @@ enum {
 //http://forum.arduino.cc/index.php?topic=258619.0
 //https://code.google.com/p/embox/source/browse/trunk/embox/src/include/drivers/at91sam7_tcc.h?spec=svn2952&r=2952
 
-//typedef volatile unsigned AT91_REG;
-
-//*****************************************************************************
-//** GPIO
-//*****************************************************************************
 #define PIO_B(_b)		((AT91S_PIO*)(_b + 0x600))
 #define PMC(_b)			((AT91S_PMC*)(_b + 0xC00))
 
 #define MAP_SIZE		4096UL
-
-//*****************************************************************************
-//** Timer Counter
-//*****************************************************************************
-#define TCB_BASE		0xFFFA0000 //Timer Counter Block base address
-
 
 //board pin to bit shift for PIOB
 static int lib_piob_from_pin(int pin) {
