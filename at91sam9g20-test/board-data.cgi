@@ -26,7 +26,7 @@ select "Content-type: text/html
 						<tr><td><b>Board Display Name</b></td><td>"||name||"</td></tr>
 						<tr><td><b>Board Description</b></td><td>"||descr||"</td></tr>
 						<tr><td><b>Board Status</b></td><td>"||status||"</td></tr>
-						<tr><td><b>Board Registration Date/Time</b></td><td>"||time||"</td></tr>
+						<tr><td><b>Board Registration Date/Time</b></td><td>"||datetime(time, '+4 hours')||"</td></tr>
 						<tr><td><b>Type</b></td><td>"||type||"</td></tr>"
 						from keys where key="$1";
 					select "
@@ -66,7 +66,7 @@ select "Content-type: text/html
 						select "
 						<tr>
 							<th>"||rowid||"</th>
-							<td>"||time||"</td>
+							<td>"||datetime(time, '+4 hours')||"</td>
 							<td>"||devid||"</td>
 							<td>"||value||"</td>
 							<td>"||type||"</td>

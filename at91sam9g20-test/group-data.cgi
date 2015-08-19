@@ -37,7 +37,7 @@ select "Content-type: text/html
 						<tr><td><b>Board Display Name</b></td><td>"||name||"</td></tr>
 						<tr><td><b>Board Description</b></td><td>"||descr||"</td></tr>
 						<tr><td><b>Board Status</b></td><td>"||status||"</td></tr>
-						<tr><td><b>Board Registration Date/Time</b></td><td>"||time||"</td></tr>
+						<tr><td><b>Board Registration Date/Time</b></td><td>"||datetime(time, '+4 hours')||"</td></tr>
 						<tr><td><b>Type</b></td><td>"||type||"</td></tr>"
 						from keys where key="$1";
 					select "
@@ -69,7 +69,7 @@ select "Content-type: text/html
 							<th>"||keys.name||"</th>
 							<td>"||keys.descr||"</td>
 							<td>"||keys.status||"</td>
-							<td>"||keys.time||"</td>
+							<td>"||datetime(keys.time, '+4 hours')||"</td>
 							<td>"||keys.type||"</td>
 							<td><a href=board-data.cgi?"||keys.key||">...</a></td>
 						</tr>" from keys join groups where keys.type='board' and keys.key=groups.child and groups.parent="$1";
@@ -92,7 +92,7 @@ select "Content-type: text/html
 							<th>"||keys.name||"</th>
 							<td>"||keys.descr||"</td>
 							<td>"||keys.status||"</td>
-							<td>"||keys.time||"</td>
+							<td>"||datetime(keys.time, '+4 hours')||"</td>
 							<td>"||keys.type||"</td>
 							<td><a href=group-data.cgi?"||keys.key||">...</a></td>
 						</tr>" from keys join groups where keys.type='group' and keys.key=groups.child and groups.parent="$1";

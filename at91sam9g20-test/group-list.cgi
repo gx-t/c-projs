@@ -32,7 +32,7 @@ select "Content-type: text/html
 				<td>"||name||"</td>
 				<td>"||descr||"</td>
 				<td>"||status||"</td>
-				<td>"||time||"</td>
+				<td>"||datetime(time, '+4 hours')||"</td>
 				<td>"||type||"</td>
 				<td><a href=group-data.cgi?"||key||">...</a></td>
 			</tr>" from keys where type="group" order by type desc, time desc, name;
