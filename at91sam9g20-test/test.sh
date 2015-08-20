@@ -23,16 +23,21 @@ echo 1 > /sys/class/misc/adc/ch0_enable
 
 #read board key
 key=$(cat key)
-#configuration table name
-config="$key.config"
-#data table name
-data="$key.data"
+
+#create local tables if do not exist
+echo "create table config (name text, value text, unique(name) on conflict replace);
+create table data (time timestamp, devid text, value float, key text, type text);
+vacuum;" |
+sqlite3 -batch sensors.db 2> /dev/null
+
 #ask server for board configuration
-echo ".dump \"$config\"" | curl -s --upload-file - http://shah32768.sdf.org/cgi-bin/board-get-config.cgi | sqlite3 -batch sensors.db 2> /dev/null
-echo "create table \"$data\" (time timestamp, devid text, value float, key text);" | sqlite3 -batch sensors.db 2> /dev/null
+echo ".mode insert config
+select name, value from config where key=\"$key\";" |
+curl -s --upload-file - http://shah32768.sdf.org/cgi-bin/board-get-config.cgi |
+sqlite3 -batch sensors.db 2> /dev/null
 
 get_config() {
-	echo "select value from \"$config\" where name=\"$1\";" | sqlite3 -batch sensors.db 
+	echo "select value from config where name=\"$1\";" | sqlite3 -batch sensors.db 
 }
 
 ./test -q << EOT
@@ -51,22 +56,22 @@ collect() {
 	./test -q << EOT | sqlite3 -batch sensors.db
 	gpio 29 0 gpio 31 1 gpio 3 0
 	begin transaction;
-		insert into "$data" values( CURRENT_TIMESTAMP , "$THERM0" , ds18b20 4 read , "$key" , "temp" ); 
-		insert into "$data" values( CURRENT_TIMESTAMP , "$COUNTER" , counter read , "$key" , "count" ); 
-		insert into "$data" values( CURRENT_TIMESTAMP , "$THERM1" , lm75 0x4F read , "$key" , "temp" ); 
-		insert into "$data" values( CURRENT_TIMESTAMP , "$ADCLIGHT0" , `cat /sys/class/misc/adc/ch0_value`, "$key" , "light" ); 
+		insert into data values( CURRENT_TIMESTAMP , "$THERM0" , ds18b20 4 read , "$key" , "temp" ); 
+		insert into data values( CURRENT_TIMESTAMP , "$COUNTER" , counter read , "$key" , "count" ); 
+		insert into data values( CURRENT_TIMESTAMP , "$THERM1" , lm75 0x4F read , "$key" , "temp" ); 
+		insert into data values( CURRENT_TIMESTAMP , "$ADCLIGHT0" , `cat /sys/class/misc/adc/ch0_value`, "$key" , "light" ); 
 	end transaction;
 EOT
 }
 
 send() {
 	echo "gpio 29 1	gpio 31 1" | ./test -q
-	echo ".dump \"$data\"" | sqlite3 -batch sensors.db | gzip -fc | [[ `curl -s --upload-file - $(get_config data-cgi)` == "OK" ]]
+	echo ".dump data" | sqlite3 -batch sensors.db | gzip -fc | [[ `curl -s --upload-file - $(get_config data-cgi)` == "OK" ]]
 }
 
 delete() {
 	echo "gpio 29 0 gpio 31 0" | ./test -q
-	echo "delete from \"$data\";" | sqlite3 -batch sensors.db
+	echo "delete from data;" | sqlite3 -batch sensors.db
 }
 
 cnt=0
