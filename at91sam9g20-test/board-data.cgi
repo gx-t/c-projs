@@ -42,13 +42,13 @@ select "Content-type: text/html
 						<caption><h3>Configuration</h3></caption>";
 						select "
 						<tr><td><b>"||name||"</b></td><td>"||value||"</td></tr>"
-						from "$1.config";
+						from config where key="$1";
 					select "
 					</table>
 					<p align=center>
 					<iframe src=http://maps.google.com/maps?q="||
-						(select value from "$1.config" where name="latitude")||","||
-						(select value from "$1.config" where name="longitude")||
+						(select value from config where key="$1" and name="latitude")||","||
+						(select value from config where key="$1" and name="longitude")||
 						"&z=15&output=embed width=600 height=600></iframe>
 					</p>
 				</td>
@@ -70,7 +70,7 @@ select "Content-type: text/html
 							<td>"||devid||"</td>
 							<td>"||value||"</td>
 							<td>"||type||"</td>
-						</tr>" from "$1.data" order by rowid desc limit 128;
+						</tr>" from data where key="$1" order by rowid desc limit 128;
 					select "
 					</table>
 				</td>
