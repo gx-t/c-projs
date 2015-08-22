@@ -307,7 +307,7 @@ int main(int argc, char* argv[]) {
 	while(fgets(line, sizeof(line), stdin)) {
 		char* cmd = strtok(line, SHELL_CMD_DELIMITER);
 		if(!cmd) {
-			fprintf(stderr, "gpio, counter, ds18b20, lm75 <args>, ctlr+d to exit, .<any text> - comment, empty for help\n");
+			log(stderr, "gpio, counter, ds18b20, lm75 <args>, ctlr+d to exit, .<any text> - comment, empty for help\n");
 			continue;
 		}
 		for(; cmd; cmd = strtok(0, SHELL_CMD_DELIMITER)) {

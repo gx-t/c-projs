@@ -11,76 +11,60 @@ THERM1="therm-lm75"
 COUNTER="counter0"
 ADCLIGHT0="adc-light0"
 
-./test -q << EOT
-gpio 29 enable gpio 29 output gpio 29 1
+#read board key
+key=$(cat key)
+
+
+#init sensors
+echo "gpio 29 enable gpio 29 output gpio 29 1
 gpio 31 enable gpio 31 output gpio 31 1
 gpio 3 enable gpio 3 output gpio 3 0
 counter init
 gpio 3 1
-ds18b20 4 presense
-EOT
+ds18b20 4 presense" | ./test -q > /dev/null
 echo 1 > /sys/class/misc/adc/ch0_enable
 
-#read board key
-key=$(cat key)
+ss=`curl -s http://shah32768.sdf.org/cgi-bin/board-get-config.cgi?$key` &&
+printf "%s" "$ss" > .config
+unset ss
+source .config
+mkdir -p outbox
 
-#create local tables if do not exist
-echo "create table config (name text, value text, unique(name) on conflict replace);
-create table data (time timestamp, devid text, value float, key text, type text);
-vacuum;" |
-sqlite3 -batch sensors.db 2> /dev/null
-
-#ask server for board configuration
-echo ".mode insert config
-select name, value from config where key=\"$key\";" |
-curl -s --upload-file - http://shah32768.sdf.org/cgi-bin/board-get-config.cgi |
-sqlite3 -batch sensors.db 2> /dev/null
-
-get_config() {
-	echo "select value from config where name=\"$1\";" | sqlite3 -batch sensors.db 
-}
-
-./test -q << EOT
-gpio 29 0 gpio 31 0 gpio 3 1
-EOT
-
-sleep `get_config measure-period`
-
-prepare() {
-	./test -q << EOT
-	gpio 29 1 gpio 31 0 gpio 3 1 ds18b20 4 convert
-EOT
-}
+echo 'gpio 29 0 gpio 31 0 gpio 3 1' | ./test -q > /dev/null
+usleep 200000
 
 collect() {
-	./test -q << EOT | sqlite3 -batch sensors.db
-	gpio 29 0 gpio 31 1 gpio 3 0
-	begin transaction;
-		insert into data values( CURRENT_TIMESTAMP , "$THERM0" , ds18b20 4 read , "$key" , "temp" ); 
-		insert into data values( CURRENT_TIMESTAMP , "$COUNTER" , counter read , "$key" , "count" ); 
-		insert into data values( CURRENT_TIMESTAMP , "$THERM1" , lm75 0x4F read , "$key" , "temp" ); 
-		insert into data values( CURRENT_TIMESTAMP , "$ADCLIGHT0" , `cat /sys/class/misc/adc/ch0_value`, "$key" , "light" ); 
-	end transaction;
-EOT
+	echo 'begin transaction;'
+	for i in `seq 1 $send_period)`
+		do
+			dt=`date -u '+%Y-%m-%d %H:%M:%S'`
+			echo "gpio 29 1 gpio 3 1 ds18b20 4 convert
+				`sleep $measure_period`
+				gpio 29 0 gpio 3 0
+				insert into data values( '$dt' , '$THERM0' , ds18b20 4 read , '$key' , 'temp' ); 
+				insert into data values( '$dt' , '$COUNTER' , counter read , '$key' , 'count' ); 
+				insert into data values( '$dt' , '$THERM1' , lm75 0x4F read , '$key' , 'temp' ); 
+				insert into data values( '$dt' , '$ADCLIGHT0' , `cat /sys/class/misc/adc/ch0_value`, '$key' , 'light' );"
+		done
+	echo 'commit;'
 }
-
-send() {
-	echo "gpio 29 1	gpio 31 1" | ./test -q
-	echo ".dump data" | sqlite3 -batch sensors.db | gzip -fc | [[ `curl -s --upload-file - $(get_config data-cgi)` == "OK" ]]
-}
-
-delete() {
-	echo "gpio 29 0 gpio 31 0" | ./test -q
-	echo "delete from data;" | sqlite3 -batch sensors.db
-}
-
-cnt=0
-while true
+while :
 do
-prepare
-sleep `get_config measure-period`
-collect
-cnt=`expr $cnt + 1`
-[[ $cnt == `get_config send-period` ]] && cnt=0 && send && delete
-done
+	collect | ./test -q | gzip -fc > .tmp
+	mv .tmp "outbox/$(date -u +%s)"
+done &
 
+echo "collect_pid=$!"
+
+cd outbox
+while sleep `expr $send_period \\* $measure_period`
+do
+	echo 'gpio 31 1' | ../test -q > /dev/null
+	ls | while read ff
+	do
+		cat $ff | [[ `curl -s --upload-file - $data_cgi` == "OK" ]] && rm $ff
+	done
+	echo 'gpio 31 0' | ../test -q > /dev/null
+done &
+
+echo "send_pid=$!"
