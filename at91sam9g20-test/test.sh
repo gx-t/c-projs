@@ -62,7 +62,7 @@ do
 	echo 'gpio 31 1' | ../test -q > /dev/null
 	ls | while read ff
 	do
-		cat $ff | [[ `curl -s --upload-file - $data_cgi` == "OK" ]] && rm $ff
+		[[ `curl -s --upload-file $ff $data_cgi` == "OK" ]] && rm $ff
 	done
 	echo 'gpio 31 0' | ../test -q > /dev/null
 done &
