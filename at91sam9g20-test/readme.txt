@@ -1,5 +1,5 @@
 ===ON BOARD SIDE===
-1. Get latest test.c and test.sh
+1. Get latest test.c, at91sam9g20.h, Makefile, test.sh - compile and put test and test.sh
 2. Delete sensors.db - not needed at all
 3. Create key file:
 	cd /root
