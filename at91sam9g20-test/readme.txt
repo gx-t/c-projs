@@ -58,11 +58,13 @@ How it works:
 
 ===MINIMUM PHP SUPPORT===
 
-1. Create board list PHP:
+1. Create board list PHP with the following SQL statement:
 	select * from keys where type="board" order by type desc, time desc, name;
-2. Modify board data PHP:
+2. Modify board data PHP to have the following SQL statement:
 	select * from data where key="$1" order by rowid desc limit 128;
 
-*For complete support see working CGIs and do the same using PHP:
+*For complete support see working CGIs and do the same in PHP:
 	https://github.com/shah-/c-projs/tree/master/at91sam9g20-test
+*Working example is here:
+	http://shah32768.sdf.org/cgi-bin/board-list.cgi
 
