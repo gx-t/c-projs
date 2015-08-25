@@ -1,73 +1,68 @@
-wget -t 0 -c http://www.busybox.net/downloads/binaries/latest/busybox-armv5l
-copy to /bin
-ln -s /bin/busybox-armv5l /usr/bin/awk
-.mode insert
-select time,devid,value from outbox
-====
-Error in board datasheet - I2C SCL and SDA are swapped
+===ON BOARD SIDE===
+1. Get latest test.c and test.sh
+2. Delete sensors.db - not needed at all
+3. Create key file:
+	cd /root
+	echo -en "c893b811-352e-4667-b740-0d6ed91d0f95" > key
 
-26.06.2015
-TODO:
-1. Server DB name - data
-2. gzip send, receive (php)
-3. send key=.... (board key)
-Config:
-Table: config
-Columns: key TEXT, name TEXT, value TEXT
-Params: board, 
-Sensors:
-devid, type
+How it works:
+1. Reads key from 'key' file
+2. Asks server for configuration for given key
+3. Saves the configuration to .config file
+4. Sources the .config file
+5. Separate background process scans sensors, puts the data to compressed files in outbox
+6. An other background process scans outbox for files, sends and deletes sent file
 
-===BOARD DATABASE===
-====config:
-PRAGMA foreign_keys=OFF;
-BEGIN TRANSACTION;
-CREATE TABLE config (name text, value text, unique(name) on conflict replace);
-INSERT INTO "config" VALUES('board','xxx test board (prefix - boardxxx)');
-INSERT INTO "config" VALUES('send-period','10');
-INSERT INTO "config" VALUES('measure-period','1');
-INSERT INTO "config" VALUES('description','xxx board multiline
-description is here');
-INSERT INTO "config" VALUES('key','xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx');
-INSERT INTO "config" VALUES('data-cgi','http://www.seismoinstruments.am/insert.php');
-INSERT INTO "config" VALUES('config-cgi','http://www.seismoinstruments.am/insert.php');
-COMMIT;
-====outbox:
-PRAGMA foreign_keys=OFF;
-BEGIN TRANSACTION;
-CREATE TABLE outbox (time timestamp, devid text, value float);
-COMMIT;
+===ON SERVER SIDE===
+1. Create tables: config, data, groups, keys:
+	CREATE TABLE config (name text, value text, key text,  unique(name, key) on conflict replace);
+	CREATE TABLE data (time TIMESTAMP, devid text, value real, key text, type text);
+	CREATE TABLE groups (parent text, child text, unique(parent, child) on conflict abort);
+	CREATE TABLE keys (key text, name text, descr text, status text, time timestamp, type text, unique(key) on conflict abort);
+2. Fill config:
+	INSERT INTO config VALUES('measure_period','1','c893b811-352e-4667-b740-0d6ed91d0f95');
+	INSERT INTO config VALUES('send_period','10','c893b811-352e-4667-b740-0d6ed91d0f95');
+	INSERT INTO config VALUES('latitude','40.1920773','c893b811-352e-4667-b740-0d6ed91d0f95');
+	INSERT INTO config VALUES('longitude','44.55','c893b811-352e-4667-b740-0d6ed91d0f95');
+	INSERT INTO config VALUES('data_cgi','http://shah32768.sdf.org/cgi-bin/board-send-data.cgi','c893b811-352e-4667-b740-0d6ed91d0f95');
+	INSERT INTO config VALUES('config_cgi','http://shah32768.sdf.org/cgi-bin/board-send-data.cgi','c893b811-352e-4667-b740-0d6ed91d0f95');
+	INSERT INTO config VALUES('measure_period','1','22265df2-1e31-4f8f-a778-53d724c8ff9c');
+	INSERT INTO config VALUES('send_period','10','22265df2-1e31-4f8f-a778-53d724c8ff9c');
+	INSERT INTO config VALUES('latitude','40.1920773','22265df2-1e31-4f8f-a778-53d724c8ff9c');
+	INSERT INTO config VALUES('longitude','44.5099267','22265df2-1e31-4f8f-a778-53d724c8ff9c');
+	INSERT INTO config VALUES('data_cgi','http://shah32768.sdf.org/cgi-bin/board-send-data.cgi','22265df2-1e31-4f8f-a778-53d724c8ff9c');
+	INSERT INTO config VALUES('config_cgi','http://shah32768.sdf.org/cgi-bin/board-send-data.cgi','22265df2-1e31-4f8f-a778-53d724c8ff9c');
+3. Fill groups:
+	INSERT INTO groups VALUES('00000000-0000-0000-0000-000000000000','6accc6d5-c6cd-4083-bd7b-7aeede51db21');
+	INSERT INTO groups VALUES('6accc6d5-c6cd-4083-bd7b-7aeede51db21','0d2acecb-ecf2-49ba-824b-8870971d1925');
+	INSERT INTO groups VALUES('6accc6d5-c6cd-4083-bd7b-7aeede51db21','abe67128-6f0c-44b5-99a4-f0b87d46cf46');
+	INSERT INTO groups VALUES('6accc6d5-c6cd-4083-bd7b-7aeede51db21','c893b811-352e-4667-b740-0d6ed91d0f95');
+	INSERT INTO groups VALUES('6accc6d5-c6cd-4083-bd7b-7aeede51db21','22265df2-1e31-4f8f-a778-53d724c8ff9c');
+	INSERT INTO groups VALUES('abe67128-6f0c-44b5-99a4-f0b87d46cf46','c893b811-352e-4667-b740-0d6ed91d0f95');
+	INSERT INTO groups VALUES('0d2acecb-ecf2-49ba-824b-8870971d1925','22265df2-1e31-4f8f-a778-53d724c8ff9c');
+	INSERT INTO groups VALUES('00000000-0000-0000-0000-000000000000','04c2925b-039e-49d9-8d35-39788354a5f8');
+	INSERT INTO groups VALUES('04c2925b-039e-49d9-8d35-39788354a5f8','1a566962-d7b4-4f6f-9360-8377773a24c6');
+	INSERT INTO groups VALUES('04c2925b-039e-49d9-8d35-39788354a5f8','214bceae-d11c-4d25-a167-e9b0ec452c08');
+	INSERT INTO groups VALUES('04c2925b-039e-49d9-8d35-39788354a5f8','0442baca-59cd-4db4-8370-42e51102f23e');
+4. Fill keys:
+	INSERT INTO keys VALUES('22265df2-1e31-4f8f-a778-53d724c8ff9c','Test Board 0','Description of Test Board 0, script generated','enabled','2015-07-30 20:29:21','board');
+	INSERT INTO keys VALUES('c893b811-352e-4667-b740-0d6ed91d0f95','Test Board 1','Description of Test Board 1','enabled','2015-07-30 20:32:08','board');
+	INSERT INTO keys VALUES('00000000-0000-0000-0000-000000000000','Root','Parent for All Groups and Devices','enabled','2015-08-05 11:36:09','group');
+	INSERT INTO keys VALUES('6accc6d5-c6cd-4083-bd7b-7aeede51db21','Testing','Temporary Group Created for Testing','enabled','2015-08-08 16:56:40','group');
+	INSERT INTO keys VALUES('0d2acecb-ecf2-49ba-824b-8870971d1925','Yerevan','Group of boards located in Yerevan and part of Testing group','enabled','2015-08-08 16:59:31','group');
+	INSERT INTO keys VALUES('abe67128-6f0c-44b5-99a4-f0b87d46cf46','Gyumri','Group of boards located in Gyumri and part of Testing group','enabled','2015-08-08 17:00:38','group');
+	INSERT INTO keys VALUES('04c2925b-039e-49d9-8d35-39788354a5f8','Spare Boards','Holder of spare boards - new boards that are not assigned yet or returned boards','disabled','2015-08-15 12:15:40','group');
+	INSERT INTO keys VALUES('1a566962-d7b4-4f6f-9360-8377773a24c6','Spare Board','This board is not assigned yet','disabled','2015-08-15 12:22:25','board');
+	INSERT INTO keys VALUES('214bceae-d11c-4d25-a167-e9b0ec452c08','Spare Board','This board is not assigned yet','disabled','2015-08-15 12:26:31','board');
+	INSERT INTO keys VALUES('0442baca-59cd-4db4-8370-42e51102f23e','Spare Board','This board is not assigned yet','disabled','2015-08-15 12:28:12','board');
 
-2 tables: key.data (as "9a5a9f7d-efe5-447f-9894-06fb91750ba6.data") and key.config (as "9a5a9f7d-efe5-447f-9894-06fb91750ba6.config")
-tables must not have id primary key to use simple .dump to avoid using awk, etc.
-Board initialli sends key.config to server.
-key.data has: time TIMESTAMP, devid TEXT, value FLOAT
-key.config has: name TEXT, value TEXT
-key.config *must* contain the following names:
-"board" - board name
-"key" - board key, used as prefix for table name and as key for web API call
-"data-url" - server URL for SQL insertions
-"config-url" - server URL for config insertions
-"measure-period" - measurement period in seconds
-"send-period" - send period in seconds
-===
-Data sends are done using simple .dump so they contain "CREATE TABLE..." that will be ignored by server SQL.
-Data must be sent gzipped to lower the traffic
-===
-Server must response to sensor data with "OK" in case of success and with description in case of error (???)
-Server response may also contain URL with board update script (or native executable)
-Board requests must have the following format: <server php>?key=<key> Example:
-http://seismo.firewall.am/insert.php?key="9a5a9f7d-efe5-447f-9894-06fb91750ba6"
-Server checks if the key is registered key, if no - ignores the request.
-Key is also used on server to identify the user that the board belongs to.
-===
-On server side
-	table: keys
-	table: key.data
-	table: key.config
-	board-list.c gi
-	new-board.sh (to be converted to CGI)
-TODO: Adopt board script to new table names, use "key" file
-TODO: Add board-config.cgi
-TODO: Add board-data.cgi
+===MINIMUM PHP SUPPORT===
+
+1. Create board list PHP:
+	select * from keys where type="board" order by type desc, time desc, name;
+2. Modify board data PHP:
+	select * from data where key="$1" order by rowid desc limit 128;
+
+*For complete support see working CGIs and do the same using PHP:
+	https://github.com/shah-/c-projs/tree/master/at91sam9g20-test
 
