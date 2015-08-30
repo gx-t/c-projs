@@ -156,7 +156,7 @@ static int empty_log(FILE* ff, const char* fmt, ...) {
 }
 
 static void shell_gpio() {
-	static const char* msg_usage = "gpio pin [enable | disable | input | output | 1 | 0 | read]\n";
+	static const char* msg_usage = "gpio pin [enable | disable | input | output | pullup | 1 | 0 | read]\n";
 	char* pin_name = strtok(0, SHELL_CMD_DELIMITER);
 	char* pin_action = strtok(0, SHELL_CMD_DELIMITER);
 	if(!pin_action) return (void)fprintf(stderr, "%s\n", msg_usage);
@@ -170,6 +170,7 @@ static void shell_gpio() {
 	if(!strcmp(pin_action, "disable"))	{ io_port_b->PIO_PDR = flags; return; }
 	if(!strcmp(pin_action, "input"))	{ io_port_b->PIO_ODR = flags; return; }
 	if(!strcmp(pin_action, "output"))	{ io_port_b->PIO_OER = flags; return; }
+	if(!strcmp(pin_action, "pullup"))	{ io_port_b->PIO_PPUER = flags; return; }
 	if(!strcmp(pin_action, "1"))		{ io_port_b->PIO_SODR = flags; return; }
 	if(!strcmp(pin_action, "0"))		{ io_port_b->PIO_CODR = flags;	return; }
 	if(!strcmp(pin_action, "read"))	{
@@ -282,6 +283,133 @@ static void shell_lm75() {
 	close(fd);
 }
 
+//=============================================================================
+static void sht1x_start(int clk_flags, int data_flags) {
+	io_port_b->PIO_OER = data_flags; //all output
+	io_port_b->PIO_SODR = clk_flags | data_flags;
+	io_port_b->PIO_CODR = data_flags;
+	io_port_b->PIO_CODR = clk_flags;
+	io_port_b->PIO_SODR = clk_flags;
+	io_port_b->PIO_SODR = data_flags;
+	io_port_b->PIO_CODR = clk_flags;
+	io_port_b->PIO_CODR = data_flags;
+}
+
+static int sht1x_read_bit(int clk_flags, int data_flags) {
+	io_port_b->PIO_SODR = clk_flags;
+	int bit = io_port_b->PIO_PDSR & data_flags;
+	io_port_b->PIO_CODR = clk_flags;
+	return !!bit;
+}
+
+static void sht1x_write_0(int clk_flags, int data_flags) {
+	io_port_b->PIO_CODR = data_flags;
+	io_port_b->PIO_SODR = clk_flags;
+	io_port_b->PIO_CODR = clk_flags;
+}
+
+static void sht1x_write_1(int clk_flags, int data_flags) {
+	io_port_b->PIO_SODR = data_flags;
+	io_port_b->PIO_SODR = clk_flags;
+	io_port_b->PIO_CODR = clk_flags;
+}
+
+static void sht1x_cmd_temp(int clk_flags, int data_flags) {
+	//initialization sequence
+	sht1x_start(clk_flags, data_flags);
+
+	sht1x_write_0(clk_flags, data_flags);
+	sht1x_write_0(clk_flags, data_flags);
+	sht1x_write_0(clk_flags, data_flags);
+	sht1x_write_0(clk_flags, data_flags);
+	sht1x_write_0(clk_flags, data_flags);
+	sht1x_write_0(clk_flags, data_flags);
+	sht1x_write_0(clk_flags, data_flags);
+	sht1x_write_1(clk_flags, data_flags);
+	
+	//pass ACK bit
+	io_port_b->PIO_ODR = data_flags; //data - input
+	int ack_bit = sht1x_read_bit(clk_flags, data_flags);
+	fprintf(stderr, "ACK1: %d\n", ack_bit);
+	ack_bit = io_port_b->PIO_PDSR & data_flags;
+	fprintf(stderr, "ACK2: %d\n", ack_bit);
+}
+
+static void sht1x_cmd_humidity(int clk_flags, int data_flags) {
+	io_port_b->PIO_CODR = data_flags;
+	io_port_b->PIO_SODR = clk_flags; //0
+	io_port_b->PIO_CODR = clk_flags;
+	io_port_b->PIO_SODR = clk_flags; //0
+	io_port_b->PIO_CODR = clk_flags;
+	io_port_b->PIO_SODR = clk_flags; //0
+	io_port_b->PIO_CODR = clk_flags;
+	io_port_b->PIO_SODR = clk_flags; //0
+	io_port_b->PIO_CODR = clk_flags;
+	io_port_b->PIO_SODR = clk_flags; //0
+	io_port_b->PIO_CODR = clk_flags;
+	io_port_b->PIO_SODR = data_flags;
+	io_port_b->PIO_SODR = clk_flags; //1
+	io_port_b->PIO_CODR = clk_flags;
+	io_port_b->PIO_CODR = data_flags;
+	io_port_b->PIO_SODR = clk_flags; //0
+	io_port_b->PIO_CODR = clk_flags;
+	io_port_b->PIO_SODR = data_flags;
+	io_port_b->PIO_SODR = clk_flags; //1
+	io_port_b->PIO_CODR = clk_flags;
+	io_port_b->PIO_ODR = data_flags; //data - input
+	io_port_b->PIO_SODR = clk_flags;
+	//ACK FROM SENSOR:
+	int data_bit = io_port_b->PIO_PDSR & data_flags;
+	printf("ACK1: %c ", data_bit ? '1' : '0');
+	io_port_b->PIO_CODR = clk_flags;
+	data_bit = io_port_b->PIO_PDSR & data_flags;
+	printf("ACK2: %c ", data_bit ? '1' : '0');
+}
+
+static void shell_sht1x_convert(int clk_flags, int data_flags, char what) {
+	what == 't' ? sht1x_cmd_temp(clk_flags, data_flags) : sht1x_cmd_humidity(clk_flags, data_flags);
+}
+
+static void shell_sht1x_read(int clk_flags, int data_flags, char what) {
+	int data = sht1x_read_bit(clk_flags, data_flags) << 7;
+	data |= sht1x_read_bit(clk_flags, data_flags) << 6;
+	data |= sht1x_read_bit(clk_flags, data_flags) << 5;
+	data |= sht1x_read_bit(clk_flags, data_flags) << 4;
+	data |= sht1x_read_bit(clk_flags, data_flags) << 3;
+	data |= sht1x_read_bit(clk_flags, data_flags) << 2;
+	data |= sht1x_read_bit(clk_flags, data_flags) << 1;
+	data |= sht1x_read_bit(clk_flags, data_flags) << 0;
+
+	printf("===%d===\n", data);
+}
+
+static void shell_sht1x() {
+	static const char* msg_usage = "sht1x clk_pin data_pin [convert t | convert h | read t | read h]\n";
+	char* clk_pin = strtok(0, SHELL_CMD_DELIMITER);
+	char* data_pin = strtok(0, SHELL_CMD_DELIMITER);
+	char* action = strtok(0, SHELL_CMD_DELIMITER);
+	if(!action) return (void)fprintf(stderr, "%s\n", msg_usage);
+	int clk_bit = lib_piob_from_pin(atoi(clk_pin));
+	if(clk_bit == -1) {
+		fprintf(stderr, "Invalid clock pin number (%s). Only GPIO B is supported. %s\n", clk_pin, msg_usage);
+		return;
+	}
+	int data_bit = lib_piob_from_pin(atoi(data_pin));
+	if(data_bit == -1) {
+		fprintf(stderr, "Invalid data pin number (%s). Only GPIO B is supported. %s\n", data_pin, msg_usage);
+		return;
+	}
+	int clk_flags = 1 << clk_bit;
+	int data_flags = 1 << data_bit;
+	io_port_b->PIO_PER = clk_bit | data_bit;
+	io_port_b->PIO_OER = clk_flags; //clock always output
+	io_port_b->PIO_ODR = data_flags; //data input by default
+	io_port_b->PIO_PPUER = data_bit; //enable pull up
+	char* what = strtok(0, SHELL_CMD_DELIMITER);
+	if(!what || (strcmp("t", what) && strcmp("h", what))) return (void)fprintf(stderr, "%s\n", msg_usage);
+	if(!strcmp(action, "convert"))	{ shell_sht1x_convert(clk_flags, data_flags, *what); return; }
+	if(!strcmp(action, "read"))		{ shell_sht1x_read(clk_flags, data_flags, *what); return; }
+}
 static void shell_ctrl_c(int sig) {
 	(void)sig;
 	fclose(stdin);
@@ -307,7 +435,7 @@ int main(int argc, char* argv[]) {
 	while(fgets(line, sizeof(line), stdin)) {
 		char* cmd = strtok(line, SHELL_CMD_DELIMITER);
 		if(!cmd) {
-			log(stderr, "gpio, counter, ds18b20, lm75 <args>, ctlr+d to exit, .<any text> - comment, empty for help\n");
+			log(stderr, "gpio, counter, ds18b20, lm75, sht1x <args>, ctlr+d to exit, .<any text> - comment, empty for help\n");
 			continue;
 		}
 		for(; cmd; cmd = strtok(0, SHELL_CMD_DELIMITER)) {
@@ -315,6 +443,7 @@ int main(int argc, char* argv[]) {
 			if(!strcmp(cmd, "counter"))	{shell_counter(); continue;}
 			if(!strcmp(cmd, "ds18b20"))	{shell_ds18b20(); continue;}
 			if(!strcmp(cmd, "lm75"))	{shell_lm75(); continue;}
+			if(!strcmp(cmd, "sht1x"))	{shell_sht1x(); continue;}
 			printf("%s ", cmd);
 		}
 		printf("\n");
