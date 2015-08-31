@@ -284,132 +284,117 @@ static void shell_lm75() {
 }
 
 //=============================================================================
-static void sht1x_start(int clk_flags, int data_flags) {
-	io_port_b->PIO_OER = data_flags; //all output
-	io_port_b->PIO_SODR = clk_flags | data_flags;
-	io_port_b->PIO_CODR = data_flags;
-	io_port_b->PIO_CODR = clk_flags;
-	io_port_b->PIO_SODR = clk_flags;
-	io_port_b->PIO_SODR = data_flags;
-	io_port_b->PIO_CODR = clk_flags;
-	io_port_b->PIO_CODR = data_flags;
-}
-
-static int sht1x_read_bit(int clk_flags, int data_flags) {
+static int sht1x_shift_out(int clk_flags, int data_flags) {
 	io_port_b->PIO_SODR = clk_flags;
 	int bit = io_port_b->PIO_PDSR & data_flags;
 	io_port_b->PIO_CODR = clk_flags;
 	return !!bit;
 }
 
-static void sht1x_write_0(int clk_flags, int data_flags) {
-	io_port_b->PIO_CODR = data_flags;
-	io_port_b->PIO_SODR = clk_flags;
-	io_port_b->PIO_CODR = clk_flags;
+static int sht1x_read_byte(int clk_flags, int data_flags) {
+	io_port_b->PIO_ODR = data_flags; //data is input
+	int data = sht1x_shift_out(clk_flags, data_flags);
+	data <<= 1;
+	data |= sht1x_shift_out(clk_flags, data_flags);
+	data <<= 1;
+	data |= sht1x_shift_out(clk_flags, data_flags);
+	data <<= 1;
+	data |= sht1x_shift_out(clk_flags, data_flags);
+	data <<= 1;
+	data |= sht1x_shift_out(clk_flags, data_flags);
+	data <<= 1;
+	data |= sht1x_shift_out(clk_flags, data_flags);
+	data <<= 1;
+	data |= sht1x_shift_out(clk_flags, data_flags);
+	data <<= 1;
+	data |= sht1x_shift_out(clk_flags, data_flags);
+	return data;
 }
 
-static void sht1x_write_1(int clk_flags, int data_flags) {
-	io_port_b->PIO_SODR = data_flags;
-	io_port_b->PIO_SODR = clk_flags;
-	io_port_b->PIO_CODR = clk_flags;
+static void sht1x_send_ack(int clk_flags, int data_flags) {
+	io_port_b->PIO_OER = data_flags; //data output
+	io_port_b->PIO_CODR = data_flags; //data down
+	io_port_b->PIO_SODR = clk_flags; //clock up
+	io_port_b->PIO_CODR = clk_flags; //clock down
 }
 
-static void sht1x_cmd_temp(int clk_flags, int data_flags) {
-	//initialization sequence
-	sht1x_start(clk_flags, data_flags);
-
-	sht1x_write_0(clk_flags, data_flags);
-	sht1x_write_0(clk_flags, data_flags);
-	sht1x_write_0(clk_flags, data_flags);
-	sht1x_write_0(clk_flags, data_flags);
-	sht1x_write_0(clk_flags, data_flags);
-	sht1x_write_0(clk_flags, data_flags);
-	sht1x_write_0(clk_flags, data_flags);
-	sht1x_write_1(clk_flags, data_flags);
-	
-	//pass ACK bit
-	io_port_b->PIO_ODR = data_flags; //data - input
-	int ack_bit = sht1x_read_bit(clk_flags, data_flags);
-	fprintf(stderr, "ACK1: %d\n", ack_bit);
-	ack_bit = io_port_b->PIO_PDSR & data_flags;
-	fprintf(stderr, "ACK2: %d\n", ack_bit);
+static void sht1x_skip_ack(int clk_flags, int data_flags) {
+	io_port_b->PIO_OER = data_flags; //data output
+	io_port_b->PIO_SODR = data_flags; //data up
+	io_port_b->PIO_SODR = clk_flags; //clock up
+	io_port_b->PIO_CODR = clk_flags; //clock down
 }
 
-static void sht1x_cmd_humidity(int clk_flags, int data_flags) {
-	io_port_b->PIO_CODR = data_flags;
-	io_port_b->PIO_SODR = clk_flags; //0
-	io_port_b->PIO_CODR = clk_flags;
-	io_port_b->PIO_SODR = clk_flags; //0
-	io_port_b->PIO_CODR = clk_flags;
-	io_port_b->PIO_SODR = clk_flags; //0
-	io_port_b->PIO_CODR = clk_flags;
-	io_port_b->PIO_SODR = clk_flags; //0
-	io_port_b->PIO_CODR = clk_flags;
-	io_port_b->PIO_SODR = clk_flags; //0
-	io_port_b->PIO_CODR = clk_flags;
-	io_port_b->PIO_SODR = data_flags;
-	io_port_b->PIO_SODR = clk_flags; //1
-	io_port_b->PIO_CODR = clk_flags;
-	io_port_b->PIO_CODR = data_flags;
-	io_port_b->PIO_SODR = clk_flags; //0
-	io_port_b->PIO_CODR = clk_flags;
-	io_port_b->PIO_SODR = data_flags;
-	io_port_b->PIO_SODR = clk_flags; //1
-	io_port_b->PIO_CODR = clk_flags;
-	io_port_b->PIO_ODR = data_flags; //data - input
-	io_port_b->PIO_SODR = clk_flags;
-	//ACK FROM SENSOR:
-	int data_bit = io_port_b->PIO_PDSR & data_flags;
-	printf("ACK1: %c ", data_bit ? '1' : '0');
-	io_port_b->PIO_CODR = clk_flags;
-	data_bit = io_port_b->PIO_PDSR & data_flags;
-	printf("ACK2: %c ", data_bit ? '1' : '0');
+static void sht1x_shift_in(int clk_flags) {
+	io_port_b->PIO_SODR = clk_flags; //clock up
+	io_port_b->PIO_CODR = clk_flags; //clock down
 }
 
-static void shell_sht1x_convert(int clk_flags, int data_flags, char what) {
-	what == 't' ? sht1x_cmd_temp(clk_flags, data_flags) : sht1x_cmd_humidity(clk_flags, data_flags);
-}
+static void sht1x_init(int clk_flags, int data_flags) {
+	//init ports
+	io_port_b->PIO_PER = clk_flags | data_flags; //enable clock and data
+	io_port_b->PIO_OER = clk_flags; //clock always output
+	io_port_b->PIO_CODR = clk_flags; //clock down
+	io_port_b->PIO_OER = data_flags; //data initially output
+	io_port_b->PIO_PPUER = data_flags; //pullup on data
 
-static void shell_sht1x_read(int clk_flags, int data_flags, char what) {
-	int data = sht1x_read_bit(clk_flags, data_flags) << 7;
-	data |= sht1x_read_bit(clk_flags, data_flags) << 6;
-	data |= sht1x_read_bit(clk_flags, data_flags) << 5;
-	data |= sht1x_read_bit(clk_flags, data_flags) << 4;
-	data |= sht1x_read_bit(clk_flags, data_flags) << 3;
-	data |= sht1x_read_bit(clk_flags, data_flags) << 2;
-	data |= sht1x_read_bit(clk_flags, data_flags) << 1;
-	data |= sht1x_read_bit(clk_flags, data_flags) << 0;
-
-	printf("===%d===\n", data);
+	//init sensor
+	io_port_b->PIO_SODR = data_flags; //data up
+	io_port_b->PIO_SODR = clk_flags; //clock up
+	io_port_b->PIO_CODR = data_flags; //data down
+	io_port_b->PIO_CODR = clk_flags; //clock down
+	io_port_b->PIO_SODR = clk_flags; //clock up
+	io_port_b->PIO_SODR = data_flags; //data up
+	io_port_b->PIO_CODR = clk_flags; //clock down
 }
 
 static void shell_sht1x() {
-	static const char* msg_usage = "sht1x clk_pin data_pin [convert t | convert h | read t | read h]\n";
-	char* clk_pin = strtok(0, SHELL_CMD_DELIMITER);
-	char* data_pin = strtok(0, SHELL_CMD_DELIMITER);
-	char* action = strtok(0, SHELL_CMD_DELIMITER);
-	if(!action) return (void)fprintf(stderr, "%s\n", msg_usage);
-	int clk_bit = lib_piob_from_pin(atoi(clk_pin));
-	if(clk_bit == -1) {
-		fprintf(stderr, "Invalid clock pin number (%s). Only GPIO B is supported. %s\n", clk_pin, msg_usage);
-		return;
-	}
-	int data_bit = lib_piob_from_pin(atoi(data_pin));
-	if(data_bit == -1) {
-		fprintf(stderr, "Invalid data pin number (%s). Only GPIO B is supported. %s\n", data_pin, msg_usage);
-		return;
-	}
+	int clk_bit = lib_piob_from_pin(7);
+	int data_bit = lib_piob_from_pin(8);
 	int clk_flags = 1 << clk_bit;
 	int data_flags = 1 << data_bit;
-	io_port_b->PIO_PER = clk_bit | data_bit;
-	io_port_b->PIO_OER = clk_flags; //clock always output
-	io_port_b->PIO_ODR = data_flags; //data input by default
-	io_port_b->PIO_PPUER = data_bit; //enable pull up
-	char* what = strtok(0, SHELL_CMD_DELIMITER);
-	if(!what || (strcmp("t", what) && strcmp("h", what))) return (void)fprintf(stderr, "%s\n", msg_usage);
-	if(!strcmp(action, "convert"))	{ shell_sht1x_convert(clk_flags, data_flags, *what); return; }
-	if(!strcmp(action, "read"))		{ shell_sht1x_read(clk_flags, data_flags, *what); return; }
+
+	sht1x_init(clk_flags, data_flags);
+
+	//address
+	io_port_b->PIO_CODR = data_flags; //data down
+	sht1x_shift_in(clk_flags);
+	sht1x_shift_in(clk_flags);
+	sht1x_shift_in(clk_flags);
+
+	//command 00011
+	sht1x_shift_in(clk_flags);
+	sht1x_shift_in(clk_flags);
+	sht1x_shift_in(clk_flags);
+	io_port_b->PIO_SODR = data_flags; //data up
+	sht1x_shift_in(clk_flags);
+	sht1x_shift_in(clk_flags);
+
+	//read ACK
+	io_port_b->PIO_ODR = data_flags; //data is input
+	int bit = sht1x_shift_out(clk_flags, data_flags);
+	fprintf(stderr, "ACK1: %d\n", bit);
+	bit = io_port_b->PIO_PDSR & data_flags;
+	bit =!! bit;
+	fprintf(stderr, "ACK2: %d\n", bit);
+
+	sleep(2);
+	//read 1st byte
+	int data = sht1x_read_byte(clk_flags, data_flags);
+	sht1x_send_ack(clk_flags, data_flags);
+	//read 2nd byte
+	data <<= 8;
+	data |= sht1x_read_byte(clk_flags, data_flags);
+
+	//don't send to stop sending CRC
+	sht1x_skip_ack(clk_flags, data_flags);
+
+	float temp = (float)data;
+	temp *= 0.01;
+	temp += 5;
+	fprintf(stderr, "DATA: %d, TEMP: %g\n", data, temp);
 }
+
 static void shell_ctrl_c(int sig) {
 	(void)sig;
 	fclose(stdin);
