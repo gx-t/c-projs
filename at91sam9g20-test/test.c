@@ -156,7 +156,7 @@ static int empty_log(FILE* ff, const char* fmt, ...) {
 }
 
 static void shell_gpio() {
-	static const char* msg_usage = "gpio pin [enable | disable | input | output | 1 | 0 | read]\n";
+	static const char* msg_usage = "gpio pin [enable | disable | input | output | pullup | 1 | 0 | read]\n";
 	char* pin_name = strtok(0, SHELL_CMD_DELIMITER);
 	char* pin_action = strtok(0, SHELL_CMD_DELIMITER);
 	if(!pin_action) return (void)fprintf(stderr, "%s\n", msg_usage);
@@ -170,6 +170,7 @@ static void shell_gpio() {
 	if(!strcmp(pin_action, "disable"))	{ io_port_b->PIO_PDR = flags; return; }
 	if(!strcmp(pin_action, "input"))	{ io_port_b->PIO_ODR = flags; return; }
 	if(!strcmp(pin_action, "output"))	{ io_port_b->PIO_OER = flags; return; }
+	if(!strcmp(pin_action, "pullup"))	{ io_port_b->PIO_PPUER = flags; return; }
 	if(!strcmp(pin_action, "1"))		{ io_port_b->PIO_SODR = flags; return; }
 	if(!strcmp(pin_action, "0"))		{ io_port_b->PIO_CODR = flags;	return; }
 	if(!strcmp(pin_action, "read"))	{
