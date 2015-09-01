@@ -11,6 +11,9 @@
 #include <linux/i2c-dev.h>
 #include "at91sam9g20.h"
 
+#include "bmp180.c"
+#include "si7021.c"
+
 enum {
 	ERR_OK = 0,
 	ERR_ARGC,
@@ -283,6 +286,140 @@ static void shell_lm75() {
 	close(fd);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+static void shell_bmp180_temperature() {
+	struct bmp180_t *bmp180;
+	uint8_t err;
+	char *string;
+	uint32_t pold, pmed;
+	uint32_t tcurrent;
+	 
+	string = malloc(80);
+	bmp180 = malloc(sizeof(struct bmp180_t));
+	 
+	fd = open("/dev/i2c-0", O_RDWR ); //"/dev/i2c-0"
+	
+	if( ioctl( fd, I2C_SLAVE, BMP180_ADDR ) < 0 )
+	{
+		fprintf( stderr, "Failed to set slave address: %m\n" );
+		return 2;
+	}
+	
+	err = bmp180_init(bmp180); 
+	
+	bmp180->oss = BMP180_RES_ULTRAHIGH;
+	print_struct(bmp180, string);
+	//printf("  Print Struct Called \n");
+	
+	err = bmp180_read_all(bmp180);
+	pmed = bmp180->p;
+	pold = pmed;
+	tcurrent = bmp180->T;
+	
+	if (!err)
+	{
+			print_results(bmp180, string);
+			//printf("  Print Results \n");
+	}
+	
+//	while(1){
+//		_delay_ms(1000);
+		//err = bmp180_read_pressure(bmp180);
+		err = bmp180_read_temperature(bmp180);
+		
+		/*
+		 * pmed = ((pmed * 7) + bmp180->p) >> 3;
+		 */
+		pmed = bmp180->p;
+		tcurrent = bmp180->T;
+		
+////		sprintf(string,"%u",pmed);
+////		printf("pmed is  : %s \n",string);
+//		
+//		if (abs(pold - pmed) > 1) {
+//			pold = pmed;
+//			//string = ultoa(pmed, string, 10);
+//			sprintf(string,"%u",pmed);
+//			printf("PRESSURE : %s \n",string);
+//		}
+		
+		sprintf(string,"%f",(double)(tcurrent/10.0));
+		double tmpTempDouble = tcurrent/10.0;
+		//printf("TEMPERATURE : %s \n",string);
+		//printf("%lu\t%s\t%g\n", time(0),"board1.bmp180.temperature", tmpTempDouble);
+		printf("\'%g\'\n", tmpTempDouble);
+		
+//	}
+}
+
+static void shell_bmp180_pressure() {
+	struct bmp180_t bmp180;
+	uint8_t err;
+	char string[80];
+	uint32_t pold, pmed;
+	uint32_t tcurrent;
+	 
+	 
+	fd = open("/dev/i2c-0", O_RDWR ); //"/dev/i2c-0"
+	
+	if( ioctl( fd, I2C_SLAVE, BMP180_ADDR ) < 0 )
+	{
+		fprintf( stderr, "Failed to set slave address: %m\n" );
+		return 2;
+	}
+	
+	err = bmp180_init(&bmp180); 
+	
+	bmp180.oss = BMP180_RES_ULTRAHIGH;
+	print_struct(&bmp180, string);
+	//printf("  Print Struct Called \n");
+	
+	err = bmp180_read_all(&bmp180);
+	pmed = bmp180.p;
+	pold = pmed;
+	tcurrent = bmp180.T;
+	
+	if (!err)
+	{
+			print_results(&bmp180, string);
+			//printf("  Print Results \n");
+	}
+	
+		err = bmp180_read_pressure(&bmp180);
+		//err = bmp180_read_temperature(&bmp180);
+		
+		/*
+		 * pmed = ((pmed * 7) + bmp180.p) >> 3;
+		 */
+		pmed = bmp180.p;
+		//tcurrent = bmp180.T;
+		
+	
+		
+		pold = pmed;
+		sprintf(string,"%u",pmed);
+		unsigned long tmpLongPressure = pmed;
+		//printf("PRESSURE : %s \n",string);
+		
+		//printf("%lu\t%s\t%lu\n", time(0),"board1.bmp180.pressure", tmpLongPressure);
+		printf("\'%lu\'\n", tmpLongPressure);
+		
+//		sprintf(string,"%f",(double)(tcurrent/10.0));
+//		double tmpTempDouble = tcurrent/10.0;
+//		//printf("TEMPERATURE : %s \n",string);
+//		printf("%lu\t%s\t%g\n", time(0),"board1.bmp180.temperature", tmpTempDouble);
+		
+}
+
+static void shell_si7021_humidity() {
+	float tmpFloatHumidity;
+	
+	tmpFloatHumidity = getHumidity();
+
+	printf("\'%f\'\n", tmpFloatHumidity);
+}
+///////////////////////////////////////////////////////////////////////////////
+
 static void shell_ctrl_c(int sig) {
 	(void)sig;
 	fclose(stdin);
@@ -316,6 +453,9 @@ int main(int argc, char* argv[]) {
 			if(!strcmp(cmd, "counter"))	{shell_counter(); continue;}
 			if(!strcmp(cmd, "ds18b20"))	{shell_ds18b20(); continue;}
 			if(!strcmp(cmd, "lm75"))	{shell_lm75(); continue;}
+			if(!strcmp(cmd, "bmp180"))	{shell_bmp180_temperature(); continue;}
+			if(!strcmp(cmd, "bmp180p"))	{shell_bmp180_pressure(); continue;}
+			if(!strcmp(cmd, "si7021h"))	{shell_si7021_humidity(); continue;}
 			printf("%s ", cmd);
 		}
 		printf("\n");
