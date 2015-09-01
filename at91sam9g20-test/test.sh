@@ -44,6 +44,9 @@ collect() {
 				insert into data values( '$dt' , '$THERM0' , ds18b20 4 read , '$key' , 'temp' ); 
 				insert into data values( '$dt' , '$COUNTER' , counter read , '$key' , 'count' ); 
 				insert into data values( '$dt' , '$THERM1' , lm75 0x4F read , '$key' , 'temp' ); 
+				insert into data values( '$dt' , 'board1.therm-bmp180' , bmp180 , '$key' , 'temp' ); 
+				insert into data values( '$dt' , 'board1.press-bmp180' , bmp180p  , '$key' , 'pressure' ); 
+				insert into data values( '$dt' , 'board1.humidity-si7021' , si7021h , '$key' , 'humidity' ); 
 				insert into data values( '$dt' , '$ADCLIGHT0' , `cat /sys/class/misc/adc/ch0_value`, '$key' , 'light' );"
 		done
 	echo 'commit;'
