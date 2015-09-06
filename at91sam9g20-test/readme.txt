@@ -1,3 +1,8 @@
+TODO:
+1. Magnetometer: 16 bit data, 1 bit strobe, state management
+2. Update support: notification, download, unzip, run
+
+
 ===ON BOARD SIDE===
 1. Get latest test.c, at91sam9g20.h, Makefile, test.sh - compile and put test and test.sh
 2. Delete sensors.db - not needed at all
