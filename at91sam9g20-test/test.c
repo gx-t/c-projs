@@ -36,7 +36,7 @@ enum {
 
 //board pin to bit shift for PIOB
 static int lib_piob_from_pin(int pin) {
-	if(pin < 3 || pin == 17 || pin == 18 || pin > 31) return -1;
+	if(pin < 3 || pin == 17 || pin == 18 || pin > 34) return -1;
 	return pin - 3;
 }
 
