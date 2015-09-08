@@ -1,7 +1,13 @@
 TODO:
 1. Magnetometer: 16 bit data, 1 bit strobe, state management
-2. Update support: notification, download, unzip, run
+2. Update support: version, notification, download, unzip, run
 
+*Counters pins: 9, 10 (PB6, PB7)
+*DS18B20 pin: 11 (PB8)
+*strob pin: 16 (PB13)
+*I2C pins: 17, 18 (PA23, PA24)
+*16 bit parallel data pins: 19-34 (PB16-PB31)
+*ADC pins: 35-38 (PC0-PC3)
 
 ===ON BOARD SIDE===
 1. Get latest test.c, at91sam9g20.h, Makefile, test.sh - compile and put test and test.sh
