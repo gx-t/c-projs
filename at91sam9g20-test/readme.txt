@@ -79,3 +79,5 @@ How it works:
 *Working example is here:
 	http://shah32768.sdf.org/cgi-bin/board-list.cgi
 
+I2C ADC board:
+https://www.adafruit.com/products/1085
