@@ -1,9 +1,9 @@
 #!/bin/sh
 
-#2 LEDS: pin 29, 31
+#2 LEDS: pin 3, 4
 #GENERATOR(PULSE) pin 3
 #COUNTER pin 9
-#DS18B20 pin 4
+#DS18B20 pin 15
 #LM75 pins 17,18
 
 THERM0="therm-ds18b20"
@@ -16,8 +16,8 @@ key=$(cat key)
 
 
 #init sensors
-echo "gpio 29 enable gpio 29 output gpio 29 1
-gpio 31 enable gpio 31 output gpio 31 1
+echo "gpio 3 enable gpio 3 output gpio 3 1
+gpio 4 enable gpio 4 output gpio 4 1
 gpio 3 enable gpio 3 output gpio 3 0
 counter init
 gpio 3 1
@@ -30,7 +30,7 @@ unset ss
 source .config
 mkdir -p outbox
 
-echo 'gpio 29 0 gpio 31 0 gpio 3 1' | ./test -q > /dev/null
+echo 'gpio 3 0 gpio 4 0 gpio 3 1' | ./test -q > /dev/null
 usleep 200000
 
 collect() {
@@ -38,9 +38,9 @@ collect() {
 	for i in `seq 1 $send_period)`
 		do
 			dt=`date -u '+%Y-%m-%d %H:%M:%S'`
-			echo "gpio 29 1 gpio 3 1 ds18b20 4 convert
+			echo "gpio 3 1 gpio 3 1 ds18b20 4 convert
 				`sleep $measure_period`
-				gpio 29 0 gpio 3 0
+				gpio 3 0 gpio 3 0
 				insert into data values( '$dt' , '$THERM0' , ds18b20 4 read , '$key' , 'temp' ); 
 				insert into data values( '$dt' , '$COUNTER' , counter read , '$key' , 'count' ); 
 				insert into data values( '$dt' , '$THERM1' , lm75 0x4F read , '$key' , 'temp' ); 
@@ -50,7 +50,7 @@ collect() {
 }
 while :
 do
-	collect | ./test -q | gzip -fc > .tmp
+	collect | ./test -q > .tmp
 	mv .tmp "outbox/$(date -u +%s)"
 done &
 
@@ -59,12 +59,14 @@ echo "collect_pid=$!"
 cd outbox
 while sleep `expr $send_period \\* $measure_period`
 do
-	echo 'gpio 31 1' | ../test -q > /dev/null
+	echo 'gpio 4 1' | ../test -q > /dev/null
 	ls | while read ff
 	do
-		[[ `curl -s --upload-file $ff $data_cgi` == "OK" ]] && rm $ff
+		local resp=`curl -s --upload-file $ff http://www.seismoinstruments.am/insert.php`
+		rm $ff
 	done
-	echo 'gpio 31 0' | ../test -q > /dev/null
+	echo 'gpio 4 0' | ../test -q > /dev/null
 done &
 
 echo "send_pid=$!"
+
