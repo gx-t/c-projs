@@ -1,0 +1,194 @@
+//Microsoft Developer Studio generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include <windows.h>
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_MAIN                ICON    DISCARDABLE     "DESKTOP.ICO"
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE DISCARDABLE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_NEWDESKTOP DIALOG DISCARDABLE  0, 0, 186, 50
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Create New Desktop"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDC_EDIT_NEWDESKTOP,7,7,111,12,ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,129,7,50,14,BS_FLAT | WS_DISABLED
+    PUSHBUTTON      "Cancel",IDCANCEL,129,24,50,14,BS_FLAT
+END
+
+IDD_NETSEND DIALOG DISCARDABLE  0, 0, 306, 159
+STYLE DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Net Send"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Tree1",IDC_TREE_USERS,"SysTreeView32",TVS_NOTOOLTIPS | 
+                    TVS_CHECKBOXES | WS_BORDER | WS_TABSTOP,7,7,106,146
+    EDITTEXT        IDC_EDIT_MESSAGE,123,7,176,71,ES_MULTILINE | 
+                    ES_WANTRETURN | WS_VSCROLL
+    PUSHBUTTON      "Send to selected users",IDC_BTN_SEND,123,82,104,14,
+                    BS_FLAT
+    EDITTEXT        IDC_EDIT_USERNAME,200,115,93,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "Add to list",IDC_BTN_ADDUSER,200,132,74,14,BS_FLAT
+    PUSHBUTTON      "Remove from list",IDC_BTN_REMOVEUSER,123,139,66,14,
+                    BS_FLAT
+    GROUPBOX        "New users...",-1,194,100,105,53
+END
+
+IDD_SHOUTRIPPER DIALOGEX 0, 0, 262, 193
+STYLE DS_MODALFRAME | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Shoutcast Ripper"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    EDITTEXT        IDC_EDIT_PROXYURL,112,71,138,12,ES_AUTOHSCROLL | NOT 
+                    WS_BORDER,WS_EX_STATICEDGE
+    LTEXT           "Radiostation URL:",IDC_STATIC,7,9,59,8
+    CONTROL         "Use HTTP Proxy Server:",IDC_CHECK_USEPROXY,"Button",
+                    BS_AUTOCHECKBOX | BS_FLAT | WS_TABSTOP,13,73,94,10
+    EDITTEXT        IDC_EDIT_FOLDER,14,40,174,12,ES_AUTOHSCROLL | 
+                    ES_READONLY | NOT WS_BORDER,WS_EX_ACCEPTFILES | 
+                    WS_EX_STATICEDGE
+    CONTROL         "Start At:",IDC_CHECK_USESTARTTIMER,"Button",
+                    BS_AUTOCHECKBOX | BS_FLAT | WS_TABSTOP,13,136,41,10
+    CONTROL         "DateTimePicker1",IDC_TIME_START,"SysDateTimePick32",
+                    DTS_RIGHTALIGN | DTS_UPDOWN | WS_TABSTOP | 0x8,58,134,70,
+                    15
+    CONTROL         "Stop At:",IDC_CHECK_USESTOPTIMER,"Button",
+                    BS_AUTOCHECKBOX | BS_FLAT | WS_TABSTOP,135,136,41,10
+    PUSHBUTTON      "Start",IDC_BTN_START,7,172,55,14,BS_FLAT
+    PUSHBUTTON      "Stop",IDC_BTN_STOP,71,172,55,14,BS_FLAT | WS_DISABLED
+    CONTROL         "DateTimePicker1",IDC_TIME_STOP,"SysDateTimePick32",
+                    DTS_RIGHTALIGN | DTS_UPDOWN | WS_TABSTOP | 0x8,180,134,
+                    70,15
+    GROUPBOX        "Output Directory (drag and drop the directory here)",
+                    IDC_STATIC,7,27,248,31
+    PUSHBUTTON      "Explorer...",IDC_BTN_EXPLORER,195,39,55,14,BS_FLAT
+    GROUPBOX        "Scheduler",IDC_STATIC,7,124,248,28
+    GROUPBOX        "Proxy Settings",IDC_STATIC,7,61,248,61
+    CONTROL         "Use WinAmp as user-agent",IDC_CHECK_ASWINAMP,"Button",
+                    BS_AUTOCHECKBOX | BS_FLAT | WS_TABSTOP,13,156,102,10
+    CONTROL         "Reconnect if disconnected",IDC_CHECK_RECONIFLOST,"Button",
+                    BS_AUTOCHECKBOX | BS_FLAT | WS_TABSTOP,154,156,101,10
+    CONTROL         "",IDC_STATIC,"Static",SS_ETCHEDHORZ,7,168,247,1,
+                    WS_EX_CLIENTEDGE
+    CONTROL         "Enable logging to file",IDC_CHECK_LOG,"Button",
+                    BS_AUTOCHECKBOX | BS_FLAT | WS_TABSTOP,174,176,81,10
+    COMBOBOX        IDC_COMBO_RADIOURL,77,7,161,82,CBS_DROPDOWN | 
+                    CBS_AUTOHSCROLL | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Proxy server requires an authorization",
+                    IDC_CHECK_USEAUTH,"Button",BS_AUTOCHECKBOX | BS_FLAT | 
+                    WS_TABSTOP,13,89,133,10
+    EDITTEXT        IDC_EDIT_LOGIN,37,105,82,12,ES_AUTOHSCROLL | NOT 
+                    WS_BORDER,WS_EX_STATICEDGE
+    EDITTEXT        IDC_EDIT_PASSWORD,167,105,82,12,ES_PASSWORD | 
+                    ES_AUTOHSCROLL | NOT WS_BORDER,WS_EX_STATICEDGE
+    LTEXT           "Login:",IDC_STATIC,13,107,20,8
+    LTEXT           "Password:",IDC_STATIC,130,107,34,8
+    PUSHBUTTON      "X",IDC_BTN_DELURL,243,8,12,10,BS_FLAT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO DISCARDABLE 
+BEGIN
+    IDD_NEWDESKTOP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 43
+    END
+
+    IDD_NETSEND, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 299
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 152
+    END
+
+    IDD_SHOUTRIPPER, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 255
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 186
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
