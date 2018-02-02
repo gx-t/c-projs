@@ -134,14 +134,14 @@ static void CheckName(HWND hEdit, HWND hOk)
   HDESK hDesk;
   GetWindowText(hEdit, szName, MAX_DESKTOP_NAME);
   hDesk = OpenDesktop(szName, 0, FALSE, DESKTOP_ENUMERATE);
-  EnableWindow(hOk, !(BOOL)hDesk && *szName);
+  EnableWindow(hOk, !hDesk && *szName);
   if(hDesk)
   {
     CloseDesktop(hDesk);
   }
 }
 
-static BOOL CALLBACK NewDesktopDlgProc(
+static INT_PTR CALLBACK NewDesktopDlgProc(
                                       HWND hWnd,
                                       UINT msg,
                                       WPARAM wParam,
@@ -151,8 +151,8 @@ static BOOL CALLBACK NewDesktopDlgProc(
   switch(msg)
   {
   case WM_INITDIALOG:
-    SetWindowLong(hWnd, GWL_EXSTYLE, WS_EX_APPWINDOW);
-    SetWindowLong(hWnd, GWL_USERDATA, lParam);
+    SetWindowLongPtr(hWnd, GWL_EXSTYLE, WS_EX_APPWINDOW);
+    SetWindowLongPtr(hWnd, GWLP_USERDATA, lParam);
     SetFocus(GetDlgItem(hWnd, IDC_EDIT_NEWDESKTOP));
     Edit_LimitText(
       GetDlgItem(hWnd, IDC_EDIT_NEWDESKTOP),
@@ -173,7 +173,7 @@ static BOOL CALLBACK NewDesktopDlgProc(
     }
     break;
   }
-  return FALSE;
+  return 0;
 }
 
 static int DesktopCreate()

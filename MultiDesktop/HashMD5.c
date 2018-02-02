@@ -1,5 +1,5 @@
 #include <windows.h>
-#include "hashmd5.h"
+#include "HashMD5.h"
 
 #define GET_DWORD(n,b,i)                                  \
 {                                                         \

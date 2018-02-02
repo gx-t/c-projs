@@ -20,7 +20,7 @@ static UINT MnuPopupMenu(HWND hWnd, UINT uCount, ...)
     AppendMenu(hMenu, szText ? MF_STRING : MF_SEPARATOR, uCmd + 1, szText);
   }
   va_end (pArgList);
-  if(TreeView_GetItemRect(hWnd, hSelItem, (LPARAM)&rc, TRUE))
+  if(TreeView_GetItemRect(hWnd, hSelItem, &rc, TRUE))
   {
     pt.x = (rc.left + rc.right) >> 1;
     pt.y = (rc.top + rc.bottom) >> 1;

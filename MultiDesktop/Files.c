@@ -104,7 +104,7 @@ static void ProcessShortcut(struct SCAN_DATA* pData)
         cp2 ++;
       
       WriteFile(pData->hOutFile, szLnk0, sizeof(szLnk0) - 1, &dwBytes, 0);
-      WriteFile(pData->hOutFile, cp1, (DWORD)cp2 - (DWORD)cp1, &dwBytes, 0);
+      WriteFile(pData->hOutFile, cp1, cp2 - cp1, &dwBytes, 0);
       WriteFile(pData->hOutFile, szLnk1, sizeof(szLnk1) - 1, &dwBytes, 0);
 
       for(i = pData->iCol << 2; i; i --)

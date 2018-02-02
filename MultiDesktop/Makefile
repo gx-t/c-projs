@@ -1,16 +1,16 @@
 all: multidesktop.exe
 
-CC=mingw32-gcc.exe
-LD=mingw32-gcc.exe
-RC=windres.exe
+CC=x86_64-w64-mingw32-gcc
+LD=x86_64-w64-mingw32-gcc
+RC=x86_64-w64-mingw32-windres
 
 CCFLAGS=-O2 -s -D_WIN32_IE=0x0400 -c
-LDFLAGS=-s -mwindows -nostdlib -e__main
+LDFLAGS=-s -mwindows 
 
 #CCFLAGS=-g -D_WIN32_IE=0x0400 -c
 #LDFLAGS=-mwindows -nostdlib -e__main
 
-LIBS=-lgcc -lcrtdll -lkernel32 -luser32 -ladvapi32 -lcomdlg32 -lshell32 -lws2_32 -lole32 -lrpcrt4 -lcomctl32 -lnetapi32 -loleaut32
+LIBS=-lgcc -lkernel32 -luser32 -ladvapi32 -lcomdlg32 -lshell32 -lws2_32 -lole32 -lrpcrt4 -lcomctl32 -lnetapi32 -loleaut32
 
 SRCS=common.c \
 	Bace64.c \
@@ -68,8 +68,8 @@ multidesktop.exe: $(OBJS) $(RSRC)
 $(OBJS): $(SRCS)
 	$(CC) $(CCFLAGS) $(SRCS)
 
-$(RSRC): multidesktop.rc
-	$(RC) multidesktop.rc -D_WIN32_IE=0x0400 -o$(RSRC)
+$(RSRC): MultiDesktop.rc
+	$(RC) MultiDesktop.rc -D_WIN32_IE=0x0400 -o$(RSRC)
 
 clean:
-	del *.o *.exe
+	rm -f *.o *.exe

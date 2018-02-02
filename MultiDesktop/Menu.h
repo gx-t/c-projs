@@ -22,7 +22,7 @@ typedef struct REG_MENU
 {
   TEXT_MENU mb;
   HKEY hKeyRoot;
-  UINT (*InitCheckProc)(PREG_MENU);
+  UINT (*InitCheckProc)(struct REG_MENU*);
 } REG_MENU, *PREG_MENU;
 
 void AppendTextMenu(HMENU, PCWSTR, PUINT);

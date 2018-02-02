@@ -60,7 +60,7 @@ static void UpdateControls(HWND hWnd)
   HWND hBtnAdd = GetDlgItem(hWnd, IDC_BTN_ADDUSER);
   HWND hBtnRemove = GetDlgItem(hWnd, IDC_BTN_REMOVEUSER);
   GetWindowText(hTxtName, UpdData.szName, MAX_COMPUTERNAME);
-  EnumTreeItems(hTree, TreeCheckProc, &UpdData);
+  EnumTreeItems(hTree, (TREE_ITEM_ENUM_PROC)TreeCheckProc, &UpdData);
   EnableWindow(hBtnRemove, UpdData.bIsChecked);
   EnableWindow(
     hBtnSend,
@@ -145,7 +145,7 @@ static void Send(HWND hWnd)
   Data.hWnd = hWnd;
   GetDlgItemText(hWnd, IDC_EDIT_MESSAGE, Data.szText, MAX_MSG_LEN);
   GetWindowText(hWnd, szTitle, MAX_COMPUTERNAME);
-  EnumTreeItems(GetDlgItem(hWnd, IDC_TREE_USERS), SendProc, &Data);
+  EnumTreeItems(GetDlgItem(hWnd, IDC_TREE_USERS), (TREE_ITEM_ENUM_PROC)SendProc, &Data);
   SetWindowText(hWnd, szTitle);
 }
 
@@ -200,12 +200,12 @@ static void MngUser(HWND hWnd, WORD wBtnId)
   while(Data.bContinue)
   {
     Data.bContinue = FALSE;
-    EnumTreeItems(hTree, RemoveProc, &Data);
+    EnumTreeItems(hTree, (TREE_ITEM_ENUM_PROC)RemoveProc, &Data);
   }
   RegCloseKey(Data.hKey);
 }
 
-static BOOL CALLBACK DlgProc(
+static INT_PTR CALLBACK DlgProc(
                              HWND hWnd,
                              UINT msg,
                              WPARAM wParam,
@@ -215,7 +215,7 @@ static BOOL CALLBACK DlgProc(
   switch(msg)
   {
   case WM_INITDIALOG:
-    SetWindowLong(hWnd, GWL_EXSTYLE, WS_EX_APPWINDOW);
+    SetWindowLongPtr(hWnd, GWL_EXSTYLE, WS_EX_APPWINDOW);
     SetEditLimits(hWnd);
     FillTree(hWnd);
     if(lParam)
@@ -252,7 +252,7 @@ static BOOL CALLBACK DlgProc(
   default:
     break;
   }
-  return FALSE;
+  return 0;
 }
 
 static int UserList()
@@ -384,7 +384,7 @@ static int CopyUrl()
     0,
     CLSCTX_LOCAL_SERVER,
     &IID_IShellWindows,
-    &pIShellWnds);
+    (LPVOID*)&pIShellWnds);
   if(S_OK == hRes)
   {
     pIShellWnds->lpVtbl->get_Count(pIShellWnds, &lCount);
@@ -398,7 +398,7 @@ static int CopyUrl()
           pDispBrowser->lpVtbl->QueryInterface(
           pDispBrowser,
           &IID_IWebBrowser2,
-          &pBrowser);
+          (LPVOID*)&pBrowser);
         pDispBrowser->lpVtbl->Release(pDispBrowser);
         if(hRes == S_OK)
         {

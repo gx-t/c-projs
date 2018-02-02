@@ -149,7 +149,7 @@ static void FsScanCollectNames(struct FsScanCollectNames* psc, PWSTR szEnd)
       g_fs.fAddLogLine(g_str.pTbl->szCannotScanDir, psc->szScanRoot);
       return;
     }
-    if(*(PDWORD)g_glb.fd.cFileName == '.')//0x2E)
+    if(*g_glb.fd.cFileName == L'.')//0x2E)
     {
       FindNextFile(hFind, &g_glb.fd);
       if(!FindNextFile(hFind, &g_glb.fd))
@@ -179,7 +179,7 @@ static void FsScanCollectNames(struct FsScanCollectNames* psc, PWSTR szEnd)
   else
   {
     WriteFile(psc->hFile, &g_glb.fd.nFileSizeHigh, 2 * sizeof(DWORD), &dwBytesWritten, 0);
-    dwBytes = (unsigned)szEnd - (unsigned)psc->szScanRoot;
+    dwBytes = szEnd - psc->szScanRoot;
     dwBytes += sizeof(WCHAR);
     WriteFile(psc->hFile, psc->szScanRoot, dwBytes, &dwBytesWritten, 0);
     g_glb.dwFileCount ++;
@@ -535,7 +535,7 @@ static void FsScanDiffFiles(struct FsScanDiffFiles* psc, PWSTR szEnd0, PWSTR szE
       g_fs.fAddLogLine(g_str.pTbl->szCannotScanDir, psc->szScanRoot0);
       return;
     }
-    if(*(PDWORD)g_glb.fd.cFileName == '.')//0x2E)
+    if(*g_glb.fd.cFileName == '.')//0x2E)
     {
       FindNextFile(hFind, &g_glb.fd);
       if(!FindNextFile(hFind, &g_glb.fd))

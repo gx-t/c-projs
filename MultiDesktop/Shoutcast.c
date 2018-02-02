@@ -4,7 +4,7 @@
 #define SEC_IN_24H                (24 * 60 * 60)
 #define SEC_IN_HOUR               (60 * 60)
 #define SEC_IN_MIN                (60)
-#define WDATA(h_)                 ((struct SHOUT_DATA*)GetWindowLong(h_, GWL_USERDATA))
+#define WDATA(h_)                 ((struct SHOUT_DATA*)GetWindowLong(h_, -4))
 
 static LPCWSTR szErrFolderTitle = L"The dropped object is unusable";
 static LPCWSTR szErrFolder =      L"Only directories may be dropped here";
@@ -433,7 +433,7 @@ static void OnStart(HWND hWnd)
   SaveReg(hWnd);
   QueueUserWorkItem(
     (LPTHREAD_START_ROUTINE)WorkThread,
-    (PVOID)GetWindowLong(hWnd, GWL_USERDATA),
+    (PVOID)GetWindowLongPtr(hWnd, GWLP_USERDATA),
     WT_EXECUTELONGFUNCTION
     );
 }
@@ -550,11 +550,11 @@ static BOOL CALLBACK ShoutDlgProc(HWND hWnd,
 
     LoadReg(hWnd);
     ((struct SHOUT_DATA*)lParam)->OldEditProc =
-      (WNDPROC)SetWindowLong(GetDlgItem(hWnd, IDC_EDIT_FOLDER),
-      GWL_WNDPROC,
-      (LONG)DropEditProc);
+      (WNDPROC)SetWindowLongPtr(GetDlgItem(hWnd, IDC_EDIT_FOLDER),
+      GWLP_WNDPROC,
+      DropEditProc);
     ((struct SHOUT_DATA*)lParam)->hWnd = hWnd;
-    SetWindowLong(hWnd, GWL_USERDATA, lParam);
+    SetWindowLongPtr(hWnd, GWLP_USERDATA, lParam);
     break;
   case WM_TIMER:
     KillTimer(hWnd, wParam);

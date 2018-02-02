@@ -1,12 +1,5 @@
 #include "rt.h"
 
-#define TVM_SETLINECOLOR            (TV_FIRST + 40)
-#define TreeView_SetLineColor(hwnd, clr) (COLORREF)SendMessage((hwnd), TVM_SETLINECOLOR, 0, (LPARAM)(clr))
-
-#define TVM_GETLINECOLOR            (TV_FIRST + 41)
-#define TreeView_GetLineColor(hwnd) (COLORREF)SendMessage((hwnd), TVM_GETLINECOLOR, 0, 0)
-
-
 enum
 {
   F_TV_EMPTY = 0
@@ -604,7 +597,7 @@ static void TvInit()
   TreeView_SetBkColor(g_glb.hTree, 0x00FFFFFF);
   TreeView_SetLineColor(g_glb.hTree, 0x00FF0000);
   SendMessage(g_glb.hTree, WM_SETICON, 0, (LPARAM)hIcon);
-  g_glb.pOldProc = (WNDPROC)SetWindowLong(g_glb.hTree , GWL_WNDPROC, (LONG)TvProc);
+  g_glb.pOldProc = (WNDPROC)SetWindowLongPtr(g_glb.hTree , GWLP_WNDPROC, (LONG_PTR)TvProc);
   ShowWindow(g_glb.hTree, SW_SHOWNORMAL);
   UpdateWindow(g_glb.hTree);
   TvInitPermanentItems();

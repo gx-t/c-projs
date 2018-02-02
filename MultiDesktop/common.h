@@ -10,7 +10,7 @@
 #include <commctrl.h>
 #include <shlobj.h>
 #include <mshtml.h>
-#include <Lm.h>
+#include <lm.h>
 #include <rpc.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -57,29 +57,6 @@ typedef PCWSTR  *PPCWSTR;
 
 EXTERN_C const CLSID CLSID_ShellWindows;
 EXTERN_C const IID IID_IShellWindows;
-#define INTERFACE IShellWindows
-DECLARE_INTERFACE_(IShellWindows,IDispatch)
-{
-	STDMETHOD(QueryInterface)(THIS_ REFIID,PVOID*) PURE;
-	STDMETHOD_(ULONG,AddRef)(THIS) PURE;
-	STDMETHOD_(ULONG,Release)(THIS) PURE;
-	STDMETHOD(GetTypeInfoCount)(THIS_ UINT*) PURE;
-	STDMETHOD(GetTypeInfo)(THIS_ UINT,LCID,LPTYPEINFO*) PURE;
-	STDMETHOD(GetIDsOfNames)(THIS_ REFIID,LPOLESTR*,UINT,LCID,DISPID*) PURE;
-	STDMETHOD(Invoke)(THIS_ DISPID,REFIID,LCID,WORD,DISPPARAMS*,VARIANT*,EXCEPINFO*,UINT*) PURE;
-	STDMETHOD_(ULONG,get_Count)(THIS,long*) PURE;
-	STDMETHOD_(ULONG,Item)(THIS,VARIANT,IDispatch**) PURE;
-	STDMETHOD_(ULONG,_NewEnum)(THIS,IUnknown**) PURE;
-	STDMETHOD_(ULONG,Register)(THIS,IDispatch*,long,int,long*) PURE;
-	STDMETHOD_(ULONG,RegisterPending)(THIS,long,VARIANT*,VARIANT*,int,long*) PURE;
-	STDMETHOD_(ULONG,Revoke)(THIS,long) PURE;
-	STDMETHOD_(ULONG,OnNavigate)(THIS,long,VARIANT*) PURE;
-	STDMETHOD_(ULONG,OnActivated)(THIS,long,VARIANT_BOOL) PURE;
-	STDMETHOD_(ULONG,FindWindowSW)(THIS,VARIANT*,VARIANT*,int,long*,int,IDispatch**) PURE;
-	STDMETHOD_(ULONG,OnCreated)(THIS,long,IUnknown**) PURE;
-	STDMETHOD_(ULONG,ProcessAttachDetach)(THIS,VARIANT_BOOL) PURE;
-};
-#undef INTERFACE
 
 #endif //__GNUC__
 

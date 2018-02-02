@@ -18,14 +18,14 @@ static void RtMessageLoop()
   }
 }
 
-int RtMain()
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR pCmdLine, int nCmdShow)
 {
   g_sys.SysLoadDlls();
   g_tv.TvInit();
   RtMessageLoop();
   g_tv.TvFree();
   g_sys.SysUnloadDlls();
-  ExitProcess(0);//SHBrowseForFolder
+//  ExitProcess(0);//SHBrowseForFolder
   return 0;
 }
 
@@ -37,7 +37,7 @@ static void RtExitProcess()
 struct RT_API g_rt =
 {
   &g_glb
-  , RtMain
+  , WinMain
   , RtPassMsg
   , RtMessageLoop
   , RtExitProcess
