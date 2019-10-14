@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -51,19 +52,19 @@ static void ctrl_c()
 
 //-----------------------------------------------------------------------------
 
-static int u_device_usage(char* descr, int ret_code)
+static int device_usage(char* descr, int ret_code)
 {
     fprintf(stderr, "%s\nUsage:\n\tudp-test device address port data\n", descr);
     return ret_code;
 }
 
-static int u_client_usage(char* descr, int ret_code)
+static int client_usage(char* descr, int ret_code)
 {
     fprintf(stderr, "%s\nUsage:\n\tudp-test client address port data\n", descr);
     return ret_code;
 }
 
-static int u_server_usage(const char* txt, int code)
+static int server_usage(const char* txt, int code)
 {
     if(txt)
         fputs(txt, stderr);
@@ -76,7 +77,7 @@ static int u_server_usage(const char* txt, int code)
     return code;
 }
 
-static int u_usage(const char* txt, int code)
+static int usage(const char* txt, int code)
 {
     if(txt) 
         fputs(txt, stderr);
@@ -96,19 +97,19 @@ static int u_usage(const char* txt, int code)
 static int u_client_send_data(char* addr_s, int port, char* data)
 {
     if(!*addr_s)
-        return u_client_usage("☹ Empty destination address.", 14);
+        return client_usage("☹ Empty destination address.", 14);
 
     if(port < 1 || port > ((1 << 16) - 1))
-        return u_client_usage("Port number is out of range.", 15);
+        return client_usage("Port number is out of range.", 15);
 
     if(!*data)
-        return u_client_usage("☹ Empty data to be sent.", 16);
+        return client_usage("☹ Empty data to be sent.", 16);
 
     struct sockaddr_in addr = {.sin_family = AF_INET};
     addr.sin_addr.s_addr = inet_addr(addr_s);
 
     if(addr.sin_addr.s_addr == INADDR_NONE)
-        return u_client_usage("☹ Cannot find destination address.", 17);
+        return client_usage("☹ Cannot find destination address.", 17);
 
     if((g_s = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
         perror("☹☹☹ Cannot create client socket.");
@@ -164,16 +165,16 @@ static struct U_USER* u_find_name(char* name, struct U_USER* usr_arr)
     return (struct U_USER*)0;
 }
 
-static struct U_USER* u_find_addr(struct sockaddr_in* addr, struct U_USER* usr_arr)
-{
-    int i = 0;
-    struct U_USER* pp = usr_arr;
-    for(; i < USER_COUNT; i++, pp++)
-        if(!memcmp(&pp->addr, addr, sizeof(*addr)))
-            return pp;
-
-    return (struct U_USER*)0;
-}
+//static struct U_USER* u_find_addr(struct sockaddr_in* addr, struct U_USER* usr_arr)
+//{
+//    int i = 0;
+//    struct U_USER* pp = usr_arr;
+//    for(; i < USER_COUNT; i++, pp++)
+//        if(!memcmp(&pp->addr, addr, sizeof(*addr)))
+//            return pp;
+//
+//    return (struct U_USER*)0;
+//}
 
 static struct U_USER* u_find_empty(struct U_USER* usr_arr)
 {
@@ -266,44 +267,45 @@ static int u_server_loop(int ss)
         u_process_data(ss, &addr, buff, usr_arr);
     }
     close(ss);
+    return 0;
 }
 
 //-----------------------------------------------------------------------------
 
-static int u_device(int argc, char* argv[])
+static int device(int argc, char* argv[])
 {
     if(argc != 4)
-        return u_device_usage("☹ Invalid number of arguments for device mode.", 13);
+        return device_usage("☹ Invalid number of arguments for device mode.", 13);
 
     fprintf(stderr, "✔ Starting in device mode...\n");
 
     return u_client_send_data(argv[1], atoi(argv[2]), argv[3]);
 }
 
-static int u_client(int argc, char* argv[])
+static int client(int argc, char* argv[])
 {
     if(argc != 4)
-        return u_client_usage("☹ Invalid number of arguments for client mode.", 13);
+        return client_usage("☹ Invalid number of arguments for client mode.", 13);
 
     fprintf(stderr, "✔ Starting in client mode...\n");
 
     return u_client_send_data(argv[1], atoi(argv[2]), argv[3]);
 }
 
-static int u_server(int argc, char** argv)
+static int server(int argc, char** argv)
 {
     if(argc != 2)
-        return u_server_usage("Not enough arguments for server mode.\n", ERR_ARGC);
+        return server_usage("Not enough arguments for server mode.\n", ERR_ARGC);
 
     argc--;
     argv++;
 
     if(!strcmp(*argv, "help")) 
-        return u_server_usage(0, ERR_OK);
+        return server_usage(0, ERR_OK);
 
     int port = atoi(*argv);
     if(port < MIN_PORT || port > MAX_PORT)
-        return u_server_usage("Invalid port number.\n", ERR_PORT);
+        return server_usage("Invalid port number.\n", ERR_PORT);
 
     int ss = u_init_listen(port);
     if(ss < 0)
@@ -317,18 +319,21 @@ static int u_server(int argc, char** argv)
 int main(int argc, char* argv[])
 {
     if(argc < 2) 
-        return u_usage("Not enough arguments.\n", ERR_ARGC);
+        return usage("Not enough arguments.\n", ERR_ARGC);
+
+    signal(SIGINT, ctrl_c);
+    srand(time(0));
 
     argc --;
     argv ++;
 
     if(!strcmp(*argv, "device"))
-        return u_device(argc, argv);
+        return device(argc, argv);
     if(!strcmp(*argv, "client"))
-        return u_client(argc, argv);
+        return client(argc, argv);
     if(!strcmp(*argv, "server"))
-        return u_server(argc, argv);
+        return server(argc, argv);
 
-    return u_usage("Unknown mode.\n", ERR_ARGV);
+    return usage("Unknown mode.\n", ERR_ARGV);
 }
 
