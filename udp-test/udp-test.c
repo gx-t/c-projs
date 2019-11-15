@@ -1,339 +1,433 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <unistd.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 #include <signal.h>
+#include <sys/time.h>
+#include <time.h>
+#include <string.h>
+#include <errno.h>
 
-enum
-{
+enum {
     ERR_OK
-        , ERR_ARGC
-        , ERR_ARGV
-        , ERR_PORT
-        , ERR_SOCKET
-        , ERR_RECVFROM
+    , ERR_ARG
+    , ERR_SOCKET
+    , ERR_BIND
+    , ERR_DNS
+    , ERR_SETTIMEOUT
+    , ERR_SEND
+    , ERR_RECV
 };
 
-enum
-{
-    CMD_FIRST = 'a'
-        , CMD_PING = CMD_FIRST
-        , CMD_MESSAGE
-        , CMD_LAST = CMD_MESSAGE
+#define DATA_SIZE        (32 - 1)
+#define MAX_DEV_COUNT    0x100
+#define DEV_NAME_SIZE    16
 
-};
 
-#define MIN_PORT 1024
-#define MAX_PORT 65535
-#define BUFF_SIZE 4096
-#define NAME_SIZE 8
-#define USER_COUNT 256
-
-struct U_USER
-{
+struct BASE {
+    int run;
+    int ss;
     struct sockaddr_in addr;
-    char name[NAME_SIZE];
+    struct {
+        uint8_t cmd;
+        uint8_t data[DATA_SIZE];
+    } buff;
+
+    int argc;
+    char** argv;
 };
 
-static int g_s = -1;
+struct SRV {
+    struct BASE base;
+    struct {
+        int timeout_counter;
+        struct {
+            char name[DEV_NAME_SIZE];
+            uint32_t ip;
+            uint16_t port;
+        }info;
+    }cl[MAX_DEV_COUNT];
+};
 
-static void ctrl_c()
+struct DEV {
+    struct BASE base;
+    char NAME[DEV_NAME_SIZE];
+    int time_counter;
+};
+
+static struct BASE* gg = 0;
+
+#define LISTEN_PORT         23456
+#define TIMEOUT_SEC         1
+
+static void close_socket()
 {
-    if(g_s != -1)
-        close(g_s);
-
-    g_s = -1;
-    fprintf(stderr ,"⇘⇘⇘ STOPPING...\n");
-}
-
-//-----------------------------------------------------------------------------
-
-static int device_usage(char* descr, int ret_code)
-{
-    fprintf(stderr, "%s\nUsage:\n\tudp-test device address port data\n", descr);
-    return ret_code;
-}
-
-static int client_usage(char* descr, int ret_code)
-{
-    fprintf(stderr, "%s\nUsage:\n\tudp-test client address port data\n", descr);
-    return ret_code;
-}
-
-static int server_usage(const char* txt, int code)
-{
-    if(txt)
-        fputs(txt, stderr);
-
-    const char* msg = "%s\nUsage: udp-test server help,\n"
-        "       udp-test server <port>\n"
-        "  help               - display this text\n"
-        "  port               - listen port %d-%d\n";
-    fprintf(stderr, msg, txt, MIN_PORT, MAX_PORT);
-    return code;
-}
-
-static int usage(const char* txt, int code)
-{
-    if(txt) 
-        fputs(txt, stderr);
-
-    const char* msg = "Usage: udp-test <mode> ...\n"
-        "Mode can be one of:\n"
-        "  help               - display this text\n"
-        "  device             - run as device\n"
-        "  client             - run as client\n"
-        "  server             - run as server\n";
-    fputs(msg, stderr);
-    return code;
-}
-
-//-----------------------------------------------------------------------------
-
-static int u_client_send_data(char* addr_s, int port, char* data)
-{
-    if(!*addr_s)
-        return client_usage("☹ Empty destination address.", 14);
-
-    if(port < 1 || port > ((1 << 16) - 1))
-        return client_usage("Port number is out of range.", 15);
-
-    if(!*data)
-        return client_usage("☹ Empty data to be sent.", 16);
-
-    struct sockaddr_in addr = {.sin_family = AF_INET};
-    addr.sin_addr.s_addr = inet_addr(addr_s);
-
-    if(addr.sin_addr.s_addr == INADDR_NONE)
-        return client_usage("☹ Cannot find destination address.", 17);
-
-    if((g_s = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
-        perror("☹☹☹ Cannot create client socket.");
-        return 18;
+    if(-1 != gg->ss) {
+        close(gg->ss);
+        gg->ss = -1;
     }
-
-    int data_len = strlen(data);
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    if(sendto(g_s, data, data_len, 0, (struct sockaddr *)&addr, sizeof(addr)) != data_len) {
-        if(g_s != -1)
-        {
-            perror("☹☹☹ Error during send");
-            close(g_s);
-            return 19;
-        }
-    }
-    close(g_s);
-    return 0;
 }
 
-static int u_init_listen(int port)
+static void handle_srv_timeout()
 {
-    int ss = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if(ss < 0)
-        perror("Cannot create server socket");
-
-    return ss;
+    struct SRV* srv = (struct SRV*)gg;
+    for(int i = 0; i < MAX_DEV_COUNT; i ++)
+        srv->cl[i].timeout_counter -= !!srv->cl[i].timeout_counter;
 }
 
-static int u_wait_data(int ss, char* buff, struct sockaddr_in* addr)
+static void handle_dev_timeout()
 {
-    socklen_t addr_len = sizeof(*addr);
-    int bytes_rcvd = recvfrom(ss, buff, BUFF_SIZE - 1, 0, (struct sockaddr*)&addr, &addr_len);
-    if(bytes_rcvd < 0) {
-        perror("recvfrom");
-        return ERR_RECVFROM;
-    }
+    struct DEV* dev = (struct DEV*)gg;
+}
 
-    buff[bytes_rcvd] = 0;
-    fprintf(stderr, "Client: %s:%d\n", inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
+static void ctrl_c(int sig)
+{
+    fprintf(stderr, "\nSIGINT (%d)\n", getpid());
+    signal(SIGALRM, SIG_IGN);
+    signal(SIGINT, ctrl_c);
+    gg->run = 0;
+    close_socket();
+}
+
+static void srv_alarm(int sig)
+{
+    signal(SIGALRM, srv_alarm);
+    handle_srv_timeout();
+    alarm(1);
+}
+
+static void dev_alarm(int sig)
+{
+    signal(SIGALRM, dev_alarm);
+    handle_dev_timeout();
+    alarm(1);
+}
+
+static int init_base(struct BASE* base, int argc, char* argv[])
+{
+    gg = base;
+
+    base->argc = argc;
+    base->argv = argv;
+    base->run = 1;
+    base->ss = socket(AF_INET, SOCK_DGRAM, 0);
+    if(base->ss < 0) {
+        perror("socket");
+        return ERR_SOCKET;
+    }
+    base->addr.sin_family = AF_INET;
+
+    signal(SIGINT, ctrl_c);
+
     return ERR_OK;
 }
 
-static struct U_USER* u_find_name(char* name, struct U_USER* usr_arr)
+static int init_srv(struct SRV* srv, int argc, char* argv[])
 {
-    int i = 0;
-    struct U_USER* pp = usr_arr;
-    for(; i < USER_COUNT; i++, pp++)
-        if(!strcmp(pp->name, name))
-            return pp;
+    int res = ERR_OK;
 
-    return (struct U_USER*)0;
-}
+    if((res = init_base(&srv->base, argc, argv)))
+        return res;
 
-//static struct U_USER* u_find_addr(struct sockaddr_in* addr, struct U_USER* usr_arr)
-//{
-//    int i = 0;
-//    struct U_USER* pp = usr_arr;
-//    for(; i < USER_COUNT; i++, pp++)
-//        if(!memcmp(&pp->addr, addr, sizeof(*addr)))
-//            return pp;
-//
-//    return (struct U_USER*)0;
-//}
+    srv->base.addr.sin_family = AF_INET;
+    srv->base.addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    srv->base.addr.sin_port = htons(LISTEN_PORT);
 
-static struct U_USER* u_find_empty(struct U_USER* usr_arr)
-{
-    int i = 0;
-    struct U_USER* pp = usr_arr;
-    for(; i < USER_COUNT; i++, pp++)
-        if(!*pp->name)
-            return pp;
-
-    return (struct U_USER*)0;
-}
-
-static void u_ping_reject(struct sockaddr_in* addr, char* name)
-{
-    fprintf(stderr, "Ping rejected: no space for new client (%s - %s:%d)\n", name, inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
-}
-
-static void u_register(struct sockaddr_in* addr, char* name, struct U_USER* usr_arr)
-{
-    struct U_USER* pp = u_find_name(name, usr_arr);
-    if(!pp)
-        pp = u_find_empty(usr_arr);
-    if(!pp)
-        return u_ping_reject(addr, name);
-
-    memcpy(&pp->addr, addr, sizeof(*addr));
-    strcpy(pp->name, name);
-}
-
-static int u_check_name(char* name)
-{
-    int len = strlen(name);
-    if(len < 1 || len > NAME_SIZE - 1) {
-        fprintf(stderr, "Invalid name length: %d (must be 1 to 7)\n", len);
-        return 0;
+    if(bind(srv->base.ss, (struct sockaddr *)&srv->base.addr, sizeof(srv->base.addr)) < 0)
+    {
+        perror("bind");
+        close(srv->base.ss);
+        return ERR_BIND;
     }
-    return 1;
+
+    for(int i = 0; i < MAX_DEV_COUNT; i ++)
+        srv->cl[i].timeout_counter = 0;
+
+    signal(SIGALRM, srv_alarm);
+    alarm(1);
+
+    return ERR_OK;
 }
 
-static void u_cmd_ping(int ss, struct sockaddr_in* addr, char* data, struct U_USER* usr_arr)
+static int init_dev(struct DEV* dev, int argc, char* argv[])
 {
-    char* name = data;
-    if(u_check_name(name))
-        return;
+    int res = ERR_OK;
 
-    u_register(addr, name, usr_arr);
-}
+    if((res = init_base(&dev->base, argc, argv)))
+        return res;
 
-static void u_cmd_message(int ss, struct sockaddr_in* addr, char* data, struct U_USER* usr_arr)
-{
-    ssize_t len = 0;
-    char* pp = data;
-    pp++;
-    len ++;
-    char* dest_name = pp;
-    if(u_check_name(dest_name))
-        return;
-    struct U_USER* dest = u_find_name(dest_name, usr_arr);
-    if(!dest) {
-        fprintf(stderr, "The name: %s is not registered.\n", dest_name);
-        return;
+    dev->base.addr.sin_family = AF_INET;
+
+    struct hostent* he = gethostbyname(argv[3]);
+    if(!he) {
+        perror("gethostbyname");
+        close(dev->base.ss);
+        return ERR_DNS;
     }
-    if(len != sendto(ss, data, len, 0, (struct sockaddr*)&dest->addr, sizeof(dest->addr)))
-        perror("sendto");
+
+    dev->base.addr.sin_addr.s_addr = *(uint32_t*)he->h_addr_list[0];
+    dev->base.addr.sin_port = htons(LISTEN_PORT);
+
+    signal(SIGALRM, dev_alarm);
+    alarm(1);
+
+    return ERR_OK;
 }
 
-static void (*u_cmd_arr[])(int, struct sockaddr_in*, char*, struct U_USER*) = {
-    u_cmd_ping, u_cmd_message
+static int set_socket_timeout(time_t timeout)
+{
+    struct timeval tv = {timeout, 0};
+    if(0 > setsockopt(gg->ss, SOL_SOCKET, SO_RCVTIMEO, (struct timeval*)&tv, sizeof(struct timeval))) {
+        perror("set_socket_timeout");
+        return ERR_SETTIMEOUT;
+    }
+    return ERR_OK;
+}
+
+static void dump_addr()
+{
+    fprintf(stderr, "%s:%d\n", inet_ntoa(gg->addr.sin_addr), ntohs(gg->addr.sin_port));
+}
+
+enum {
+    CMD_PING,
+    CMD_DEV_LIST,
+    CMD_LAST = CMD_DEV_LIST
 };
 
-static void u_process_data(int ss, struct sockaddr_in* addr, char* data, struct U_USER* usr_arr)
+static int find_cl()
 {
-    fprintf(stderr, "Connection: %s:%d\n", inet_ntoa(addr->sin_addr), ntohs(addr->sin_port));
-    int cmd = *data++;
-    if(cmd < CMD_FIRST || cmd > CMD_LAST) {
-        fprintf(stderr, "Unknown command code: %d\n", *data);
-        return;
+    struct SRV* srv = (struct SRV*)gg;
+    for(int i = 0; i < MAX_DEV_COUNT; i ++) {
+        if(gg->addr.sin_addr.s_addr == srv->cl[i].info.ip && gg->addr.sin_port == srv->cl[i].info.port)
+            return i;
     }
-    cmd -= CMD_FIRST;
-    return u_cmd_arr[cmd](ss, addr, data, usr_arr);
+    return -1;
 }
 
-static int u_server_loop(int ss)
+static int find_free_cl_slot()
 {
-    fputs("Entering server loop...\n", stderr);
-    char buff[BUFF_SIZE];
-    struct sockaddr_in addr = {0};
-    struct U_USER usr_arr[USER_COUNT];
-    while(u_wait_data(ss, buff, &addr)) {
-        u_process_data(ss, &addr, buff, usr_arr);
+    for(int i = 0; i < MAX_DEV_COUNT; i ++) {
+        if(!((struct SRV*)gg)->cl[i].timeout_counter)
+            return i;
     }
-    close(ss);
-    return 0;
+    return -1;
 }
 
-//-----------------------------------------------------------------------------
-
-static int device(int argc, char* argv[])
+static void save_cl_ping_info(int idx)
 {
-    if(argc != 4)
-        return device_usage("☹ Invalid number of arguments for device mode.", 13);
-
-    fprintf(stderr, "✔ Starting in device mode...\n");
-
-    return u_client_send_data(argv[1], atoi(argv[2]), argv[3]);
+    struct SRV* srv = (struct SRV*)gg;
+    srv->cl[idx].info.ip = gg->addr.sin_addr.s_addr;
+    srv->cl[idx].info.port = gg->addr.sin_port;
+    memcpy(srv->cl[idx].info.name, gg->buff.data, DEV_NAME_SIZE);
 }
 
-static int client(int argc, char* argv[])
+static int send_empty()
 {
-    if(argc != 4)
-        return client_usage("☹ Invalid number of arguments for client mode.", 13);
-
-    fprintf(stderr, "✔ Starting in client mode...\n");
-
-    return u_client_send_data(argv[1], atoi(argv[2]), argv[3]);
+    if(0 != sendto(gg->ss, &gg->buff, 0, 0, (struct sockaddr *)&gg->addr, sizeof(gg->addr))) {
+        if(gg->run) {
+            perror("sendto");
+            return ERR_SEND;
+        }
+    }
+    return ERR_OK;
 }
 
-static int server(int argc, char** argv)
+static int send_data()
 {
-    if(argc != 2)
-        return server_usage("Not enough arguments for server mode.\n", ERR_ARGC);
-
-    argc--;
-    argv++;
-
-    if(!strcmp(*argv, "help")) 
-        return server_usage(0, ERR_OK);
-
-    int port = atoi(*argv);
-    if(port < MIN_PORT || port > MAX_PORT)
-        return server_usage("Invalid port number.\n", ERR_PORT);
-
-    int ss = u_init_listen(port);
-    if(ss < 0)
-        return ERR_SOCKET;
-
-    return u_server_loop(ss);
+    if(sizeof(gg->buff) != sendto(gg->ss, &gg->buff, sizeof(gg->buff), 0, (struct sockaddr *)&gg->addr, sizeof(gg->addr))) {
+        if(gg->run) {
+            perror("sendto");
+            return ERR_SEND;
+        }
+    }
+    return ERR_OK;
 }
 
-//-----------------------------------------------------------------------------
+static int cmd_unsupported()
+{
+    return ERR_OK;
+}
+
+static int cmd_ping()
+{
+    int idx = find_cl();
+    if(-1 == idx)
+        idx = find_free_cl_slot();
+
+    if(!idx) {
+        fprintf(stderr, "No free client slots\n");
+        return ERR_OK;
+    }
+    save_cl_ping_info(idx);
+    return send_empty();
+}
+
+static void load_dev_data(int idx)
+{
+    struct SRV* srv = (struct SRV*)gg;
+    uint8_t* pp = gg->buff.data;
+    *pp ++ = (uint8_t)idx;
+    memcpy(pp, &srv->cl[idx].info, sizeof(srv->cl[idx].info));
+}
+
+static int is_dev_alive(int idx)
+{
+    return !!((struct SRV*)gg)->cl[idx].timeout_counter;
+}
+
+static int cmd_dev_list_srv()
+{
+    int res = ERR_OK;
+
+    for(int i = 0; i < MAX_DEV_COUNT && ERR_OK == res; i ++) {
+        if(is_dev_alive(i))
+            continue;
+        load_dev_data(i);
+        res = send_data();
+    }
+    return res;
+}
+
+static int srv_loop()
+{
+    static int (*cmd_proc[])() = {
+        [CMD_PING]      = cmd_ping,
+        [CMD_DEV_LIST]  = cmd_dev_list_srv,
+    };
+
+    int res = ERR_OK;
+    while(gg->run) {
+        socklen_t addr_len = sizeof(gg->addr);
+        int len = recvfrom(gg->ss, &gg->buff, sizeof(gg->buff), 0, (struct sockaddr*)&gg->addr, &addr_len);
+        if(len < 0) {
+            if(!gg->run)
+                return res;
+            perror("recvfrom");
+            return ERR_RECV;
+        }
+        dump_addr();
+
+        if(sizeof(gg->buff) != len) {
+            fprintf(stderr, "Invalid data length: %d\n", len);
+            continue;
+        }
+
+        if(gg->buff.cmd > CMD_LAST) {
+            fprintf(stderr, "unsupported command: %d\n", gg->buff.cmd);
+            continue;
+        }
+
+        if((res = cmd_proc[gg->buff.cmd]()))
+            return res;
+    }
+    return res;
+}
+
+static int dev_loop()
+{
+    static int (*cmd_proc[])() = {
+        [CMD_PING]      = cmd_unsupported,
+        [CMD_DEV_LIST]  = cmd_unsupported,
+    };
+
+    int res = ERR_OK;
+    while(gg->run) {
+        socklen_t addr_len = sizeof(gg->addr);
+        int len = recvfrom(gg->ss, &gg->buff, sizeof(gg->buff), 0, (struct sockaddr*)&gg->addr, &addr_len);
+        if(len < 0) {
+            if(!gg->run)
+                return res;
+            perror("recvfrom");
+            return ERR_RECV;
+        }
+        dump_addr();
+
+        if(sizeof(gg->buff) != len) {
+            fprintf(stderr, "Invalid data length: %d\n", len);
+            continue;
+        }
+
+        if(gg->buff.cmd > CMD_LAST) {
+            fprintf(stderr, "unsupported command: %d\n", gg->buff.cmd);
+            continue;
+        }
+
+        if((res = cmd_proc[gg->buff.cmd]()))
+            return res;
+    }
+    return res;
+}
+
+static int srv_main(int argc, char* argv[])
+{
+    int res = ERR_OK;
+    struct SRV srv;
+
+    if((res = init_srv(&srv, argc, argv)))
+        return res;
+
+    res = srv_loop();
+    close_socket();
+    return res;
+}
+
+static int clnt_main(int argc, char* argv[])
+{
+    int res = ERR_OK;
+    struct SRV srv;
+
+    if((res = init_srv(&srv, argc, argv)))
+        return res;
+
+    res = srv_loop();
+    close_socket();
+    return res;
+}
+
+static int dev_main(int argc, char* argv[])
+{
+    int res = ERR_OK;
+    struct DEV dev;
+
+    if(argc != 4) {
+        fprintf(stderr, "Invalid number of parameters.\nUsage: %s %s <name> <server ip>\n", argv[0], argv[1]);
+        return ERR_ARG;
+    }
+
+    if((res = init_dev(&dev, argc, argv)))
+        return res;
+
+    res = dev_loop();
+    close_socket();
+    return res;
+}
+
+static char* extract_cmd(char* argv_0)
+{
+    char* cmd = argv_0;
+    while(*argv_0) {
+        if(*argv_0++ == '/')
+            cmd = argv_0;
+    }
+    return cmd;
+}
 
 int main(int argc, char* argv[])
 {
-    if(argc < 2) 
-        return usage("Not enough arguments.\n", ERR_ARGC);
 
-    signal(SIGINT, ctrl_c);
-    srand(time(0));
+    char* cmd = extract_cmd(argv[0]);
 
-    argc --;
-    argv ++;
+    if(!strcmp("udp-srv", cmd))
+        return srv_main(argc, argv);
+    if(!strcmp("udp-clnt", cmd))
+        return clnt_main(argc, argv);
+    if(!strcmp("udp-dev", cmd))
+        return dev_main(argc, argv);
 
-    if(!strcmp(*argv, "device"))
-        return device(argc, argv);
-    if(!strcmp(*argv, "client"))
-        return client(argc, argv);
-    if(!strcmp(*argv, "server"))
-        return server(argc, argv);
-
-    return usage("Unknown mode.\n", ERR_ARGV);
+    fprintf(stderr, "Unknown command: %s\n", cmd);
+    return ERR_ARG;
 }
 
