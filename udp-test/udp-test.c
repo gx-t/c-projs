@@ -27,7 +27,6 @@ enum {
 
 
 struct BASE {
-    int run;
     int ss;
     struct sockaddr_in addr;
     struct {
@@ -87,7 +86,6 @@ static void ctrl_c(int sig)
     fprintf(stderr, "\nSIGINT (%d)\n", getpid());
     signal(SIGALRM, SIG_IGN);
     signal(SIGINT, ctrl_c);
-    gg->run = 0;
     close_socket();
 }
 
@@ -111,7 +109,6 @@ static int init_base(struct BASE* base, int argc, char* argv[])
 
     base->argc = argc;
     base->argv = argv;
-    base->run = 1;
     base->ss = socket(AF_INET, SOCK_DGRAM, 0);
     if(base->ss < 0) {
         perror("socket");
@@ -226,24 +223,20 @@ static void save_cl_ping_info(int idx)
 
 static int send_empty()
 {
-    if(0 != sendto(gg->ss, &gg->buff, 0, 0, (struct sockaddr *)&gg->addr, sizeof(gg->addr))) {
-        if(gg->run) {
-            perror("sendto");
-            return ERR_SEND;
-        }
-    }
-    return ERR_OK;
+    if(0 == sendto(gg->ss, &gg->buff, 0, 0, (struct sockaddr *)&gg->addr, sizeof(gg->addr)) || gg->ss == -1)
+        return ERR_OK;
+
+    perror("sendto");
+    return ERR_SEND;
 }
 
 static int send_data()
 {
-    if(sizeof(gg->buff) != sendto(gg->ss, &gg->buff, sizeof(gg->buff), 0, (struct sockaddr *)&gg->addr, sizeof(gg->addr))) {
-        if(gg->run) {
-            perror("sendto");
-            return ERR_SEND;
-        }
-    }
-    return ERR_OK;
+    if(sizeof(gg->buff) == sendto(gg->ss, &gg->buff, sizeof(gg->buff), 0, (struct sockaddr *)&gg->addr, sizeof(gg->addr)) || gg->ss == -1)
+        return ERR_OK;
+
+    perror("sendto");
+    return ERR_SEND;
 }
 
 static int cmd_unsupported()
@@ -291,7 +284,36 @@ static int cmd_dev_list_srv()
     return res;
 }
 
-static int srv_loop()
+static int recv_loop(int (*cmd_proc[])())
+{
+    int res = ERR_OK;
+    int len = 0;
+    socklen_t addr_len;
+
+    while(addr_len = sizeof(gg->addr), 0 <= (len = recvfrom(gg->ss, &gg->buff, sizeof(gg->buff), 0, (struct sockaddr*)&gg->addr, &addr_len))) {
+        dump_addr();
+
+        if(sizeof(gg->buff) != len) {
+            fprintf(stderr, "Invalid data length: %d\n", len);
+            continue;
+        }
+
+        if(gg->buff.cmd > CMD_LAST) {
+            fprintf(stderr, "unsupported command: %d\n", gg->buff.cmd);
+            continue;
+        }
+
+        if((res = cmd_proc[gg->buff.cmd]()))
+            return res;
+    }
+    if(gg->ss == -1)
+        return ERR_OK;
+
+    perror("recvfrom");
+    return ERR_RECV;
+}
+
+static int srv_main(int argc, char* argv[])
 {
     static int (*cmd_proc[])() = {
         [CMD_PING]      = cmd_ping,
@@ -299,34 +321,18 @@ static int srv_loop()
     };
 
     int res = ERR_OK;
-    while(gg->run) {
-        socklen_t addr_len = sizeof(gg->addr);
-        int len = recvfrom(gg->ss, &gg->buff, sizeof(gg->buff), 0, (struct sockaddr*)&gg->addr, &addr_len);
-        if(len < 0) {
-            if(!gg->run)
-                return res;
-            perror("recvfrom");
-            return ERR_RECV;
-        }
-        dump_addr();
+    struct SRV srv;
 
-        if(sizeof(gg->buff) != len) {
-            fprintf(stderr, "Invalid data length: %d\n", len);
-            continue;
-        }
+    if((res = init_srv(&srv, argc, argv)))
+        return res;
 
-        if(gg->buff.cmd > CMD_LAST) {
-            fprintf(stderr, "unsupported command: %d\n", gg->buff.cmd);
-            continue;
-        }
+    res = recv_loop(cmd_proc);
 
-        if((res = cmd_proc[gg->buff.cmd]()))
-            return res;
-    }
+    close_socket();
     return res;
 }
 
-static int dev_loop()
+static int clnt_main(int argc, char* argv[])
 {
     static int (*cmd_proc[])() = {
         [CMD_PING]      = cmd_unsupported,
@@ -334,61 +340,24 @@ static int dev_loop()
     };
 
     int res = ERR_OK;
-    while(gg->run) {
-        socklen_t addr_len = sizeof(gg->addr);
-        int len = recvfrom(gg->ss, &gg->buff, sizeof(gg->buff), 0, (struct sockaddr*)&gg->addr, &addr_len);
-        if(len < 0) {
-            if(!gg->run)
-                return res;
-            perror("recvfrom");
-            return ERR_RECV;
-        }
-        dump_addr();
-
-        if(sizeof(gg->buff) != len) {
-            fprintf(stderr, "Invalid data length: %d\n", len);
-            continue;
-        }
-
-        if(gg->buff.cmd > CMD_LAST) {
-            fprintf(stderr, "unsupported command: %d\n", gg->buff.cmd);
-            continue;
-        }
-
-        if((res = cmd_proc[gg->buff.cmd]()))
-            return res;
-    }
-    return res;
-}
-
-static int srv_main(int argc, char* argv[])
-{
-    int res = ERR_OK;
     struct SRV srv;
 
     if((res = init_srv(&srv, argc, argv)))
         return res;
 
-    res = srv_loop();
-    close_socket();
-    return res;
-}
+    res = recv_loop(cmd_proc);
 
-static int clnt_main(int argc, char* argv[])
-{
-    int res = ERR_OK;
-    struct SRV srv;
-
-    if((res = init_srv(&srv, argc, argv)))
-        return res;
-
-    res = srv_loop();
     close_socket();
     return res;
 }
 
 static int dev_main(int argc, char* argv[])
 {
+    static int (*cmd_proc[])() = {
+        [CMD_PING]      = cmd_unsupported,
+        [CMD_DEV_LIST]  = cmd_unsupported,
+    };
+
     int res = ERR_OK;
     struct DEV dev;
 
@@ -400,7 +369,8 @@ static int dev_main(int argc, char* argv[])
     if((res = init_dev(&dev, argc, argv)))
         return res;
 
-    res = dev_loop();
+    res = recv_loop(cmd_proc);
+
     close_socket();
     return res;
 }
