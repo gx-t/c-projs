@@ -315,7 +315,7 @@ static int recv_loop(int (*cmd_proc[])())
 
 static int srv_main(int argc, char* argv[])
 {
-    static int (*cmd_proc[])() = {
+    int (*cmd_proc[])() = {
         [CMD_PING]      = cmd_ping,
         [CMD_DEV_LIST]  = cmd_dev_list_srv,
     };
@@ -334,7 +334,7 @@ static int srv_main(int argc, char* argv[])
 
 static int clnt_main(int argc, char* argv[])
 {
-    static int (*cmd_proc[])() = {
+    int (*cmd_proc[])() = {
         [CMD_PING]      = cmd_unsupported,
         [CMD_DEV_LIST]  = cmd_unsupported,
     };
@@ -353,7 +353,7 @@ static int clnt_main(int argc, char* argv[])
 
 static int dev_main(int argc, char* argv[])
 {
-    static int (*cmd_proc[])() = {
+    int (*cmd_proc[])() = {
         [CMD_PING]      = cmd_unsupported,
         [CMD_DEV_LIST]  = cmd_unsupported,
     };
