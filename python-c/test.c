@@ -25,7 +25,7 @@ int f1_int_int(int i)
 const char* f2_pchar_pchar(const char* text)
 {
     fprintf(stderr, "\n==>> %s: %s\n", __func__, text);
-    return "constand char* return from the function is ok\n";
+    return "constand char* return from the 'so' function is ok\n";
 }
 
 struct NODE
@@ -127,4 +127,33 @@ int f5_load_pem_string_check_2018_cert(const char* pem_str, uint32_t pem_len)
     return res;
 }
 
+void f6_call_callback(void (*f)(int, const char*), int i, const char* txt)
+{
+    const char* pref = "Called from C.... Call number %01d. Passed string is '%s'\n";
+    char buff[strlen(txt) + strlen(pref) + 2];
+    for(int c = 0; c < 8; c ++)
+    {
+        sprintf(buff, pref, c, txt);
+        f(i + c, buff);
+    }
+}
 
+int g_val_int = 37;
+
+struct {
+    void (*f0)();
+    int (*f1)(int);
+    const char* (*f2)(const char*);
+}g_api = {
+    .f0 = f0_void_void,
+    .f1 = f1_int_int,
+    .f2 = f2_pchar_pchar
+};
+
+int g_arr_int[] = {
+    0, 1, 2, 3
+};
+
+void (*g_arr_func[])() = {
+    f0_void_void, f0_void_void, f0_void_void
+};

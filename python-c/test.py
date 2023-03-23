@@ -1,6 +1,17 @@
 from ctypes import *
 dll = cdll.LoadLibrary("./test.so")
 dll.f0_void_void()
+
+#dll.f1_int_int.argtypes = [c_int]
+#dll.f1_int_int.restype = c_int
+out_int = dll.f1_int_int(67)
+print(str(out_int))
+
+#dll.f2_pchar_pchar.argtypes = [c_char_p]
+dll.f2_pchar_pchar.restype = c_char_p
+out_txt = dll.f2_pchar_pchar(b"test text")
+print(str(out_txt))
+
 class NODE(Structure):
     pass
 
@@ -10,7 +21,7 @@ NODE._fields_ = [
     ("next", POINTER(NODE))
 ]
 
-dll.f3_node_node.argtypes = [POINTER(NODE), c_char_p]
+#dll.f3_node_node.argtypes = [POINTER(NODE), c_char_p]
 dll.f3_node_node.restype = POINTER(NODE)
 
 node0 = NODE(b"node0", 57, None)
@@ -39,4 +50,35 @@ with open('ed25519-self-signed-2.pem') as ff:
 res = dll.f5_load_pem_string_check_2018_cert(pem_str.encode(), len(pem_str))
 print('ed25519-self-signed-2.pem: ' + str(res))
 
+PY_CALLBACK = CFUNCTYPE(None, c_int, c_char_p)
+#dll.f6_call_callback.argtypes = [PY_CALLBACK, c_int, c_char_p]
+def py_callback(i, s):
+    print(str(i) + " " + str(s))
 
+dll.f6_call_callback(PY_CALLBACK(py_callback), 33, b"Text from python")
+
+i = c_int.in_dll(dll, "g_val_int")
+print("Integer exported from 'so': " + str(i))
+
+class API(Structure):
+    pass
+
+API._fields_ = [
+    ("f0", CFUNCTYPE(None)),
+    ("f1", CFUNCTYPE(c_int, c_int)),
+    ("f2", CFUNCTYPE(c_char_p, c_char_p))
+]
+
+api = API.in_dll(dll, "g_api")
+api.f0()
+api.f1(77)
+api.f2(b"API test")
+
+arr_int = (c_int * 4).in_dll(dll, "g_arr_int")
+print("Exported int array: " + str(arr_int[0]), "... " + str(arr_int[2]))
+
+PY_FUNC = CFUNCTYPE(None)
+arr_func = (PY_FUNC * 3).in_dll(dll, "g_arr_func")
+arr_func[0]()
+arr_func[1]()
+arr_func[2]()
