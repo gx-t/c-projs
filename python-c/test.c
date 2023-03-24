@@ -138,6 +138,18 @@ void f6_call_callback(void (*f)(int, const char*), int i, const char* txt)
     }
 }
 
+void f7_node_node(const struct NODE** node_pp, const char* name)
+{
+    fprintf(stderr, "\n==>> %s: 0x%p, %s\n", __func__, node_pp, name);
+    while(*node_pp)
+    {
+        fprintf(stderr, "-->>> %s\n", (*node_pp)->name);
+        if(!strcmp((*node_pp)->name, name))
+            return;
+        *node_pp = (*node_pp)->next;
+    }
+}
+
 int g_val_int = 37;
 
 struct {
@@ -155,5 +167,5 @@ int g_arr_int[] = {
 };
 
 void (*g_arr_func[])() = {
-    f0_void_void, f0_void_void, f0_void_void
+    f0_void_void, f0_void_void, f7_node_node
 };

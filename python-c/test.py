@@ -29,7 +29,7 @@ node1 = NODE(b"node1", 58, pointer(node0))
 node2 = NODE(b"node2", 59, pointer(node1))
 node3 = NODE(b"node3", 60, pointer(node2))
 node = dll.f3_node_node(pointer(node3), b"node0")
-print(str(node))
+print(str(node[0].name))
 
 dll.f4_load_pem_file_print_subject_based_string.argtypes = [c_char_p, c_char_p]
 dll.f4_load_pem_file_print_subject_based_string.restype = None
@@ -69,16 +69,23 @@ API._fields_ = [
     ("f2", CFUNCTYPE(c_char_p, c_char_p))
 ]
 
+print('Structure based API from "C" ...')
 api = API.in_dll(dll, "g_api")
 api.f0()
 api.f1(77)
 api.f2(b"API test")
 
-arr_int = (c_int * 4).in_dll(dll, "g_arr_int")
-print("Exported int array: " + str(arr_int[0]), "... " + str(arr_int[2]))
 
+print('Exported int array from "C" ...')
+arr_int = (c_int * 4).in_dll(dll, "g_arr_int")
+print("First and last values: " + str(arr_int[0]), "... " + str(arr_int[2]))
+
+print('Function pointer array based API from "C" ...')
 PY_FUNC = CFUNCTYPE(None)
 arr_func = (PY_FUNC * 3).in_dll(dll, "g_arr_func")
 arr_func[0]()
 arr_func[1]()
-arr_func[2]()
+
+node = pointer(node3)
+arr_func[2](pointer(node), b"node0")
+print('Found node: ' + str(node[0].name))
