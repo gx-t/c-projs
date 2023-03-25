@@ -69,7 +69,7 @@ API._fields_ = [
     ("f2", CFUNCTYPE(c_char_p, c_char_p))
 ]
 
-print('Structure based API from "C" ...')
+print('\nStructure based API from "C" ...')
 api = API.in_dll(dll, "g_api")
 api.f0()
 api.f1(77)
@@ -80,12 +80,23 @@ print('Exported int array from "C" ...')
 arr_int = (c_int * 4).in_dll(dll, "g_arr_int")
 print("First and last values: " + str(arr_int[0]), "... " + str(arr_int[2]))
 
-print('Function pointer array based API from "C" ...')
-PY_FUNC = CFUNCTYPE(None)
+print('\nFunction pointer array based API from "C" ...')
+PY_FUNC = CFUNCTYPE(c_int)
 arr_func = (PY_FUNC * 3).in_dll(dll, "g_arr_func")
-arr_func[0]()
-arr_func[1]()
+arr_func[0](55)
+arr_func[1](66)
 
+
+print('\nNode search via pointer-pointer')
 node = pointer(node3)
-arr_func[2](pointer(node), b"node0")
-print('Found node: ' + str(node[0].name))
+if 0 == arr_func[2](pointer(node), b'node0'):
+    print('Found node: ' + str(node[0]) + ' ' + str(node[0].name))
+
+
+print('\nNULL pointer check (node search via pointer-pointer):')
+node = pointer(node3)
+arr_func[2](pointer(node), b'node4')
+if node:
+    print('Found node: ' + str(node[0]) + ' ' + str(node[0].name))
+else:
+    print("NULL pointer - node was not found")
