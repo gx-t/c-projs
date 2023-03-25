@@ -3,6 +3,8 @@
 #include <string.h>
 #include <time.h>
 
+#define COUNT 1000000
+
 struct SL_NODE {
     struct SL_NODE* next;
     char str[1];
@@ -129,23 +131,36 @@ static void test1()
 
 static void test2()
 {
+    fprintf(stderr, "===>>> test2 ... ");
     struct SL_NODE* list = 0;
     char str[64];
-    int i = 1000000;
+    int i = COUNT;
     srandom(time(0));
     while(i--) {
         test_gen_random_str(str);
         sl_add(str, &list);
     }
+    clock_t clk = clock();
     sl_quick_sort(&list);
-//    sl_print(list);
+    fprintf(stderr, "%g sec\n", (float)(clock() - clk) / CLOCKS_PER_SEC);
     sl_free(&list);
+}
+
+static char str[COUNT][64];
+static void test3()
+{
+    fprintf(stderr, "===>>> test3 ... ");
+    for(int i = 0; i < COUNT; i ++)
+        test_gen_random_str(str[i]);
+    clock_t clk = clock();
+    qsort(str, COUNT, 64, (int (*)(const void*, const void*))strcmp);
+    fprintf(stderr, "%g sec\n", (float)(clock() - clk) / CLOCKS_PER_SEC);
 }
 
 int main()
 {
-    //test1();
     test2();
+    test3();
     return 0;
 }
 
