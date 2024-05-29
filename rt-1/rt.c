@@ -569,8 +569,7 @@ static void FsScanCollectNames(struct FsScanCollectNames* psc, PWSTR szEnd)
     else
     {
         WriteFile(psc->hFile, &g_fs.fd.nFileSizeHigh, 2 * sizeof(DWORD), &dwBytesWritten, 0);
-        dwBytes = szEnd - psc->szScanRoot;
-        dwBytes *= sizeof(WCHAR);
+        dwBytes = (void*)szEnd - (void*)psc->szScanRoot;
         dwBytes += sizeof(WCHAR);
         WriteFile(psc->hFile, psc->szScanRoot, dwBytes, &dwBytesWritten, 0);
         g_fs.dwFileCount ++;
@@ -1231,7 +1230,7 @@ static void TvAddScanPath(PWSTR szRoot)
     TvAddLogLine(g_str.szAdded, szRoot);
     while(*p)
     {
-        if(*p == '\\')
+        if(*p == L'\\')
         {
             *p = 0;
             hti = TvFindChildItemByNameOrAdd(hti, szPath, F_TV_SCANPATH, 1);
@@ -1255,7 +1254,7 @@ static void TvAddPathComplex(HTREEITEM hRoot, PCWSTR szPath, PWSTR szRelPath, LP
     PCWSTR p1 = p;
     while(*p)
     {
-        if(*p == '\\')
+        if(*p == L'\\')
         {
             *p = 0;
             hti = TvFindChildItemByNameOrAdd(hti, p1, lParamLeave, 0);
