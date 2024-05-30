@@ -101,92 +101,92 @@ struct STR_TBL
 
 static struct STR_TBL g_str =
 {
-    L"Report Tree" //szTitle
-        , L"Added %s" //szAdded
-        , L"Scanning..." //szScanning
-        , L"Fatal error! Cannot continue" //szErrFatal
-        , L"Directory Scan Operations" //szDirScanOp
+    .szTitle = L"Report Tree"
+        , .szAdded              = L"Added %s"
+        , .szScanning           = L"Scanning..."
+        , .szErrFatal           = L"Fatal error! Cannot continue"
+        , .szDirScanOp          = L"Directory Scan Operations"
         //5
-        , L"Root to Scan" //szRootToScan
-        , L"Logs" //szLogs
-        , L">> Scan for Duplicate Files" //szSfdf
-        , L">> Scan for Different Files" //szSffd
-        , L"Duplicate Files Found" //szDiff
+        , .szRootToScan         = L"Root to Scan"
+        , .szLogs               = L"Logs"
+        , .szSfdf               = L">> Scan for Duplicate Files"
+        , .szSffd               = L">> Scan for Different Files"
+        , .szDiff               = L"Duplicate Files Found"
         //10
-        , L"Newer Than in Other Directory" //szNewer
-        , L"Bigger Than in Other Directory" //szBigger
-        , L"Absent in Other Directory" //szAbsent
-        , L"The scanning is in progress!" //szScanInProg
-        , L"The scanning is in progress. Do you want to stop?." //szWaitScanEnd
+        , .szNewer              = L"Newer Than in Other Directory"
+        , .szBigger             = L"Bigger Than in Other Directory"
+        , .szAbsent             = L"Absent in Other Directory"
+        , .szScanInProg         = L"The scanning is in progress!"
+        , .szWaitScanEnd        = L"The scanning is in progress. Do you want to stop?."
         //15
-        , L"&Clean All" //szCleanAll
-        , L"&Add Object" //szAddDirFile
-        , L"Open in Explorer" //szOpenInExplorer
-        , L"&Remove from List" //szRemoveFromList
-        , L"&Cleanup Logs" //szCleanupLog
+        , .szCleanAll           = L"&Clean All"
+        , .szAddDirFile         = L"&Add Object"
+        , .szOpenInExplorer     = L"Open in Explorer"
+        , .szRemoveFromList     = L"&Remove from List"
+        , .szCleanupLog         = L"&Cleanup Logs"
         //20
-        , L"Cannot open data file. Make sure that the media you are running from is not write protected" //szCannotOpenDataFile
-        , L"Collecting names: %s" //szCollectingNames
-        , L"Cannot scan: %s" //szCannotScanDir
-        , L"Found %d files" //szFileCount
-        , L"At least two file are needed to continue" //szNeededAtLeast2
+        , .szCannotOpenDataFile = L"Cannot open data file. Make sure that the media you are running from is not write protected"
+        , .szCollectingNames    = L"Collecting names: %s"
+        , .szCannotScanDir      = L"Cannot scan: %s"
+        , .szFileCount          = L"Found %d files"
+        , .szNeededAtLeast2     = L"At least two file are needed to continue"
         //25
-        , L"Collecting file size information" //szCollectSize
-        , L"No collected file information. Giving up." //szNoCollectInfo
-        , L"FATAL ERROR! " //szFatalErr
-        , L"%s Cannot open file list file!" //szErrOpenFilesFile
-        , L"%s Cannot map file list file!" //szErrFilesMapping
+        , .szCollectSize        = L"Collecting file size information"
+        , .szNoCollectInfo      = L"No collected file information. Giving up."
+        , .szFatalErr           = L"FATAL ERROR! "
+        , .szErrOpenFilesFile   = L"%s Cannot open file list file!"
+        , .szErrFilesMapping    = L"%s Cannot map file list file!"
         //30
-        , L"Cannot obtain size of file: %s\n" //szErrFileSize
-        , L"Sorting files by size (%d files)" //szSortBySize
-        , L"Calculating the number of same size files (%d files total)" //szCalcSameSizeCount
-        , L"Found %d files with same size in groups" //szFoundSameSize
-        , L"Extracting same size file groups" //szLogExtractSameSize
+        , .szErrFileSize        = L"Cannot obtain size of file: %s\n"
+        , .szSortBySize         = L"Sorting files by size (%d files)"
+        , .szCalcSameSizeCount  = L"Calculating the number of same size files (%d files total)"
+        , .szFoundSameSize      = L"Found %d files with same size in groups"
+        , .szLogExtractSameSize = L"Extracting same size file groups"
         //35
-        , L"Calculating file hash codes (%d files)" //szCalcHash
-        , L"Error calculating hash. Cannot open file %s" //szErrHash
-        , L"Sorting files by hash code (%d files)" //szSortByHash
-        , L"Extracting same hash file list ..." //szExtractSameHash
-        , L"Found %d groups of %d total duplicate files" //szDuplicateFound
+        , .szCalcHash           = L"Calculating file hash codes (%d files)"
+        , .szErrHash            = L"Error calculating hash. Cannot open file %s"
+        , .szSortByHash         = L"Sorting files by hash code (%d files)"
+        , .szExtractSameHash    = L"Extracting same hash file list ..."
+        , .szDuplicateFound     = L"Found %d groups of %d total duplicate files"
         //40
-        , L"<No extension>" //szNoExt
-        , L"&Containing Folder" //szOpenContainer
-        , L"&Open" //szOpen
-        , L"&Properties..." //szFileProp
-        , L"&Delete(!)" //szDeleteFile
+        , .szNoExt              = L"<No extension>"
+        , .szOpenContainer      = L"&Containing Folder"
+        , .szOpen               = L"&Open"
+        , .szFileProp           = L"&Properties..."
+        , .szDeleteFile         = L"&Delete(!)"
         //45
-        , L"Deleting..." //szDeleting
-        , L"Canceled." //szCancelled
-        , L"Deleted file: %s" //szDeleted
-        , L"Cannot delete the file" //szErrDel
-        , L"%s %s" //szFmtErrDel
+        , .szDeleting           = L"Deleting..."
+        , .szCancelled          = L"Canceled."
+        , .szDeleted            = L"Deleted file: %s"
+        , .szErrDel             = L"Cannot delete the file"
+        , .szFmtErrDel          = L"%s %s"
         //50
-        , L"No input" //szNoInput
-        , L"Drag-drop or add objects double clicking the scan root and try again" //szDragDrop
-        , L"Invalid input" //szInvalidInput
-        , L"The input for this scan must include exactly 2 directory paths" //szOnly2Dirs
-        , L"%s. %s" //szNoInputLog
+        , .szNoInput            = L"No input"
+        , .szDragDrop           = L"Drag-drop or add objects double clicking the scan root and try again"
+        , .szInvalidInput       = L"Invalid input"
+        , .szOnly2Dirs          = L"The input for this scan must include exactly 2 directory paths"
+        , .szNoInputLog         = L"%s. %s"
         //55    
-        , L"Comparing recursevely %s and %s" //szCmpDirs
-        , L"Cannot open file to compare: %s" //szErrOpenToCmp
-        , L"Cannot get file time to compare: %s" //szErrFileTime
-        , L"&Copy All" //szCopyAll
-        , L"&Empty Group" //szEmptyGroup
+        , .szCmpDirs            = L"Comparing recursevely %s and %s"
+        , .szErrOpenToCmp       = L"Cannot open file to compare: %s"
+        , .szErrFileTime        = L"Cannot get file time to compare: %s"
+        , .szCopyAll            = L"&Copy All"
+        , .szEmptyGroup         = L"&Empty Group"
         //60
-        , L"&Remove Group" //szRemoveGroup
-        , L"&Copy to Other Folder" //szCopyToOther
-        , L"Paused" //szPause
-        , L"Scanning... %c" //szProgress
-        , L"Cleaning up the tree." //szCleanUpTree
+        , .szRemoveGroup        = L"&Remove Group"
+        , .szCopyToOther        = L"&Copy to Other Folder"
+        , .szPause              = L"Paused"
+        , .szProgress           = L"Scanning... %c"
+        , .szCleanUpTree        = L"Cleaning up the tree."
         //65
-        , L"Cannot continue" //szCannotContinue
-        , L"Error copying files. Check free space and access rights." //szErrCopy
-        , L"Copying aborted by user." //szCopyAborted
-        , L"Copy of %s to %s" //szCopyingFromTo
-        , L"Cannot copy. No such file: %s" //szErrCopyNoSrc
+        , .szCannotContinue     = L"Cannot continue"
+        , .szErrCopy            = L"Error copying files. Check free space and access rights."
+        , .szCopyAborted        = L"Copying aborted by user."
+        , .szCopyingFromTo      = L"Copy of %s to %s"
+        , .szErrCopyNoSrc       = L"Cannot copy. No such file: %s"
         //70
-        , L"Replacing directory with file is restricted. Skipping." //szErrCopyDirFile
-        , L"Replacing file with directory is restricted. Skipping." //szErrCopyFileDir
+        , .szErrCopyDirFile     = L"Replacing directory with file is restricted. Skipping."
+        , .szErrCopyFileDir     = L"Replacing file with directory is restricted. Skipping."
 };
 
 
@@ -358,7 +358,7 @@ void sha256_finish( sha256_context *ctx, uint8 digest[32] )
 
 #define FS_MAXFILECOUNT 32768 //limited by stack size
 
-struct FS_GLB
+struct
 {
     DWORD dwFileCount;
     WIN32_FIND_DATA fd;
@@ -1012,7 +1012,7 @@ enum TV_STATE
     TVS_LAST
 };
 
-struct TV_GLB
+struct
 {
     HWND hTree;
     WNDPROC pOldProc;
@@ -1029,7 +1029,7 @@ struct TV_GLB
     HTREEITEM hScanLog;
     HTREEITEM hLastGroup;
     enum TV_STATE st;
-};
+} static g_tv;
 
 enum
 {
@@ -1051,12 +1051,6 @@ enum
         , F_TV_LAST = 15
 };
 
-struct TVI_CLASS
-{
-    void (*fTvDblClick)(HTREEITEM);
-    void (*fTvKbdEnter)(HTREEITEM);
-};
-
 static void fTvEmpty(HTREEITEM hi);
 static void fTvScanRoot();
 static void fTvScanPath(HTREEITEM hi);
@@ -1073,7 +1067,11 @@ static void fTvSfdfRes(HTREEITEM hi);
 static void fTvStartSffdScan();
 static void fTvLogs();
 
-static struct TVI_CLASS g_EvtTbl[F_TV_LAST] =
+struct
+{
+    void (*fTvDblClick)(HTREEITEM);
+    void (*fTvKbdEnter)(HTREEITEM);
+} static g_EvtTbl[F_TV_LAST] =
 {
     [F_TV_EMPTY].fTvDblClick                 = fTvEmpty,
     [F_TV_EMPTY].fTvKbdEnter                 = fTvEmpty,
@@ -1121,7 +1119,6 @@ static struct TVI_CLASS g_EvtTbl[F_TV_LAST] =
     [F_TV_LOGS].fTvKbdEnter                  = fTvLogs,
 };
 
-static struct TV_GLB g_tv;
 
 static UINT TvMsgBox(PCWSTR szText, PCWSTR szTitle, UINT uType)
 {
