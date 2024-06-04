@@ -80,7 +80,7 @@ struct STR_TBL
     PCWSTR szCopyAll; //L"&Copy All...";
     PCWSTR szEmptyGroup; //L"&Empty Group"
     //60
-    PCWSTR szRemoveGroup; //L"&Remove Group"
+    PCWSTR szHideGroup; //L"&Hide Group"
     PCWSTR szCopyToOther; //L"&Copy to Other Folder"
     PCWSTR szPause; //L"Paused"
     PCWSTR szProgress; //L"Scanning... %c";
@@ -173,7 +173,7 @@ static struct STR_TBL g_str =
         , .szCopyAll            = L"&Copy All"
         , .szEmptyGroup         = L"&Empty Group"
         //60
-        , .szRemoveGroup        = L"&Remove Group"
+        , .szHideGroup          = L"&Hide Group"
         , .szCopyToOther        = L"&Copy to Other Folder"
         , .szPause              = L"Paused"
         , .szProgress           = L"Scanning... %c"
@@ -1053,70 +1053,100 @@ enum
 
 static void fTvEmpty(HTREEITEM hi);
 static void fTvScanRoot();
+static void fTvScanRootHelp(HTREEITEM hi);
 static void fTvScanPath(HTREEITEM hi);
+static void fTvScanPathHelp(HTREEITEM hi);
 static void fTvSfdfGroup(HTREEITEM hi);
+static void fTvSfdfGroupHelp(HTREEITEM hi);
 static void fTvSffdGroup(HTREEITEM hi);
+static void fTvSffdGroupHelp(HTREEITEM hi);
 static void fTvSffdFile(HTREEITEM hi);
+static void fTvSffdFileHelp(HTREEITEM hi);
 static void fTvSfdfFile(HTREEITEM hi);
+static void fTvSfdfFileHelp(HTREEITEM hi);
 static void fTvSffdRoot(HTREEITEM hi);
+static void fTvSffdRootHelp(HTREEITEM hi);
 static void fTvOpenSelectAbsent(HTREEITEM hi);
+static void fTvOpenSelectAbsentHelp(HTREEITEM hi);
 static void fTvOpenSelectBigger(HTREEITEM hi);
+static void fTvOpenSelectBiggerHelp(HTREEITEM hi);
 static void fTvOpenSelectNewer(HTREEITEM hi);
+static void fTvOpenSelectNewerHelp(HTREEITEM hi);
 static void fTvStartSfdfScan();
+static void fTvStartSfdfScanHelp();
 static void fTvSfdfRes(HTREEITEM hi);
+static void fTvSfdfResHelp(HTREEITEM hi);
 static void fTvStartSffdScan();
+static void fTvStartSffdScanHelp();
 static void fTvLogs();
+static void fTvLogsHelp();
 
 struct
 {
     void (*fTvDblClick)(HTREEITEM);
     void (*fTvKbdEnter)(HTREEITEM);
+    void (*fTvKbdHelp)(HTREEITEM);
 } static g_EvtTbl[F_TV_LAST] =
 {
     [F_TV_EMPTY].fTvDblClick                 = fTvEmpty,
     [F_TV_EMPTY].fTvKbdEnter                 = fTvEmpty,
+    [F_TV_EMPTY].fTvKbdHelp                  = fTvEmpty,
 
     [F_TV_SCANROOT].fTvDblClick              = fTvScanRoot,
     [F_TV_SCANROOT].fTvKbdEnter              = fTvScanRoot,
+    [F_TV_SCANROOT].fTvKbdHelp               = fTvScanRootHelp,
 
     [F_TV_SCANPATH].fTvDblClick              = fTvScanPath,
     [F_TV_SCANPATH].fTvKbdEnter              = fTvScanPath,
+    [F_TV_SCANPATH].fTvKbdHelp               = fTvScanPathHelp,
 
     [F_TV_SFDF_GROUP].fTvDblClick            = fTvSfdfGroup,
     [F_TV_SFDF_GROUP].fTvKbdEnter            = fTvSfdfGroup,
+    [F_TV_SFDF_GROUP].fTvKbdHelp             = fTvSfdfGroupHelp,
 
     [F_TV_SFFD_GROUP].fTvDblClick            = fTvSffdGroup,
     [F_TV_SFFD_GROUP].fTvKbdEnter            = fTvSffdGroup,
+    [F_TV_SFFD_GROUP].fTvKbdHelp             = fTvSffdGroupHelp,
 
     [F_TV_SFFD_FILE].fTvDblClick             = fTvSffdFile,
     [F_TV_SFFD_FILE].fTvKbdEnter             = fTvSffdFile,
+    [F_TV_SFFD_FILE].fTvKbdHelp              = fTvSffdFileHelp,
 
     [F_TV_SFDF_FILE].fTvDblClick             = fTvSfdfFile,
     [F_TV_SFDF_FILE].fTvKbdEnter             = fTvSfdfFile,
+    [F_TV_SFDF_FILE].fTvKbdHelp              = fTvSfdfFileHelp,
 
     [F_TV_SFFD_ROOT].fTvDblClick             = fTvSffdRoot,
     [F_TV_SFFD_ROOT].fTvKbdEnter             = fTvSffdRoot,
+    [F_TV_SFFD_ROOT].fTvKbdHelp              = fTvSffdRootHelp,
 
     [F_TV_OPENSELECT_ABSENT].fTvDblClick     = fTvOpenSelectAbsent,
     [F_TV_OPENSELECT_ABSENT].fTvKbdEnter     = fTvOpenSelectAbsent,
+    [F_TV_OPENSELECT_ABSENT].fTvKbdHelp      = fTvOpenSelectAbsentHelp,
 
     [F_TV_OPENSELECT_BIGGER].fTvDblClick     = fTvOpenSelectBigger,
     [F_TV_OPENSELECT_BIGGER].fTvKbdEnter     = fTvOpenSelectBigger,
+    [F_TV_OPENSELECT_BIGGER].fTvKbdHelp      = fTvOpenSelectBiggerHelp,
 
     [F_TV_OPENSELECT_NEWER].fTvDblClick      = fTvOpenSelectNewer,
     [F_TV_OPENSELECT_NEWER].fTvKbdEnter      = fTvOpenSelectNewer,
+    [F_TV_OPENSELECT_NEWER].fTvKbdHelp       = fTvOpenSelectNewerHelp,
 
     [F_TV_STARTSFDFSCAN].fTvDblClick         = fTvStartSfdfScan,
     [F_TV_STARTSFDFSCAN].fTvKbdEnter         = fTvStartSfdfScan,
+    [F_TV_STARTSFDFSCAN].fTvKbdHelp          = fTvStartSfdfScanHelp,
 
     [F_TV_SFDF_RES].fTvDblClick              = fTvSfdfRes,
     [F_TV_SFDF_RES].fTvKbdEnter              = fTvSfdfRes,
+    [F_TV_SFDF_RES].fTvKbdHelp               = fTvSfdfResHelp,
 
     [F_TV_STARTSFFDSCAN].fTvDblClick         = fTvStartSffdScan,
     [F_TV_STARTSFFDSCAN].fTvKbdEnter         = fTvStartSffdScan,
+    [F_TV_STARTSFFDSCAN].fTvKbdHelp          = fTvStartSffdScanHelp,
 
     [F_TV_LOGS].fTvDblClick                  = fTvLogs,
     [F_TV_LOGS].fTvKbdEnter                  = fTvLogs,
+    [F_TV_LOGS].fTvKbdHelp                   = fTvLogsHelp,
 };
 
 
@@ -1505,6 +1535,17 @@ static void TvKbdEnter()
     }
 }
 
+static void TvKdbHelp()
+{
+    TVITEM tvi = {TVIF_PARAM};
+    tvi.hItem = TreeView_GetSelection(g_tv.hTree);
+    if(tvi.hItem && !TvInProgressWarning())
+    {
+        TreeView_GetItem(g_tv.hTree, &tvi);
+        g_EvtTbl[tvi.lParam & F_TV_LAST].fTvKbdHelp(tvi.hItem);
+    }
+}
+
 static LRESULT CALLBACK TvProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch(msg)
@@ -1517,6 +1558,9 @@ static LRESULT CALLBACK TvProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam
             {
                 case VK_RETURN:
                     TvKbdEnter();
+                    break;
+                case VK_OEM_2:
+                    TvKdbHelp();
                     break;
             }
             break;
@@ -1594,15 +1638,17 @@ static void TvInit()
     tvis.hParent = g_tv.hSffdStartScan = TreeView_InsertItem(g_tv.hTree, &tvis);
 
     //scan results - files modified later:
-    tvis.item.lParam = F_TV_SFFD_ROOT;
+    tvis.item.lParam = F_TV_OPENSELECT_NEWER;
     tvis.item.pszText = (PWSTR)g_str.szNewer;
     g_tv.hSffdNew = TreeView_InsertItem(g_tv.hTree, &tvis);
 
     //scan results - files that are bigger:
+    tvis.item.lParam = F_TV_OPENSELECT_BIGGER;
     tvis.item.pszText = (PWSTR)g_str.szBigger;
     g_tv.hSffdBig = TreeView_InsertItem(g_tv.hTree, &tvis);
 
     //scan results - files that are absent in other scan dir:
+    tvis.item.lParam = F_TV_OPENSELECT_ABSENT;
     tvis.item.pszText = (PWSTR)g_str.szAbsent;
     g_tv.hSffdAbsent = TreeView_InsertItem(g_tv.hTree, &tvis);
 
@@ -1719,7 +1765,7 @@ static void fTvScanPath(HTREEITEM hi)
 
 static void fTvSfdfGroup(HTREEITEM hi)
 {
-    if(1 == MnuPopupMenu(g_tv.hTree, 1, g_str.szRemoveGroup))
+    if(1 == MnuPopupMenu(g_tv.hTree, 1, g_str.szHideGroup))
         TreeView_DeleteItem(g_tv.hTree, hi);
 }
 
@@ -2030,6 +2076,76 @@ void fTvLogs()
     UINT uSel = MnuPopupMenu(g_tv.hTree, 1, g_str.szCleanupLog);
     if(uSel == 1)
         TvDeleteChildren(g_tv.hScanLog);
+}
+
+static void fTvScanRootHelp(HTREEITEM hi)
+{
+    fprintf(stderr, "==>> %s\n", __func__);
+}
+
+static void fTvScanPathHelp(HTREEITEM hi)
+{
+    fprintf(stderr, "==>> %s\n", __func__);
+}
+
+static void fTvSfdfGroupHelp(HTREEITEM hi)
+{
+    fprintf(stderr, "==>> %s\n", __func__);
+}
+
+static void fTvSffdGroupHelp(HTREEITEM hi)
+{
+    fprintf(stderr, "==>> %s\n", __func__);
+}
+
+static void fTvSffdFileHelp(HTREEITEM hi)
+{
+    fprintf(stderr, "==>> %s\n", __func__);
+}
+
+static void fTvSfdfFileHelp(HTREEITEM hi)
+{
+    fprintf(stderr, "==>> %s\n", __func__);
+}
+
+static void fTvSffdRootHelp(HTREEITEM hi)
+{
+    fprintf(stderr, "==>> %s\n", __func__);
+}
+
+static void fTvOpenSelectAbsentHelp(HTREEITEM hi)
+{
+    fprintf(stderr, "==>> %s\n", __func__);
+}
+
+static void fTvOpenSelectBiggerHelp(HTREEITEM hi)
+{
+    fprintf(stderr, "==>> %s\n", __func__);
+}
+
+static void fTvOpenSelectNewerHelp(HTREEITEM hi)
+{
+    fprintf(stderr, "==>> %s\n", __func__);
+}
+
+void fTvStartSfdfScanHelp()
+{
+    fprintf(stderr, "==>> %s\n", __func__);
+}
+
+void fTvSfdfResHelp(HTREEITEM hi)
+{
+    fprintf(stderr, "==>> %s\n", __func__);
+}
+
+void fTvStartSffdScanHelp()
+{
+    fprintf(stderr, "==>> %s\n", __func__);
+}
+
+void fTvLogsHelp()
+{
+    fprintf(stderr, "==>> %s\n", __func__);
 }
 
 static void RtMessageLoop()
