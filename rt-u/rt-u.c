@@ -457,7 +457,7 @@ struct FS_FILE_ENTRY
 //sha256_file_report
 static void sha256_file_report()
 {
-  fprintf(stderr, "--- hashing --- %lu %d --- file:\n%s\n", g_status.byte, g_status.count, g_status.path);
+  fprintf(stderr, "--- hashing --- %llu %d --- file:\n%s\n", g_status.byte, g_status.count, g_status.path);
 }
 
 //******************************************************************************
@@ -1406,7 +1406,7 @@ static const struct GDS_RECORD_CLASS* gds_get_record_class(unsigned char id)
 //gds_dump_report
 static void gds_scan_report()
 {
-  fprintf(stderr, "--- scanning GDS --- %d records scanned --- %lu bytes remain\n", g_status.count, g_status.byte);
+  fprintf(stderr, "--- scanning GDS --- %d records scanned --- %llu bytes remain\n", g_status.count, g_status.byte);
 }
 
 //******************************************************************************
@@ -1430,7 +1430,7 @@ static int gds_dump_txt()
     perror(0);
     return ERR_MAPPING;
   }
-  fprintf(stderr, "The input GDS file size is %lu bytes, scanning...\n", st.st_size);
+  fprintf(stderr, "The input GDS file size is %llu bytes, scanning...\n", st.st_size);
   g_status.byte = st.st_size;
   g_status.count = 0;
   g_status.report = gds_scan_report;
@@ -1556,7 +1556,7 @@ static int http_init_server(char* home, int port, int* ss)
 {
   struct sockaddr_in sin;
   int on = 1;
-  if(port < 1 && port > 65535)
+  if(port < 1 || port > 65535)
   {
     fprintf(stderr, "Invalid port number. Must be any number between 1 and 65535.\n");
     return ERR_HTTP_INVALID_PORT;
@@ -1615,32 +1615,33 @@ static int http_main(int argc, char* argv[])
   return res;
 }
 
+  //little endian read unsigned short
+static unsigned read_u16_le()
+{
+    return (unsigned)fgetc(stdin) | (unsigned)fgetc(stdin) << 8;
+}
+//big endian read unsigned short
+static unsigned read_u16_be()
+{
+    return (unsigned)fgetc(stdin) << 8 | (unsigned)fgetc(stdin);
+}
+//little endian read unsigned int
+static unsigned read_u32_le(char* data)
+{
+    return (unsigned)fgetc(stdin) | (unsigned)fgetc(stdin) << 8 |
+        (unsigned)fgetc(stdin) << 16 | (unsigned)fgetc(stdin) << 24;
+}
+//big endian read unsigned int
+static unsigned read_u32_be(char* data)
+{
+    return (unsigned)fgetc(stdin) << 24 | (unsigned)fgetc(stdin) << 16 |
+        (unsigned)fgetc(stdin) << 8 | (unsigned)fgetc(stdin);
+}
+
 //******************************************************************************
 //jpeg_main
 static int jpeg_main(int argc, char* argv[])
 {
-  //little endian read unsigned short
-  unsigned read_u16_le()
-  {
-    return (unsigned)fgetc(stdin) | (unsigned)fgetc(stdin) << 8;
-  }
-  //big endian read unsigned short
-  unsigned read_u16_be()
-  {
-    return (unsigned)fgetc(stdin) << 8 | (unsigned)fgetc(stdin);
-  }
-  //little endian read unsigned int
-  unsigned read_u32_le(char* data)
-  {
-    return (unsigned)fgetc(stdin) | (unsigned)fgetc(stdin) << 8 |
-           (unsigned)fgetc(stdin) << 16 | (unsigned)fgetc(stdin) << 24;
-  }
-  //big endian read unsigned int
-  unsigned read_u32_be(char* data)
-  {
-    return (unsigned)fgetc(stdin) << 24 | (unsigned)fgetc(stdin) << 16 |
-           (unsigned)fgetc(stdin) << 8 | (unsigned)fgetc(stdin);
-  }
   //endian-dependent read for unsigned short and int
   unsigned (*read_u16)();
   unsigned (*read_u32)();
@@ -1709,11 +1710,11 @@ static int jpeg_main(int argc, char* argv[])
         fputs("Illegal format code in EXIF dir.\n", stderr);
         return ERR_JPEG_EXIF;
       }
-      unsigned comp = read_u32();
+      //unsigned comp = read_u32();
       //if tag is not GPSINFO - go ahead
       if(tag != 0x8825) continue;
-      static const unsigned bytes_per_format[] = {0, 1, 1, 2, 4, 8, 1, 1, 2, 4, 8, 4, 8};
-      unsigned byte_count = comp * bytes_per_format[format];
+      //static const unsigned bytes_per_format[] = {0, 1, 1, 2, 4, 8, 1, 1, 2, 4, 8, 4, 8};
+      //unsigned byte_count = comp * bytes_per_format[format];
       //if byte count is more than 4 the value is value offset, else it is value itself
       char data[48];
       fread(data, 1, sizeof(data) - 1, stdin);

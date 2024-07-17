@@ -1,12 +1,16 @@
 MAKEFLAGS+=-j 3
+OPENSSL_PREFIX=$(shell brew --prefix openssl)
+ifneq ($(OPENSSL_PREFIX)),)
+    OPENSSL_PREFIX := -I$(OPENSSL_PREFIX)/include -L$(OPENSSL_PREFIX)/lib
+endif
 
 deb: 00-deb
 rel: 00-rel
 
 00-deb:
-	gcc -Wall -g -shared -fPIC test.c -o test.so -lcrypto
+	$(CC) -Wall -g -shared $(OPENSSL_PREFIX) -fPIC test.c -o test.so -lcrypto
 00-rel:
-	gcc -O3 -Wall -s -shared -fPIC test.c -o test.so -lcrypto
+	$(CC) -O3 -Wall -shared $(OPENSSL_PREFIX) -fPIC test.c -o test.so -lcrypto
 
 run: 00-rel
 	python test.py
@@ -17,5 +21,5 @@ pyc:
 	rm -rf __pycache__
 
 clean:
-	rm -rf *.so *.pyc __pycache__
+	rm -rf *.so *.dSYM *.pyc __pycache__
 
