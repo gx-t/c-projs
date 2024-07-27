@@ -72,8 +72,8 @@ int main(int argc, char *argv[])
         if(!(texture = SDL_CreateTexture(rend
                 , SDL_PIXELFORMAT_RGBA8888
                 , SDL_TEXTUREACCESS_TARGET
-                , 16
-                , 16)))
+                , 64
+                , 48)))
         {
             fprintf(stderr, "SDL_CreateTextureFromSurface Error: %s\n", SDL_GetError());
             res = 6;
@@ -110,13 +110,14 @@ int main(int argc, char *argv[])
             SDL_SetRenderTarget(rend, texture);
             SDL_SetRenderDrawColor(rend, 0x00, 0x00, 0x00, 0x00);
             SDL_RenderClear(rend);
+            SDL_RenderSetScale(rend, 1, 1);
             while(count --)
             {
 //                pointArr[count].x = rand() % 16;
 //                pointArr[count].y = rand() % 16;
                 const SDL_Color* clr = &colorArr[rand() % sizeof(colorArr) / sizeof(colorArr[0])];
                 SDL_SetRenderDrawColor(rend, clr->r, clr->g, clr->b, clr->a);
-                SDL_RenderDrawPoint(rend, rand() % 16, rand() % 16);
+                SDL_RenderDrawPoint(rend, rand() % 64, rand() % 48);
             }
 
 //            SDL_SetRenderDrawColor(rend, 0xFF, 0xFF, 0xFF, 0xFF);
