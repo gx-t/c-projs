@@ -2,10 +2,10 @@ LFLAGS_MAC=`sdl2-config --cflags --libs` -lSDL2_ttf -DTTF_PATH=\"/System/Library
 
 
 00-deb-mac:
-	$(CC) -g -o 00-rand-dots.c 00-rand-dots.c $(LFLAGS_MAC)
+	$(CC) -g -o 00-rand-dots 00-rand-dots.c $(LFLAGS_MAC)
 
 00-rel-mac:
-	$(CC) -O2 -o 00-rand-dots.c 00-rand-dots.c $(LFLAGS_MAC)
+	$(CC) -O2 -o 00-rand-dots 00-rand-dots.c $(LFLAGS_MAC)
 
 clean:
 	rm -rf 00-rand-dots *.dsym
