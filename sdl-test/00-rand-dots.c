@@ -131,14 +131,10 @@ int main(int argc, char *argv[])
         }
     } while(0);
 
-    if(texture)
-        SDL_DestroyTexture(texture);
-    if(font)
-        TTF_CloseFont(font);
-    if(rend)
-        SDL_DestroyRenderer(rend);
-    if(win)
-        SDL_DestroyWindow(win);
+    SDL_DestroyTexture(texture);
+    TTF_CloseFont(font);
+    SDL_DestroyRenderer(rend);
+    SDL_DestroyWindow(win);
     TTF_Quit();
     SDL_Quit();
     
