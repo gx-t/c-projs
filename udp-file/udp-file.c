@@ -62,12 +62,6 @@ static int enc_main()
     if(5 != __argc__)
         return show_usage(ERR_ARGC, "Not enough arguments for \"enc\" subcommand");
 
-    uint8_t mk[2 * AES_BLOCK_SIZE];
-    size_t mk_len = 0;
-    if(!OPENSSL_hexstr2buf_ex(mk, sizeof(mk), &mk_len, __argv__[2], 0)
-        || sizeof(mk) != mk_len)
-        return show_usage(ERR_ARGV, "Invalid master key value. Must be 32 bytes length. Hex string.");
-
     char* file_name = strrchr(__argv__[3], '/');
 
     file_name = file_name ? file_name + 1 : __argv__[3];
@@ -87,6 +81,7 @@ static int enc_main()
     fprintf(stderr, "==>>%ld\n", file_size);
 
     int ret = ERR_OK;
+    uint8_t* mk = NULL;
     do {
         if((1 > file_size) || (0xFFFF * CHUNK_SIZE < file_size))
         {
@@ -97,7 +92,17 @@ static int enc_main()
         uint16_t last_chunk_size = file_size % CHUNK_SIZE;
         uint16_t chunk_count = file_size / CHUNK_SIZE + !!last_chunk_size;
         fprintf(stderr, "Chunk count: %u, last chunk length: %u\n", chunk_count, last_chunk_size);
+
+        long mk_len = 0;
+        mk = OPENSSL_hexstr2buf(__argv__[2], &mk_len);
+        if(!mk || 2 * AES_BLOCK_SIZE != mk_len)
+        {
+            ret = show_usage(ERR_ARGV, "Invalid master key value. Must be 32 bytes length. Hex string.");
+            break;
+        }
+
     } while(0);
+    OPENSSL_free(mk);
     fclose(in_file);
     return ret;
 }
