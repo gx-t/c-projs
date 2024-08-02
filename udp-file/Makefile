@@ -7,7 +7,7 @@ rel-mac:
 	$(CC) -O3 -Wall $(MAC_PREFIX) udp-file.c -o udp-file -lcrypto
 
 deb:
-	$(CC) -Wall -g -shared udp-file.c -o udp-file -lcrypto
+	$(CC) -Wall -g udp-file.c -o udp-file -lcrypto
 rel:
 	$(CC) -O3 -s -Wall -s udp-file.c -o udp-file -lcrypto
 
