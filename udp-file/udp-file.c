@@ -24,6 +24,7 @@ enum
     , ERR_SUBCMD
     , ERR_ARGV
     , ERR_FILE
+    , ERR_ALGO
 };
 
 enum
@@ -35,7 +36,7 @@ enum
 static int show_usage(int err, const char* descr)
 {
     fprintf(stderr, "\n%s\nUsage:\n", descr);
-    fprintf(stderr, "\t%s enc <master-key> <in-file> <out-file>\n", __argv__[0]);
+    fprintf(stderr, "\t%s enc <master-key> <file-name> < <in-file> > <out-file>\n", __argv__[0]);
     fprintf(stderr, "\t%s dec <inbox> <file> <master-key>\n", __argv__[0]);
     fprintf(stderr, "\t%s send <outbox> <ip> <port>\n", __argv__[0]);
     fprintf(stderr, "\t%s recv <inbox> <port>\n", __argv__[0]);
@@ -59,39 +60,30 @@ static int show_usage(int err, const char* descr)
 
 static int enc_main()
 {
-    if(5 != __argc__)
+    if(4 != __argc__)
         return show_usage(ERR_ARGC, "Not enough arguments for \"enc\" subcommand");
 
-    char* file_name = strrchr(__argv__[3], '/');
-
-    file_name = file_name ? file_name + 1 : __argv__[3];
+    const char* file_name = __argv__[3];
 
     if(31 < strlen(file_name))
         return show_usage(ERR_ARGV, "File name is too long. Must be 1-31.");
 
-    FILE* in_file = fopen(__argv__[3], "r");
-    if(!in_file)
+    fseek(stdin, 0, SEEK_END);
+    long file_size = ftell(stdin);
+    fseek(stdin, 0, SEEK_SET);
+    fprintf(stderr, "==>>%ld\n", file_size);
+
+    if((1 > file_size) || (0xFFFF * CHUNK_SIZE < file_size))
     {
-        perror(__argv__[3]);
+        fprintf(stderr, "Only redirection of files from 1B to 65535KB is supported.\n");
         return ERR_FILE;
     }
-    fseek(in_file, 0, SEEK_END);
-    long file_size = ftell(in_file);
-    fseek(in_file, 0, SEEK_SET);
-    fprintf(stderr, "==>>%ld\n", file_size);
 
     int ret = ERR_OK;
     uint8_t* mk = NULL;
     do {
-        if((1 > file_size) || (0xFFFF * CHUNK_SIZE < file_size))
-        {
-            fprintf(stderr, "Only files from 1B to 65535KB are supported.\n");
-            ret = ERR_FILE;
-            break;
-        }
-        uint16_t last_chunk_size = file_size % CHUNK_SIZE;
-        uint16_t chunk_count = file_size / CHUNK_SIZE + !!last_chunk_size;
-        fprintf(stderr, "Chunk count: %u, last chunk length: %u\n", chunk_count, last_chunk_size);
+        long chunk_count = (file_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
+        fprintf(stderr, "Chunk count: %lu\n", chunk_count);
 
         long mk_len = 0;
         mk = OPENSSL_hexstr2buf(__argv__[2], &mk_len);
@@ -100,10 +92,27 @@ static int enc_main()
             ret = show_usage(ERR_ARGV, "Invalid master key value. Must be 32 bytes length. Hex string.");
             break;
         }
+        uint8_t chunk_buff[CHUNK_SIZE];
+        uint16_t chunk_num = 0;
+        while(running && !feof(stdin))
+        {
+            size_t chunk_len = fread(chunk_buff, 1, sizeof(chunk_buff), stdin); 
+            if(chunk_len != CHUNK_SIZE)
+                fprintf(stderr, "===>>> Last chunk length is %lu\n", chunk_len);
+            chunk_num ++;
+        }
+        if(chunk_num != chunk_count)
+        {
+            fprintf(stderr
+                    , "Algo error! Calculated number of chunks = %lu, prceeded = %u\n"
+                    , chunk_count, chunk_num);
+            ret = ERR_ALGO;
+            break;
+        }
+        fprintf(stderr, "==>> Processed chunks: %u\n", chunk_num);
 
     } while(0);
     OPENSSL_free(mk);
-    fclose(in_file);
     return ret;
 }
 
