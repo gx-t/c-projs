@@ -27,6 +27,7 @@ enum
         , ERR_ARGV
         , ERR_FILE
         , ERR_ALGO
+        , ERR_INVALID_HASH
 };
 
 enum
@@ -39,7 +40,7 @@ static int show_usage(int err, const char* descr)
 {
     fprintf(stderr, "\n%s\nUsage:\n", descr);
     fprintf(stderr, "\t%s enc <master-key> <file-name> < <in-file> > <out-file>\n", __argv__[0]);
-    fprintf(stderr, "\t%s dec <inbox> <file> <master-key>\n", __argv__[0]);
+    fprintf(stderr, "\t%s dec <master-key> <inbox> < <in-file>\n", __argv__[0]);
     fprintf(stderr, "\t%s send <outbox> <ip> <port>\n", __argv__[0]);
     fprintf(stderr, "\t%s recv <inbox> <port>\n", __argv__[0]);
     return err;
@@ -47,20 +48,14 @@ static int show_usage(int err, const char* descr)
 
 struct UDP_FILE_CHUNK
 {
-    struct
-    {
-        uint8_t iv[16];
-        struct
-        {
-            uint8_t cmd;
-            uint8_t padding[9];
-            char file_name[32];
-            uint16_t chunk_num;
-            uint16_t chunk_count;
-            uint16_t data_len;
-            uint8_t data[CHUNK_SIZE];
-        } enc_data;
-    } hashed_data;
+    uint8_t iv[16];
+    uint8_t cmd;
+    uint8_t padding[9];
+    char file_name[32];
+    uint16_t chunk_num;
+    uint16_t chunk_count;
+    uint16_t data_len;
+    uint8_t data[CHUNK_SIZE];
     uint8_t hash[32];
 };
 
@@ -73,28 +68,30 @@ struct FILE_CHUNK
 
 static void encrypt_chunk(uint8_t mk[2 * AES_BLOCK_SIZE], struct UDP_FILE_CHUNK* chunk)
 {
-    RAND_bytes(chunk->hashed_data.iv, AES_BLOCK_SIZE);
+    uint8_t iv[AES_BLOCK_SIZE];
+    RAND_bytes(iv, AES_BLOCK_SIZE);
+    memcpy(chunk->iv, iv, sizeof(iv));
 
     AES_KEY key;
     AES_set_encrypt_key(mk, 256, &key);
 
-    AES_cbc_encrypt((uint8_t*)&chunk->hashed_data.enc_data
-            , (uint8_t*)&chunk->hashed_data.enc_data
-            , sizeof(chunk->hashed_data.enc_data)
-            , &key
-            , chunk->hashed_data.iv
-            , AES_ENCRYPT);
-
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
-    SHA256_Update(&sha256, &chunk->hashed_data, sizeof(chunk->hashed_data));
+    SHA256_Update(&sha256, chunk, sizeof(*chunk) - sizeof(chunk->hash));
     SHA256_Final(chunk->hash, &sha256);
+
+    AES_cbc_encrypt(&chunk->cmd
+            , &chunk->cmd
+            , sizeof(*chunk) - sizeof(iv)
+            , &key
+            , iv
+            , AES_ENCRYPT);
 }
 
 static int enc_main()
 {
     if(4 != __argc__)
-        return show_usage(ERR_ARGC, "Not enough arguments for \"enc\" subcommand");
+        return show_usage(ERR_ARGC, "Invalid number of arguments for \"enc\" subcommand");
 
     const char* file_name = __argv__[3];
 
@@ -113,60 +110,120 @@ static int enc_main()
     }
 
     int ret = ERR_OK;
-    uint8_t* mk = NULL;
-    do {
-        uint16_t chunk_count = (file_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
-        fprintf(stderr, "Chunk count: %u\n", chunk_count);
 
-        long mk_len = 0;
-        mk = OPENSSL_hexstr2buf(__argv__[2], &mk_len);
-        if(!mk || 2 * AES_BLOCK_SIZE != mk_len)
-        {
-            ret = show_usage(ERR_ARGV, "Invalid master key value. Must be 32 bytes length. Hex string.");
-            break;
-        }
-        uint16_t chunk_num = 0;
-        while(running && !feof(stdin))
-        {
-            struct FILE_CHUNK chunk_buff = {.flag = 0, .send_count = 0, /*.padding = {0, 0}*/};
-            memset(&chunk_buff.udp_chunk, 0x55, sizeof(chunk_buff.udp_chunk));
-            chunk_buff.udp_chunk.hashed_data.enc_data.cmd = CMD_SEND_FILE_CHUNK;
-            strcpy(chunk_buff.udp_chunk.hashed_data.enc_data.file_name, file_name);
-            chunk_buff.udp_chunk.hashed_data.enc_data.chunk_num = htons(chunk_num);
-            chunk_buff.udp_chunk.hashed_data.enc_data.chunk_count = htons(chunk_count);
+    long mk_len = 0;
+    uint8_t* mk = OPENSSL_hexstr2buf(__argv__[2], &mk_len);
+    if(!mk || 2 * AES_BLOCK_SIZE != mk_len)
+    {
+        OPENSSL_free(mk);
+        return show_usage(ERR_ARGV, "Invalid master key value. Must be 32 bytes length. Hex string.");
+    }
 
-            long data_len = fread(chunk_buff.udp_chunk.hashed_data.enc_data.data
-                    , 1
-                    , CHUNK_SIZE
-                    , stdin); 
+    uint16_t chunk_count = (file_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
+    fprintf(stderr, "Chunk count: %u\n", chunk_count);
 
-            if(data_len != CHUNK_SIZE)
-                fprintf(stderr, "===>>> Last chunk length is %lu\n", data_len);
+    uint16_t chunk_num = 0;
+    while(running && !feof(stdin))
+    {
+        struct FILE_CHUNK chunk_buff = {.flag = 0, .send_count = 0, /*.padding = {0, 0}*/};
+        memset(&chunk_buff.udp_chunk, 0x55, sizeof(chunk_buff.udp_chunk));
+        chunk_buff.udp_chunk.cmd = CMD_SEND_FILE_CHUNK;
+        strcpy(chunk_buff.udp_chunk.file_name, file_name);
+        chunk_buff.udp_chunk.chunk_num = htons(chunk_num);
+        chunk_buff.udp_chunk.chunk_count = htons(chunk_count);
 
-            chunk_buff.udp_chunk.hashed_data.enc_data.data_len = htons((uint16_t)data_len);
+        long data_len = fread(chunk_buff.udp_chunk.data
+                , 1
+                , sizeof(chunk_buff.udp_chunk.data)
+                , stdin); 
 
-            encrypt_chunk(mk, &chunk_buff.udp_chunk);
-            fwrite(&chunk_buff, sizeof(chunk_buff), 1, stdout);
+        if(data_len != CHUNK_SIZE)
+            fprintf(stderr, "===>>> Last chunk length is %lu\n", data_len);
 
-            chunk_num ++;
-        }
-        if(chunk_num != chunk_count)
-        {
-            fprintf(stderr
-                    , "Algo error! Calculated number of chunks = %u, prceeded = %u\n"
-                    , chunk_count, chunk_num);
-            ret = ERR_ALGO;
-            break;
-        }
-        fprintf(stderr, "==>> Processed chunks: %u\n", chunk_num);
+        chunk_buff.udp_chunk.data_len = htons((uint16_t)data_len);
 
-    } while(0);
+        encrypt_chunk(mk, &chunk_buff.udp_chunk);
+        fwrite(&chunk_buff, sizeof(chunk_buff), 1, stdout);
+
+        chunk_num ++;
+    }
+    if(chunk_num != chunk_count)
+    {
+        fprintf(stderr
+                , "Algo error! Calculated number of chunks = %u, prceeded = %u\n"
+                , chunk_count, chunk_num);
+        ret = ERR_ALGO;
+    }
+    fprintf(stderr, "==>> Processed chunks: %u\n", chunk_num);
+
     OPENSSL_free(mk);
     return ret;
 }
 
+static int decrypt_chunk(uint8_t mk[2 * AES_BLOCK_SIZE], struct UDP_FILE_CHUNK* chunk)
+{
+    uint8_t iv[AES_BLOCK_SIZE];
+    memcpy(iv, chunk->iv, sizeof(iv));
+
+    AES_KEY key;
+    AES_set_decrypt_key(mk, 256, &key);
+
+    AES_cbc_encrypt(&chunk->cmd
+            , &chunk->cmd
+            , sizeof(*chunk) - sizeof(chunk->iv)
+            , &key
+            , iv
+            , AES_DECRYPT);
+
+    uint8_t hash[2 * AES_BLOCK_SIZE];
+
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, chunk, sizeof(*chunk) - sizeof(chunk->hash));
+    SHA256_Final(hash, &sha256);
+
+    return memcmp(hash, chunk->hash, sizeof(hash)) ? ERR_INVALID_HASH : ERR_OK;
+}
+
 static int dec_main()
 {
+    if(4 != __argc__)
+        return show_usage(ERR_ARGC, "Invalid number of arguments for \"dec\" subcommand");
+
+    if(chdir(__argv__[3]))
+    {
+        perror(__argv__[3]);
+        return show_usage(ERR_ARGC, "Cannot enter given \"Inbox\" directory");
+    }
+
+    long mk_len = 0;
+    uint8_t* mk = OPENSSL_hexstr2buf(__argv__[2], &mk_len);
+    if(!mk || 2 * AES_BLOCK_SIZE != mk_len)
+    {
+        OPENSSL_free(mk);
+        return show_usage(ERR_ARGV, "Invalid master key value. Must be 32 bytes length. Hex string.");
+    }
+
+    while(running && !feof(stdin))
+    {
+        struct FILE_CHUNK chunk_buff;
+        long bytes_read = fread(&chunk_buff, 1, sizeof(chunk_buff), stdin);
+        if(bytes_read != sizeof(chunk_buff))
+        {
+            fprintf(stderr
+                    , "File data chunk of invalid size (%ld vs %lu) received, ignoring.\n"
+                    , bytes_read
+                    , sizeof(chunk_buff));
+            continue;
+        }
+
+        if(ERR_OK != decrypt_chunk(mk, &chunk_buff.udp_chunk))
+        {
+            fprintf(stderr, "Invalid hash! ignoring.\n");
+            continue;
+        }
+    }
+
     return ERR_OK;
 }
 
