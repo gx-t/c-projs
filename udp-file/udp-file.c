@@ -46,21 +46,23 @@ static int show_usage(int err, const char* descr)
     return err;
 }
 
+#pragma pack(push, 1)
 struct UDP_FILE_CHUNK
 {
     uint8_t iv[16];
     uint8_t cmd;
     uint8_t padding[9];
     char file_name[32];
-    uint16_t chunk_num;
-    uint16_t chunk_count;
+    uint32_t offset;
     uint16_t data_len;
     uint8_t data[CHUNK_SIZE];
     uint8_t hash[32];
 };
+#pragma pack(pop)
 
 struct FILE_CHUNK
 {
+    uint16_t chunk_num;
     uint8_t flag;
     uint8_t send_count;
     struct UDP_FILE_CHUNK udp_chunk;
@@ -75,6 +77,35 @@ void xor_iv_and_mk(uint8_t mk[2 * AES_BLOCK_SIZE], uint8_t iv[AES_BLOCK_SIZE])
     }
 }
 
+static int decrypt_chunk(uint8_t mk[2 * AES_BLOCK_SIZE], struct UDP_FILE_CHUNK* chunk)
+{
+    uint8_t iv[AES_BLOCK_SIZE];
+    memcpy(iv, chunk->iv, sizeof(iv));
+    xor_iv_and_mk(mk, iv);
+
+    AES_KEY key;
+    AES_set_decrypt_key(mk, 256, &key);
+
+    AES_cbc_encrypt(&chunk->cmd
+            , &chunk->cmd
+            , sizeof(*chunk) - sizeof(chunk->iv)
+            , &key
+            , iv
+            , AES_DECRYPT);
+
+    uint8_t hash[2 * AES_BLOCK_SIZE];
+
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, chunk, sizeof(*chunk) - sizeof(chunk->hash));
+    SHA256_Final(hash, &sha256);
+
+    if(memcmp(hash, chunk->hash, sizeof(hash)))
+        return ERR_INVALID_HASH;
+
+    return ERR_OK;
+}
+
 static void encrypt_chunk(uint8_t mk[2 * AES_BLOCK_SIZE], struct UDP_FILE_CHUNK* chunk)
 {
     uint8_t iv[AES_BLOCK_SIZE];
@@ -82,17 +113,19 @@ static void encrypt_chunk(uint8_t mk[2 * AES_BLOCK_SIZE], struct UDP_FILE_CHUNK*
     memcpy(chunk->iv, iv, sizeof(iv));
     xor_iv_and_mk(mk, chunk->iv);
 
-    AES_KEY key;
-    AES_set_encrypt_key(mk, 256, &key);
-
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
     SHA256_Update(&sha256, chunk, sizeof(*chunk) - sizeof(chunk->hash));
     SHA256_Final(chunk->hash, &sha256);
 
+
+
+    AES_KEY key;
+    AES_set_encrypt_key(mk, 256, &key);
+
     AES_cbc_encrypt(&chunk->cmd
             , &chunk->cmd
-            , sizeof(*chunk) - sizeof(iv)
+            , sizeof(*chunk) - sizeof(chunk->iv)
             , &key
             , iv
             , AES_ENCRYPT);
@@ -133,27 +166,27 @@ static int enc_main()
     fprintf(stderr, "Chunk count: %u\n", chunk_count);
 
     uint16_t chunk_num = 0;
-    while(running && !feof(stdin))
+    uint32_t offset = 0;
+    while(running)
     {
-        struct FILE_CHUNK chunk_buff = {.flag = 0, .send_count = 0, /*.padding = {0, 0}*/};
+        struct FILE_CHUNK chunk_buff = {.chunk_num = chunk_num, .flag = 0, .send_count = 0};
         memset(&chunk_buff.udp_chunk, 0x55, sizeof(chunk_buff.udp_chunk));
         chunk_buff.udp_chunk.cmd = CMD_SEND_FILE_CHUNK;
         strcpy(chunk_buff.udp_chunk.file_name, file_name);
-        chunk_buff.udp_chunk.chunk_num = htons(chunk_num);
-        chunk_buff.udp_chunk.chunk_count = htons(chunk_count);
+        chunk_buff.udp_chunk.offset = htonl(offset);
 
-        long data_len = fread(chunk_buff.udp_chunk.data
-                , 1
-                , sizeof(chunk_buff.udp_chunk.data)
-                , stdin); 
+        ssize_t data_len = read(STDIN_FILENO, chunk_buff.udp_chunk.data, CHUNK_SIZE);
+        if(0 == data_len)
+            break; //EOF
 
+        offset += data_len;
         if(data_len != CHUNK_SIZE)
             fprintf(stderr, "===>>> Last chunk length is %lu\n", data_len);
 
         chunk_buff.udp_chunk.data_len = htons((uint16_t)data_len);
 
         encrypt_chunk(mk, &chunk_buff.udp_chunk);
-        fwrite(&chunk_buff, sizeof(chunk_buff), 1, stdout);
+        write(STDOUT_FILENO, &chunk_buff, sizeof(chunk_buff));
 
         chunk_num ++;
     }
@@ -170,30 +203,33 @@ static int enc_main()
     return ret;
 }
 
-static int decrypt_chunk(uint8_t mk[2 * AES_BLOCK_SIZE], struct UDP_FILE_CHUNK* chunk)
+static int write_chunk_to_file(struct UDP_FILE_CHUNK* chunk)
 {
-    uint8_t iv[AES_BLOCK_SIZE];
-    memcpy(iv, chunk->iv, sizeof(iv));
-    xor_iv_and_mk(mk, iv);
-
-    AES_KEY key;
-    AES_set_decrypt_key(mk, 256, &key);
-
-    AES_cbc_encrypt(&chunk->cmd
-            , &chunk->cmd
-            , sizeof(*chunk) - sizeof(chunk->iv)
-            , &key
-            , iv
-            , AES_DECRYPT);
-
-    uint8_t hash[2 * AES_BLOCK_SIZE];
-
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, chunk, sizeof(*chunk) - sizeof(chunk->hash));
-    SHA256_Final(hash, &sha256);
-
-    return memcmp(hash, chunk->hash, sizeof(hash)) ? ERR_INVALID_HASH : ERR_OK;
+    int fd = open(chunk->file_name, O_WRONLY | O_CREAT, 0644);
+    if(-1 == fd)
+    {
+        perror(chunk->file_name);
+        return ERR_FILE;
+    }
+    int res = ERR_OK;
+    do
+    {
+        lseek(fd, 0, SEEK_SET);
+        if(-1 == lseek(fd, chunk->offset, SEEK_SET))
+        {
+            perror("lseek");
+            res = ERR_FILE;
+            break;
+        }
+        if(chunk->data_len != write(fd, chunk->data, chunk->data_len))
+        {
+            perror("write");
+            res = ERR_FILE;
+            break;
+        }
+    } while(0);
+    close(fd);
+    return res;
 }
 
 static int dec_main()
@@ -215,10 +251,12 @@ static int dec_main()
         return show_usage(ERR_ARGV, "Invalid master key value. Must be 32 bytes length. Hex string.");
     }
 
-    while(running && !feof(stdin))
+    while(running)
     {
         struct FILE_CHUNK chunk_buff;
-        long bytes_read = fread(&chunk_buff, 1, sizeof(chunk_buff), stdin);
+        ssize_t bytes_read = read(STDIN_FILENO, &chunk_buff, sizeof(chunk_buff));
+        if(0 == bytes_read)
+            break; //EOF
         if(bytes_read != sizeof(chunk_buff))
         {
             fprintf(stderr
@@ -233,6 +271,17 @@ static int dec_main()
             fprintf(stderr, "Invalid hash! ignoring.\n");
             continue;
         }
+        if(CMD_SEND_FILE_CHUNK != chunk_buff.udp_chunk.cmd)
+        {
+            fprintf(stderr, "Not CMD_SEND_FILE_CHUNK command! ignoring.\n");
+            continue;
+        }
+        chunk_buff.udp_chunk.offset = ntohl(chunk_buff.udp_chunk.offset);
+        chunk_buff.udp_chunk.data_len = ntohs(chunk_buff.udp_chunk.data_len);
+
+        int res = write_chunk_to_file(&chunk_buff.udp_chunk);
+        if(res)
+            return res;
     }
 
     return ERR_OK;
