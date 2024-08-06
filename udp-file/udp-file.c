@@ -66,11 +66,21 @@ struct FILE_CHUNK
     struct UDP_FILE_CHUNK udp_chunk;
 };
 
+void xor_iv_and_mk(uint8_t mk[2 * AES_BLOCK_SIZE], uint8_t iv[AES_BLOCK_SIZE])
+{
+    for(int i = 0; i < AES_BLOCK_SIZE; i ++)
+    {
+        iv[i] ^= mk[i];
+        iv[i] ^= mk[i + AES_BLOCK_SIZE];
+    }
+}
+
 static void encrypt_chunk(uint8_t mk[2 * AES_BLOCK_SIZE], struct UDP_FILE_CHUNK* chunk)
 {
     uint8_t iv[AES_BLOCK_SIZE];
     RAND_bytes(iv, AES_BLOCK_SIZE);
     memcpy(chunk->iv, iv, sizeof(iv));
+    xor_iv_and_mk(mk, chunk->iv);
 
     AES_KEY key;
     AES_set_encrypt_key(mk, 256, &key);
@@ -164,6 +174,7 @@ static int decrypt_chunk(uint8_t mk[2 * AES_BLOCK_SIZE], struct UDP_FILE_CHUNK* 
 {
     uint8_t iv[AES_BLOCK_SIZE];
     memcpy(iv, chunk->iv, sizeof(iv));
+    xor_iv_and_mk(mk, iv);
 
     AES_KEY key;
     AES_set_decrypt_key(mk, 256, &key);
@@ -265,4 +276,3 @@ int main(int argc, char* argv[])
 
     return show_usage(ERR_SUBCMD, "Unknown subcommand");
 }
-// 2443716 bytes
