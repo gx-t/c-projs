@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sys/mman.h>
+#include <time.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
@@ -41,6 +43,7 @@ static int show_usage(int err, const char* descr)
     fprintf(stderr, "\n%s\nUsage:\n", descr);
     fprintf(stderr, "\t%s enc <master-key> <file-name> < <in-file> > <out-file>\n", __argv__[0]);
     fprintf(stderr, "\t%s dec <master-key> <inbox> < <in-file>\n", __argv__[0]);
+    fprintf(stderr, "\t%s shuffle <file-name>\n", __argv__[0]);
     fprintf(stderr, "\t%s send <outbox> <ip> <port>\n", __argv__[0]);
     fprintf(stderr, "\t%s recv <inbox> <port>\n", __argv__[0]);
     return err;
@@ -287,6 +290,64 @@ static int dec_main()
     return ERR_OK;
 }
 
+static int shuffle_main()
+{
+    if(3 != __argc__)
+        return show_usage(ERR_ARGC, "Invalid number of arguments for \"shuffle\" subcommand");
+
+    int fd = open(__argv__[2], O_RDWR);
+    if(-1 == fd)
+    {
+        perror(__argv__[2]);
+        return show_usage(ERR_FILE, "Cannot open the file");
+    }
+
+    struct stat st;
+    if(-1 == fstat(fd, &st))
+    {
+        perror("fstat");
+        close(fd);
+        return ERR_FILE;
+    }
+    if(st.st_size % sizeof(struct FILE_CHUNK))
+    {
+        close(fd);
+        return show_usage(ERR_FILE, "Wrong file size.");
+    }
+    size_t num_blocks = st.st_size / sizeof(struct FILE_CHUNK);
+    struct FILE_CHUNK* data = (struct FILE_CHUNK*)mmap(NULL
+            , st.st_size
+            , PROT_READ | PROT_WRITE
+            , MAP_SHARED
+            , fd
+            , 0);
+    close(fd);
+
+    if(data == MAP_FAILED)
+    {
+        perror("mmap");
+        return ERR_FILE;
+    }
+
+    size_t cnt = 2 * num_blocks;
+    while(running && cnt --)
+    {
+        size_t i = rand() * rand() % num_blocks;
+        size_t j = rand() * rand() % num_blocks;
+        struct FILE_CHUNK tmp = data[j];
+        data[j] = data[i];
+        data[i] = tmp;
+    }
+
+    fprintf(stderr, "==>> ");
+    for(size_t i = 0; running && i < num_blocks; i ++)
+        fprintf(stderr, "%05u ", data[i].chunk_num);
+    fprintf(stderr, "\n");
+
+    munmap(data, st.st_size);
+    return ERR_OK;
+}
+
 static int send_main()
 {
     return ERR_OK;
@@ -313,11 +374,14 @@ int main(int argc, char* argv[])
         return show_usage(ERR_ARGC, "Subcommand is missing");
 
     signal(SIGINT, ctrl_c);
+    srand(time(NULL));
 
     if(!strcmp("enc", argv[1]))
         return enc_main();
     if(!strcmp("dec", argv[1]))
         return dec_main();
+    if(!strcmp("shuffle", argv[1]))
+        return shuffle_main();
     if(!strcmp("send", argv[1]))
         return send_main();
     if(!strcmp("recv", argv[1]))
