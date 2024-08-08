@@ -43,7 +43,8 @@ static int show_usage(int err, const char* descr)
     fprintf(stderr, "\n%s\nUsage:\n", descr);
     fprintf(stderr, "\t%s enc <master-key> <file-name> < <in-file> > <out-file>\n", __argv__[0]);
     fprintf(stderr, "\t%s dec <master-key> <inbox> < <in-file>\n", __argv__[0]);
-    fprintf(stderr, "\t%s shuffle <file-name> [dump]\n", __argv__[0]);
+    fprintf(stderr, "\t%s shuffle <file-name>\n", __argv__[0]);
+    fprintf(stderr, "\t%s dump < <file-name>\n", __argv__[0]);
     fprintf(stderr, "\t%s send <outbox> <ip> <port>\n", __argv__[0]);
     fprintf(stderr, "\t%s recv <inbox> <port>\n", __argv__[0]);
     return err;
@@ -295,11 +296,8 @@ static int dec_main()
 
 static int shuffle_main()
 {
-    if(3 != __argc__ && 4 != __argc__)
+    if(3 != __argc__)
         return show_usage(ERR_ARGC, "Invalid number of arguments for \"shuffle\" subcommand");
-    
-    if(4 == __argc__ && strcmp("dump", __argv__[3]))
-        return show_usage(ERR_ARGV, "The fourth parameter must be \"dump\"");
 
     int fd = open(__argv__[2], O_RDWR);
     if(-1 == fd)
@@ -345,13 +343,46 @@ static int shuffle_main()
         data[i] = tmp;
     }
 
-    if(4 == __argc__)
+    munmap(data, st.st_size);
+    return ERR_OK;
+}
+
+static int dump_main()
+{
+    if(2 != __argc__)
+        return show_usage(ERR_ARGC, "Invalid number of arguments for \"dump\" subcommand");
+    
+    struct stat st;
+    if(-1 == fstat(STDIN_FILENO, &st))
     {
-        fprintf(stderr, "Block indexes after shuffling...\n");
-        for(size_t i = 0; running && i < num_blocks; i ++)
-            fprintf(stderr, "%05u ", data[i].chunk_num);
-        fprintf(stderr, "\n");
+        perror("fstat");
+        return ERR_FILE;
     }
+    if(st.st_size % sizeof(struct FILE_CHUNK))
+        return show_usage(ERR_FILE, "Wrong file size.");
+
+    size_t num_blocks = st.st_size / sizeof(struct FILE_CHUNK);
+    struct FILE_CHUNK* data = (struct FILE_CHUNK*)mmap(NULL
+            , st.st_size
+            , PROT_READ
+            , MAP_SHARED
+            , STDIN_FILENO
+            , 0);
+
+    if(data == MAP_FAILED)
+    {
+        perror("mmap");
+        return ERR_FILE;
+    }
+
+    fprintf(stderr, "Block indexes after shuffling...\n");
+    for(size_t i = 0; running && i < num_blocks; i ++)
+    {
+        fprintf(stderr, "%05u ", data[i].chunk_num);
+        if(!(i % 16))
+            fprintf(stderr, "\n");
+    }
+    fprintf(stderr, "\n");
 
     munmap(data, st.st_size);
     return ERR_OK;
@@ -391,6 +422,8 @@ int main(int argc, char* argv[])
         return dec_main();
     if(!strcmp("shuffle", argv[1]))
         return shuffle_main();
+    if(!strcmp("dump", argv[1]))
+        return dump_main();
     if(!strcmp("send", argv[1]))
         return send_main();
     if(!strcmp("recv", argv[1]))
