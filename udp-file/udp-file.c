@@ -43,7 +43,7 @@ static int show_usage(int err, const char* descr)
     fprintf(stderr, "\n%s\nUsage:\n", descr);
     fprintf(stderr, "\t%s enc <master-key> <file-name> < <in-file> > <out-file>\n", __argv__[0]);
     fprintf(stderr, "\t%s dec <master-key> <inbox> < <in-file>\n", __argv__[0]);
-    fprintf(stderr, "\t%s shuffle <file-name>\n", __argv__[0]);
+    fprintf(stderr, "\t%s shuffle <file-name> [dump]\n", __argv__[0]);
     fprintf(stderr, "\t%s send <outbox> <ip> <port>\n", __argv__[0]);
     fprintf(stderr, "\t%s recv <inbox> <port>\n", __argv__[0]);
     return err;
@@ -292,8 +292,11 @@ static int dec_main()
 
 static int shuffle_main()
 {
-    if(3 != __argc__)
+    if(3 != __argc__ && 4 != __argc__)
         return show_usage(ERR_ARGC, "Invalid number of arguments for \"shuffle\" subcommand");
+    
+    if(4 == __argc__ && strcmp("dump", __argv__[3]))
+        return show_usage(ERR_ARGV, "The fourth parameter must be \"dump\"");
 
     int fd = open(__argv__[2], O_RDWR);
     if(-1 == fd)
@@ -339,10 +342,13 @@ static int shuffle_main()
         data[i] = tmp;
     }
 
-    fprintf(stderr, "==>> ");
-    for(size_t i = 0; running && i < num_blocks; i ++)
-        fprintf(stderr, "%05u ", data[i].chunk_num);
-    fprintf(stderr, "\n");
+    if(4 == __argc__)
+    {
+        fprintf(stderr, "Block indexes after shuffling...\n");
+        for(size_t i = 0; running && i < num_blocks; i ++)
+            fprintf(stderr, "%05u ", data[i].chunk_num);
+        fprintf(stderr, "\n");
+    }
 
     munmap(data, st.st_size);
     return ERR_OK;
