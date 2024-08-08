@@ -25,4 +25,6 @@ ls -lh $OUTBOX &&
 diff test-data/IMG_20240101_160447_HDR.jpg $OUTBOX/img1.jpeg &&
 diff test-data/IMG_1095-1.MP4 $OUTBOX/img2.mp4 &&
 
-echo PASSED
+echo PASSED &&
+
+rm -rf $INBOX $OUTBOX
