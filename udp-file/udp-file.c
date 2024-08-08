@@ -144,12 +144,15 @@ static int enc_main()
     if(31 < strlen(file_name))
         return show_usage(ERR_ARGV, "File name is too long. Must be 1-31.");
 
-    fseek(stdin, 0, SEEK_END);
-    long file_size = ftell(stdin);
-    fseek(stdin, 0, SEEK_SET);
-    fprintf(stderr, "==>>%ld\n", file_size);
+    struct stat st;
+    if(-1 == fstat(STDIN_FILENO, &st))
+    {
+        perror("fstat");
+        return ERR_FILE;
+    }
+    fprintf(stderr, "==>>%ld\n", st.st_size);
 
-    if((1 > file_size) || (0xFFFF * CHUNK_SIZE < file_size))
+    if((1 > st.st_size) || (0xFFFF * CHUNK_SIZE < st.st_size))
     {
         fprintf(stderr, "Only redirection of files from 1B to 65535KB is supported.\n");
         return ERR_FILE;
@@ -165,7 +168,7 @@ static int enc_main()
         return show_usage(ERR_ARGV, "Invalid master key value. Must be 32 bytes length. Hex string.");
     }
 
-    uint16_t chunk_count = (file_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
+    uint16_t chunk_count = (st.st_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
     fprintf(stderr, "Chunk count: %u\n", chunk_count);
 
     uint16_t chunk_num = 0;
