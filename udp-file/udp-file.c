@@ -151,7 +151,7 @@ static int enc_main()
         perror("fstat");
         return ERR_FILE;
     }
-    fprintf(stderr, "==>>%lld\n", st.st_size);
+    fprintf(stderr, "==>>%lld\n", (long long)st.st_size);
 
     if((1 > st.st_size) || (0xFFFF * CHUNK_SIZE < st.st_size))
     {

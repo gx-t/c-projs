@@ -9,21 +9,14 @@ mkdir -p $OUTBOX
 rm -rf $INBOX/*
 rm -rf $OUTBOX/*
 
-./udp-file enc $key img1.jpeg < test-data/IMG_20240101_160447_HDR.jpg > $INBOX/test1.bin &&
-./udp-file enc $key img2.mp4 < test-data/IMG_1095-1.MP4 > $INBOX/test2.bin &&
-
-cat $INBOX/test1.bin $INBOX/test2.bin > $INBOX/test.bin &&
-
-ls -lh $INBOX &&
-
-rm $INBOX/test1.bin $INBOX/test2.bin &&
-
+./udp-file enc $key img1.jpeg < test-data/IMG_20240101_160447_HDR.jpg > $INBOX/test.bin &&
+./udp-file enc $key img2.mp4 < test-data/IMG_1095-1.MP4 >> $INBOX/test.bin &&
 
 ls -lh $INBOX &&
 
 ./udp-file shuffle $INBOX/test.bin &&
 
-# ./udp-file dump $INBOX/test.bin
+./udp-file dump < $INBOX/test.bin &&
 
 ./udp-file dec $key $OUTBOX < $INBOX/test.bin &&
 
