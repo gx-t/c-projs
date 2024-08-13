@@ -30,12 +30,19 @@ enum
         , ERR_FILE
         , ERR_ALGO
         , ERR_INVALID_HASH
+        , ERR_NETWORK
 };
 
 enum
 {
     CMD_SEND_FILE_CHUNK = 2
         , CMD_DEL_FILE_CHUNK
+};
+
+enum
+{
+    FLAG_NONE = 0
+        , FLAG_ACK = 1
 };
 
 static int show_usage(int err, const char* descr)
@@ -45,7 +52,7 @@ static int show_usage(int err, const char* descr)
     fprintf(stderr, "\t%s dec <master-key> <inbox> < <in-file>\n", __argv__[0]);
     fprintf(stderr, "\t%s shuffle <file-name>\n", __argv__[0]);
     fprintf(stderr, "\t%s dump < <file-name>\n", __argv__[0]);
-    fprintf(stderr, "\t%s send <outbox> <ip> <port>\n", __argv__[0]);
+    fprintf(stderr, "\t%s send <ip> <port> < <in-file>\n", __argv__[0]);
     fprintf(stderr, "\t%s recv <inbox> <port>\n", __argv__[0]);
     return err;
 }
@@ -176,7 +183,13 @@ static int enc_main()
     uint32_t offset = 0;
     while(running)
     {
-        struct FILE_CHUNK chunk_buff = {.chunk_num = chunk_num, .flag = 0, .send_count = 0};
+        struct FILE_CHUNK chunk_buff =
+        {
+            .chunk_num = chunk_num
+                , .flag = FLAG_NONE
+                , .send_count = 0
+        };
+
         memset(&chunk_buff.udp_chunk, 0x55, sizeof(chunk_buff.udp_chunk));
         chunk_buff.udp_chunk.cmd = CMD_SEND_FILE_CHUNK;
         strcpy(chunk_buff.udp_chunk.file_name, file_name);
@@ -267,7 +280,7 @@ static int dec_main()
         if(bytes_read != sizeof(chunk_buff))
         {
             fprintf(stderr
-                    , "File data chunk of invalid size (%ld vs %lu) received, ignoring.\n"
+                    , "File data chunk of invalid size (%ld vs %lu) read, ignoring.\n"
                     , bytes_read
                     , sizeof(chunk_buff));
             continue;
@@ -375,7 +388,7 @@ static int dump_main()
         return ERR_FILE;
     }
 
-    fprintf(stderr, "Block indexes after shuffling...\n");
+    fprintf(stderr, "Block indexes ...\n");
     for(size_t i = 0; running && i < num_blocks; i ++)
     {
         fprintf(stderr, "%05u ", data[i].chunk_num);
@@ -390,7 +403,63 @@ static int dump_main()
 
 static int send_main()
 {
-    return ERR_OK;
+    if(4 != __argc__)
+        return show_usage(ERR_ARGC, "Invalid number of arguments for \"send\" subcommand");
+
+    struct sockaddr_in addr = {0};
+    addr.sin_family = AF_INET;
+
+    addr.sin_addr.s_addr = inet_addr(__argv__[2]);
+    if(INADDR_NONE == addr.sin_addr.s_addr)
+    {
+        fprintf(stderr, "Invalid IP address: %s\n", __argv__[3]);
+        return ERR_NETWORK;
+    }
+    int port = atoi(__argv__[3]);
+    if(1024 > port || 0xFFFF < port)
+    {
+        fprintf(stderr, "Invalid port number: %s. Port number is integer from 1024 to 65565\n", __argv__[4]);
+        return ERR_NETWORK;
+    }
+    addr.sin_port = htons(port);
+    int ss = socket(PF_INET, SOCK_DGRAM, 0);
+    if(0 > ss)
+    {
+        perror("socket");
+        return ERR_NETWORK;
+    }
+    int res = ERR_OK;
+    while(running)
+    {
+        struct FILE_CHUNK chunk_buff;
+        ssize_t bytes_read = read(STDIN_FILENO, &chunk_buff, sizeof(chunk_buff));
+        if(0 == bytes_read)
+            break; //EOF
+        if(bytes_read != sizeof(chunk_buff))
+        {
+            fprintf(stderr
+                    , "File data chunk of invalid size (%ld vs %lu) read, ignoring.\n"
+                    , bytes_read
+                    , sizeof(chunk_buff));
+            res = ERR_FILE;
+            break;
+        }
+        if(chunk_buff.flag & FLAG_ACK)
+            continue;
+
+        if(sizeof(chunk_buff.udp_chunk) != sendto(ss
+                    , &chunk_buff.udp_chunk
+                    , sizeof(chunk_buff.udp_chunk)
+                    , 0
+                    , (struct sockaddr *)&addr
+                    , sizeof(addr)))
+        {
+            perror("sendto");
+            return ERR_NETWORK;
+        }
+    }
+    close(ss);
+    return res;
 }
 
 static int recv_main()
