@@ -20,6 +20,7 @@ static int __argc__;
 static char** __argv__;
 
 static int running = 1;
+static int ss = -1;
 
 enum
 {
@@ -422,7 +423,7 @@ static int send_main()
         return ERR_NETWORK;
     }
     addr.sin_port = htons(port);
-    int ss = socket(PF_INET, SOCK_DGRAM, 0);
+    ss = socket(PF_INET, SOCK_DGRAM, 0);
     if(0 > ss)
     {
         perror("socket");
@@ -471,6 +472,7 @@ static void ctrl_c(int sig)
 {
     fprintf(stderr, "\nSIGINT (%d)\n", getpid());
     signal(SIGINT, ctrl_c);
+    close(ss);
     running = 0;
 }
 
