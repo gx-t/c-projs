@@ -516,9 +516,10 @@ static int recv_main()
         }
         write(STDOUT_FILENO, &chunk, sizeof(chunk));
         count ++;
+        fprintf(stderr, "\r==>> received %d chunks", count);
     }
+    fprintf(stderr, "\n");
     close(ss);
-    fprintf(stderr, "==>> received %d chunks\n", count);
     return ERR_OK;
 }
 
