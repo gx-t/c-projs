@@ -461,7 +461,6 @@ static int send_main()
             break;
         }
         count ++;
-        usleep(100);
     }
     close(ss);
     fprintf(stderr, "==>> sent %d chunks\n", count);
