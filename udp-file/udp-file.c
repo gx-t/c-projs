@@ -54,7 +54,7 @@ static int show_usage(int err, const char* descr)
     fprintf(stderr, "\t%s shuffle <file-name>\n", __argv__[0]);
     fprintf(stderr, "\t%s dump < <file-name>\n", __argv__[0]);
     fprintf(stderr, "\t%s send <ip> <port> < <in-file>\n", __argv__[0]);
-    fprintf(stderr, "\t%s recv <inbox> <port>\n", __argv__[0]);
+    fprintf(stderr, "\t%s recv <port> | %s dec ... \n", __argv__[0], __argv__[0]);
     return err;
 }
 
@@ -274,33 +274,33 @@ static int dec_main()
 
     while(running)
     {
-        struct FILE_CHUNK chunk_buff;
-        ssize_t bytes_read = read(STDIN_FILENO, &chunk_buff, sizeof(chunk_buff));
+        struct UDP_FILE_CHUNK chunk;
+        ssize_t bytes_read = read(STDIN_FILENO, &chunk, sizeof(chunk));
         if(0 == bytes_read)
             break; //EOF
-        if(bytes_read != sizeof(chunk_buff))
+        if(bytes_read != sizeof(chunk))
         {
             fprintf(stderr
                     , "File data chunk of invalid size (%ld vs %lu) read, ignoring.\n"
                     , bytes_read
-                    , sizeof(chunk_buff));
+                    , sizeof(chunk));
             continue;
         }
 
-        if(ERR_OK != decrypt_chunk(mk, &chunk_buff.udp_chunk))
+        if(ERR_OK != decrypt_chunk(mk, &chunk))
         {
             fprintf(stderr, "Invalid hash! ignoring.\n");
             continue;
         }
-        if(CMD_SEND_FILE_CHUNK != chunk_buff.udp_chunk.cmd)
+        if(CMD_SEND_FILE_CHUNK != chunk.cmd)
         {
             fprintf(stderr, "Not CMD_SEND_FILE_CHUNK command! ignoring.\n");
             continue;
         }
-        chunk_buff.udp_chunk.offset = ntohl(chunk_buff.udp_chunk.offset);
-        chunk_buff.udp_chunk.data_len = ntohs(chunk_buff.udp_chunk.data_len);
+        chunk.offset = ntohl(chunk.offset);
+        chunk.data_len = ntohs(chunk.data_len);
 
-        int res = write_chunk_to_file(&chunk_buff.udp_chunk);
+        int res = write_chunk_to_file(&chunk);
         if(res)
             return res;
     }
@@ -430,6 +430,7 @@ static int send_main()
         return ERR_NETWORK;
     }
     int res = ERR_OK;
+    int count = 0;
     while(running)
     {
         struct FILE_CHUNK chunk_buff;
@@ -456,15 +457,68 @@ static int send_main()
                     , sizeof(addr)))
         {
             perror("sendto");
-            return ERR_NETWORK;
+            res = ERR_NETWORK;
+            break;
         }
+        count ++;
+        usleep(100);
     }
     close(ss);
+    fprintf(stderr, "==>> sent %d chunks\n", count);
     return res;
 }
 
 static int recv_main()
 {
+    if(3 != __argc__)
+        return show_usage(ERR_ARGC, "Invalid number of arguments for \"recv\" subcommand");
+
+    struct sockaddr_in addr = {0};
+    addr.sin_family = AF_INET;
+
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    int port = atoi(__argv__[2]);
+    if(1024 > port || 0xFFFF < port)
+    {
+        fprintf(stderr, "Invalid port number: %s. Port number is integer from 1024 to 65565\n", __argv__[4]);
+        return ERR_NETWORK;
+    }
+    addr.sin_port = htons(port);
+    ss = socket(PF_INET, SOCK_DGRAM, 0);
+    if(0 > ss)
+    {
+        perror("socket");
+        return ERR_NETWORK;
+    }
+    if(bind(ss, (struct sockaddr*)&addr, sizeof(addr)) != 0)
+    {
+        close(ss);
+        perror("bind");
+        return ERR_NETWORK;
+    }
+    int count = 0;
+    while(running)
+    {
+        struct sockaddr_in client_addr = {0};
+        client_addr.sin_family = AF_INET;
+        socklen_t client_addr_len = sizeof(client_addr);
+        struct UDP_FILE_CHUNK chunk = {0};
+        ssize_t bytes_read = recvfrom(ss
+                , &chunk
+                , sizeof(chunk)
+                , 0
+                , (struct sockaddr *)&client_addr
+                , &client_addr_len);
+        if(bytes_read != sizeof(chunk))
+        {
+            fprintf(stderr, "%ld bytes UDP datagram received\n", bytes_read);
+            continue;
+        }
+        write(STDOUT_FILENO, &chunk, sizeof(chunk));
+        count ++;
+    }
+    close(ss);
+    fprintf(stderr, "==>> received %d chunks\n", count);
     return ERR_OK;
 }
 
