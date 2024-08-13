@@ -274,33 +274,33 @@ static int dec_main()
 
     while(running)
     {
-        struct UDP_FILE_CHUNK chunk;
-        ssize_t bytes_read = read(STDIN_FILENO, &chunk, sizeof(chunk));
+        struct FILE_CHUNK chunk_buff;
+        ssize_t bytes_read = read(STDIN_FILENO, &chunk_buff, sizeof(chunk_buff));
         if(0 == bytes_read)
             break; //EOF
-        if(bytes_read != sizeof(chunk))
+        if(bytes_read != sizeof(chunk_buff))
         {
             fprintf(stderr
                     , "File data chunk of invalid size (%ld vs %lu) read, ignoring.\n"
                     , bytes_read
-                    , sizeof(chunk));
+                    , sizeof(chunk_buff));
             continue;
         }
 
-        if(ERR_OK != decrypt_chunk(mk, &chunk))
+        if(ERR_OK != decrypt_chunk(mk, &chunk_buff.udp_chunk))
         {
             fprintf(stderr, "Invalid hash! ignoring.\n");
             continue;
         }
-        if(CMD_SEND_FILE_CHUNK != chunk.cmd)
+        if(CMD_SEND_FILE_CHUNK != chunk_buff.udp_chunk.cmd)
         {
             fprintf(stderr, "Not CMD_SEND_FILE_CHUNK command! ignoring.\n");
             continue;
         }
-        chunk.offset = ntohl(chunk.offset);
-        chunk.data_len = ntohs(chunk.data_len);
+        chunk_buff.udp_chunk.offset = ntohl(chunk_buff.udp_chunk.offset);
+        chunk_buff.udp_chunk.data_len = ntohs(chunk_buff.udp_chunk.data_len);
 
-        int res = write_chunk_to_file(&chunk);
+        int res = write_chunk_to_file(&chunk_buff.udp_chunk);
         if(res)
             return res;
     }
