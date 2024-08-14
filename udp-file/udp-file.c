@@ -388,7 +388,7 @@ static int dump_main()
 {
     if(2 != __argc__)
         return show_usage(ERR_ARGC, "Invalid number of arguments for \"dump\" subcommand");
-    
+
     struct stat st;
     if(-1 == fstat(STDIN_FILENO, &st))
     {
@@ -540,11 +540,11 @@ static int recv_main()
     int total_count = 0;
     struct UDP_FILE_ACK ack = {.cmd = CMD_ACK_FILE_CHUNK};
     memset(&ack.arr, 0, sizeof(ack.arr));
+    struct sockaddr_in client_addr = {0};
+    client_addr.sin_family = AF_INET;
+    socklen_t client_addr_len = sizeof(client_addr);
     while(running)
     {
-        struct sockaddr_in client_addr = {0};
-        client_addr.sin_family = AF_INET;
-        socklen_t client_addr_len = sizeof(client_addr);
         struct UDP_FILE_CHUNK chunk = {0};
         ssize_t bytes_read = recvfrom(ss
                 , &chunk
@@ -556,7 +556,6 @@ static int recv_main()
         int res = ERR_OK;
         if(0 > bytes_read && EWOULDBLOCK == errno)
         {
-            fprintf(stderr, "===>>> Timeout\n");
             if(!count)
                 continue;
 
@@ -571,7 +570,7 @@ static int recv_main()
                 res = ERR_NETWORK;
                 break;
             }
-            fprintf(stderr, "===>>> ACK (count = %d)\n", count);
+            fprintf(stderr, "===>>> ACK (count = %d, TIMEOUT)\n", count);
             count = 0;
             memset(&ack.arr, 0, sizeof(ack.arr));
             continue;
