@@ -54,7 +54,7 @@ static int show_usage(int err, const char* descr)
     fprintf(stderr, "\t%s shuffle <file-name>\n", __argv__[0]);
     fprintf(stderr, "\t%s dump < <file-name>\n", __argv__[0]);
     fprintf(stderr, "\t%s send <ip> <port> < <in-file>\n", __argv__[0]);
-    fprintf(stderr, "\t%s recv <port> | %s dec ... \n", __argv__[0], __argv__[0]);
+    fprintf(stderr, "\t%s recv <port> <out-dir> <master-key>\n", __argv__[0]);
     return err;
 }
 
@@ -261,7 +261,7 @@ static int dec_main()
     if(chdir(__argv__[3]))
     {
         perror(__argv__[3]);
-        return show_usage(ERR_ARGC, "Cannot enter given \"Inbox\" directory");
+        return show_usage(ERR_ARGV, "Cannot enter given \"Inbox\" directory");
     }
 
     long mk_len = 0;
@@ -469,7 +469,7 @@ static int send_main()
 
 static int recv_main()
 {
-    if(3 != __argc__)
+    if(5 != __argc__)
         return show_usage(ERR_ARGC, "Invalid number of arguments for \"recv\" subcommand");
 
     struct sockaddr_in addr = {0};
@@ -480,7 +480,12 @@ static int recv_main()
     if(1024 > port || 0xFFFF < port)
     {
         fprintf(stderr, "Invalid port number: %s. Port number is integer from 1024 to 65565\n", __argv__[4]);
-        return ERR_NETWORK;
+        return ERR_ARGV;
+    }
+    if(chdir(__argv__[3]))
+    {
+        perror(__argv__[3]);
+        return ERR_ARGV;
     }
     addr.sin_port = htons(port);
     ss = socket(PF_INET, SOCK_DGRAM, 0);
@@ -494,6 +499,15 @@ static int recv_main()
         close(ss);
         perror("bind");
         return ERR_NETWORK;
+    }
+    long mk_len = 0;
+    uint8_t* mk = OPENSSL_hexstr2buf(__argv__[4], &mk_len);
+    if(!mk || 2 * AES_BLOCK_SIZE != mk_len)
+    {
+        close(ss);
+        OPENSSL_free(mk);
+        fprintf(stderr, "Invalid master key value. Must be 32 bytes length. Hex string.");
+        return ERR_ARGV;
     }
     int count = 0;
     while(running)
@@ -513,11 +527,27 @@ static int recv_main()
             fprintf(stderr, "%ld bytes UDP datagram received\n", bytes_read);
             continue;
         }
-        write(STDOUT_FILENO, &chunk, sizeof(chunk));
+        if(ERR_OK != decrypt_chunk(mk, &chunk))
+        {
+            fprintf(stderr, "Invalid hash! ignoring.\n");
+            continue;
+        }
+        if(CMD_SEND_FILE_CHUNK != chunk.cmd)
+        {
+            fprintf(stderr, "Not CMD_SEND_FILE_CHUNK command! ignoring.\n");
+            continue;
+        }
+        chunk.offset = ntohl(chunk.offset);
+        chunk.data_len = ntohs(chunk.data_len);
+
+        int res = write_chunk_to_file(&chunk);
+        if(res)
+            return res;
         count ++;
         fprintf(stderr, "\r==>> received %d chunks", count);
     }
     fprintf(stderr, "\n");
+    OPENSSL_free(mk);
     close(ss);
     return ERR_OK;
 }
