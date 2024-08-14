@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <errno.h>
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
 #include <openssl/aes.h>
@@ -522,6 +523,10 @@ static int recv_main()
         perror("bind");
         return ERR_NETWORK;
     }
+    struct timeval tv = {.tv_sec = 1, .tv_usec = 0};
+
+    setsockopt(ss, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
     long mk_len = 0;
     uint8_t* mk = OPENSSL_hexstr2buf(__argv__[4], &mk_len);
     if(!mk || 2 * AES_BLOCK_SIZE != mk_len)
@@ -533,19 +538,44 @@ static int recv_main()
     }
     int count = 0;
     int total_count = 0;
+    struct UDP_FILE_ACK ack = {.cmd = CMD_ACK_FILE_CHUNK};
+    memset(&ack.arr, 0, sizeof(ack.arr));
     while(running)
     {
         struct sockaddr_in client_addr = {0};
         client_addr.sin_family = AF_INET;
         socklen_t client_addr_len = sizeof(client_addr);
         struct UDP_FILE_CHUNK chunk = {0};
-        struct UDP_FILE_ACK ack = {.cmd = CMD_ACK_FILE_CHUNK};
         ssize_t bytes_read = recvfrom(ss
                 , &chunk
                 , sizeof(chunk)
                 , 0
                 , (struct sockaddr *)&client_addr
                 , &client_addr_len);
+
+        int res = ERR_OK;
+        if(0 > bytes_read && EWOULDBLOCK == errno)
+        {
+            fprintf(stderr, "===>>> Timeout\n");
+            if(!count)
+                continue;
+
+            if(sizeof(ack) != sendto(ss
+                        , &ack
+                        , sizeof(ack)
+                        , 0
+                        , (struct sockaddr *)&client_addr
+                        , sizeof(client_addr)))
+            {
+                perror("sendto");
+                res = ERR_NETWORK;
+                break;
+            }
+            fprintf(stderr, "===>>> ACK (count = %d)\n", count);
+            count = 0;
+            memset(&ack.arr, 0, sizeof(ack.arr));
+            continue;
+        }
         if(bytes_read != sizeof(chunk))
         {
             fprintf(stderr, "%ld bytes UDP datagram received\n", bytes_read);
@@ -564,18 +594,29 @@ static int recv_main()
         chunk.offset = ntohl(chunk.offset);
         chunk.data_len = ntohs(chunk.data_len);
 
-        int res = write_chunk_to_file(&chunk);
+        res = write_chunk_to_file(&chunk);
         if(res)
             return res;
 
-        memset(&ack.arr, 0, sizeof(ack.arr));
         strcpy(ack.arr[count].file_name, chunk.file_name);
         ack.arr[count ++].offset = htonl(chunk.offset);
         if(count == sizeof(ack.arr) / sizeof(ack.arr[0]))
         {
-            fprintf(stderr, "===>>> ACK\n");
             encrypt_chunk(mk, (struct UDP_CHUNK*)&ack);
+            if(sizeof(ack) != sendto(ss
+                        , &ack
+                        , sizeof(ack)
+                        , 0
+                        , (struct sockaddr *)&client_addr
+                        , sizeof(client_addr)))
+            {
+                perror("sendto");
+                res = ERR_NETWORK;
+                break;
+            }
+            fprintf(stderr, "===>>> ACK (count = %d)\n", count);
             count = 0;
+            memset(&ack.arr, 0, sizeof(ack.arr));
         }
         total_count ++;
         fprintf(stderr, "\r==>> received %d chunks", total_count);
