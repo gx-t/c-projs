@@ -37,7 +37,7 @@ enum
 enum
 {
     CMD_SEND_FILE_CHUNK = 2
-        , CMD_DEL_FILE_CHUNK
+        , CMD_ACK_FILE_CHUNK
 };
 
 enum
@@ -59,6 +59,15 @@ static int show_usage(int err, const char* descr)
 }
 
 #pragma pack(push, 1)
+
+struct UDP_CHUNK
+{
+    uint8_t iv[16];
+    uint8_t cmd;
+    uint8_t dummy[1071];
+    uint8_t hash[32];
+};
+
 struct UDP_FILE_CHUNK
 {
     uint8_t iv[16];
@@ -68,6 +77,19 @@ struct UDP_FILE_CHUNK
     uint32_t offset;
     uint16_t data_len;
     uint8_t data[CHUNK_SIZE];
+    uint8_t hash[32];
+};
+
+struct UDP_FILE_ACK
+{
+    uint8_t iv[16];
+    uint8_t cmd;
+    uint8_t padding[27];
+    struct
+    {
+        char file_name[32];
+        uint32_t offset;
+    } arr[29];
     uint8_t hash[32];
 };
 #pragma pack(pop)
@@ -89,7 +111,7 @@ void xor_iv_and_mk(uint8_t mk[2 * AES_BLOCK_SIZE], uint8_t iv[AES_BLOCK_SIZE])
     }
 }
 
-static int decrypt_chunk(uint8_t mk[2 * AES_BLOCK_SIZE], struct UDP_FILE_CHUNK* chunk)
+static int decrypt_chunk(uint8_t mk[2 * AES_BLOCK_SIZE], struct UDP_CHUNK* chunk)
 {
     uint8_t iv[AES_BLOCK_SIZE];
     memcpy(iv, chunk->iv, sizeof(iv));
@@ -118,7 +140,7 @@ static int decrypt_chunk(uint8_t mk[2 * AES_BLOCK_SIZE], struct UDP_FILE_CHUNK* 
     return ERR_OK;
 }
 
-static void encrypt_chunk(uint8_t mk[2 * AES_BLOCK_SIZE], struct UDP_FILE_CHUNK* chunk)
+static void encrypt_chunk(uint8_t mk[2 * AES_BLOCK_SIZE], struct UDP_CHUNK* chunk)
 {
     uint8_t iv[AES_BLOCK_SIZE];
     RAND_bytes(iv, AES_BLOCK_SIZE);
@@ -206,7 +228,7 @@ static int enc_main()
 
         chunk_buff.udp_chunk.data_len = htons((uint16_t)data_len);
 
-        encrypt_chunk(mk, &chunk_buff.udp_chunk);
+        encrypt_chunk(mk, (struct UDP_CHUNK*)&chunk_buff.udp_chunk);
         write(STDOUT_FILENO, &chunk_buff, sizeof(chunk_buff));
 
         chunk_num ++;
@@ -287,7 +309,7 @@ static int dec_main()
             continue;
         }
 
-        if(ERR_OK != decrypt_chunk(mk, &chunk_buff.udp_chunk))
+        if(ERR_OK != decrypt_chunk(mk, (struct UDP_CHUNK*)&chunk_buff.udp_chunk))
         {
             fprintf(stderr, "Invalid hash! ignoring.\n");
             continue;
@@ -510,12 +532,14 @@ static int recv_main()
         return ERR_ARGV;
     }
     int count = 0;
+    int total_count = 0;
     while(running)
     {
         struct sockaddr_in client_addr = {0};
         client_addr.sin_family = AF_INET;
         socklen_t client_addr_len = sizeof(client_addr);
         struct UDP_FILE_CHUNK chunk = {0};
+        struct UDP_FILE_ACK ack = {.cmd = CMD_ACK_FILE_CHUNK};
         ssize_t bytes_read = recvfrom(ss
                 , &chunk
                 , sizeof(chunk)
@@ -527,7 +551,7 @@ static int recv_main()
             fprintf(stderr, "%ld bytes UDP datagram received\n", bytes_read);
             continue;
         }
-        if(ERR_OK != decrypt_chunk(mk, &chunk))
+        if(ERR_OK != decrypt_chunk(mk, (struct UDP_CHUNK*)&chunk))
         {
             fprintf(stderr, "Invalid hash! ignoring.\n");
             continue;
@@ -543,8 +567,18 @@ static int recv_main()
         int res = write_chunk_to_file(&chunk);
         if(res)
             return res;
-        count ++;
-        fprintf(stderr, "\r==>> received %d chunks", count);
+
+        memset(&ack.arr, 0, sizeof(ack.arr));
+        strcpy(ack.arr[count].file_name, chunk.file_name);
+        ack.arr[count ++].offset = htonl(chunk.offset);
+        if(count == sizeof(ack.arr) / sizeof(ack.arr[0]))
+        {
+            fprintf(stderr, "===>>> ACK\n");
+            encrypt_chunk(mk, (struct UDP_CHUNK*)&ack);
+            count = 0;
+        }
+        total_count ++;
+        fprintf(stderr, "\r==>> received %d chunks", total_count);
     }
     fprintf(stderr, "\n");
     OPENSSL_free(mk);
@@ -562,6 +596,7 @@ static void ctrl_c(int sig)
 
 int main(int argc, char* argv[])
 {
+    fprintf(stderr, "==>> %lu, %lu, %lu\n", sizeof(struct UDP_CHUNK), sizeof(struct UDP_FILE_CHUNK), sizeof(struct UDP_FILE_ACK));
     __argc__ = argc;
     __argv__ = argv;
 
