@@ -85,12 +85,10 @@ struct UDP_FILE_ACK
 {
     uint8_t iv[16];
     uint8_t cmd;
-    uint8_t padding[27];
-    struct
-    {
-        char file_name[32];
-        uint32_t offset;
-    } arr[29];
+    uint8_t padding[13];
+    char file_name[32];
+    uint16_t count;
+    uint32_t off_arr[256];
     uint8_t hash[32];
 };
 #pragma pack(pop)
@@ -209,9 +207,9 @@ static int enc_main()
     {
         struct FILE_CHUNK chunk_buff =
         {
-            .chunk_num = chunk_num
-                , .flag = FLAG_NONE
-                , .send_count = 0
+            .chunk_num = chunk_num,
+            .flag = FLAG_NONE,
+            .send_count = 0
         };
 
         memset(&chunk_buff.udp_chunk, 0x55, sizeof(chunk_buff.udp_chunk));
@@ -490,6 +488,46 @@ static int send_main()
     return res;
 }
 
+static int enc_send_reset_ack(int ss
+        , const struct sockaddr_in *client_addr
+        , uint8_t mk[32]
+        , struct UDP_FILE_ACK* ack
+        , int *count)
+{
+    ack->count = htonl(*count);
+    encrypt_chunk(mk, (struct UDP_CHUNK*)ack);
+    if(sizeof(*ack) != sendto(ss
+                , ack
+                , sizeof(*ack)
+                , 0
+                , (struct sockaddr *)client_addr
+                , sizeof(*client_addr)))
+    {
+        perror("sendto");
+        return ERR_NETWORK;
+    }
+    fprintf(stderr, "===>>> ACK (count = %d)\n", *count);
+    ack->file_name[0] = '\0';
+    *count = 0;
+    return ERR_OK;
+}
+
+static int check_ack_set_file_name(struct UDP_FILE_ACK* ack
+        , const char* file_name
+        , int count)
+{
+    if(0 == count)
+    {
+        strcpy(ack->file_name, file_name);
+        return 0;
+    }
+
+    if(count == sizeof(ack->off_arr) / sizeof(ack->off_arr[0]))
+        return 1;
+
+    return strcmp(ack->file_name, file_name);
+}
+
 static int recv_main()
 {
     if(5 != __argc__)
@@ -536,10 +574,15 @@ static int recv_main()
         fprintf(stderr, "Invalid master key value. Must be 32 bytes length. Hex string.");
         return ERR_ARGV;
     }
-    int count = 0;
     int total_count = 0;
-    struct UDP_FILE_ACK ack = {.cmd = CMD_ACK_FILE_CHUNK};
-    memset(&ack.arr, 0, sizeof(ack.arr));
+    int count = 0;
+    struct UDP_FILE_ACK ack =
+    {
+        .cmd = CMD_ACK_FILE_CHUNK, 
+        .file_name = {0},
+        .count = 0,
+        .off_arr = {0}
+    };
     struct sockaddr_in client_addr = {0};
     client_addr.sin_family = AF_INET;
     socklen_t client_addr_len = sizeof(client_addr);
@@ -556,40 +599,32 @@ static int recv_main()
         int res = ERR_OK;
         if(0 > bytes_read && EWOULDBLOCK == errno)
         {
-            if(!count)
+            if(0 == count)
                 continue;
 
-            if(sizeof(ack) != sendto(ss
-                        , &ack
-                        , sizeof(ack)
-                        , 0
-                        , (struct sockaddr *)&client_addr
-                        , sizeof(client_addr)))
-            {
-                perror("sendto");
-                res = ERR_NETWORK;
+            if((res = enc_send_reset_ack(ss, &client_addr, mk, &ack, &count)))
                 break;
-            }
-            fprintf(stderr, "===>>> ACK (count = %d, TIMEOUT)\n", count);
-            count = 0;
-            memset(&ack.arr, 0, sizeof(ack.arr));
             continue;
         }
+
         if(bytes_read != sizeof(chunk))
         {
             fprintf(stderr, "%ld bytes UDP datagram received\n", bytes_read);
             continue;
         }
+
         if(ERR_OK != decrypt_chunk(mk, (struct UDP_CHUNK*)&chunk))
         {
             fprintf(stderr, "Invalid hash! ignoring.\n");
             continue;
         }
+
         if(CMD_SEND_FILE_CHUNK != chunk.cmd)
         {
             fprintf(stderr, "Not CMD_SEND_FILE_CHUNK command! ignoring.\n");
             continue;
         }
+
         chunk.offset = ntohl(chunk.offset);
         chunk.data_len = ntohs(chunk.data_len);
 
@@ -597,28 +632,15 @@ static int recv_main()
         if(res)
             return res;
 
-        strcpy(ack.arr[count].file_name, chunk.file_name);
-        ack.arr[count ++].offset = htonl(chunk.offset);
-        if(count == sizeof(ack.arr) / sizeof(ack.arr[0]))
+        ack.off_arr[count] = htonl(chunk.offset);
+        if(check_ack_set_file_name(&ack, chunk.file_name, count))
         {
-            encrypt_chunk(mk, (struct UDP_CHUNK*)&ack);
-            if(sizeof(ack) != sendto(ss
-                        , &ack
-                        , sizeof(ack)
-                        , 0
-                        , (struct sockaddr *)&client_addr
-                        , sizeof(client_addr)))
-            {
-                perror("sendto");
-                res = ERR_NETWORK;
+            if((res = enc_send_reset_ack(ss, &client_addr, mk, &ack, &count)))
                 break;
-            }
-            fprintf(stderr, "===>>> ACK (count = %d)\n", count);
-            count = 0;
-            memset(&ack.arr, 0, sizeof(ack.arr));
+            continue;
         }
+        count ++;
         total_count ++;
-        fprintf(stderr, "\r==>> received %d chunks", total_count);
     }
     fprintf(stderr, "\n");
     OPENSSL_free(mk);
