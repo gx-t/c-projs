@@ -551,24 +551,27 @@ static int recv_main()
         perror("socket");
         return ERR_NETWORK;
     }
+
+    int res = ERR_OK;
+    long mk_len = 0;
+    uint8_t* mk = NULL;
+
     if(bind(ss, (struct sockaddr*)&addr, sizeof(addr)) != 0)
     {
-        close(ss);
+        res = ERR_NETWORK;
         perror("bind");
-        return ERR_NETWORK;
+        goto end;
     }
-    struct timeval tv = {.tv_sec = 1, .tv_usec = 0};
 
+    struct timeval tv = {.tv_sec = 1, .tv_usec = 0};
     setsockopt(ss, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    long mk_len = 0;
-    uint8_t* mk = OPENSSL_hexstr2buf(__argv__[4], &mk_len);
+    mk = OPENSSL_hexstr2buf(__argv__[4], &mk_len);
     if(!mk || 2 * AES_BLOCK_SIZE != mk_len)
     {
-        close(ss);
-        OPENSSL_free(mk);
+        res = ERR_ARGV;
         fprintf(stderr, "Invalid master key value. Must be 32 bytes length. Hex string.");
-        return ERR_ARGV;
+        goto end;
     }
     struct UDP_FILE_ACK ack =
     {
@@ -577,9 +580,11 @@ static int recv_main()
         .count = 0,
         .off_arr = {0}
     };
+
     struct sockaddr_in client_addr = {0};
     client_addr.sin_family = AF_INET;
     socklen_t client_addr_len = sizeof(client_addr);
+
     while(running)
     {
         struct UDP_FILE_CHUNK chunk = {0};
@@ -590,7 +595,6 @@ static int recv_main()
                 , (struct sockaddr *)&client_addr
                 , &client_addr_len);
 
-        int res = ERR_OK;
         if(0 > bytes_read && EWOULDBLOCK == errno)
         {
             if((res = push_send_ack(ss, &client_addr, mk, &ack, 0, 0)))
@@ -629,10 +633,11 @@ static int recv_main()
 
         continue;
     }
+end:
     fprintf(stderr, "\n");
     OPENSSL_free(mk);
     close(ss);
-    return ERR_OK;
+    return res;
 }
 
 static void ctrl_c(int sig)
