@@ -488,44 +488,40 @@ static int send_main()
     return res;
 }
 
-static int enc_send_reset_ack(int ss
+static int push_send_ack(int ss
         , const struct sockaddr_in *client_addr
         , uint8_t mk[32]
         , struct UDP_FILE_ACK* ack
-        , int *idx)
-{
-    ack->count = htonl(*idx + 1);
-    encrypt_chunk(mk, (struct UDP_CHUNK*)ack);
-    if(sizeof(*ack) != sendto(ss
-                , ack
-                , sizeof(*ack)
-                , 0
-                , (struct sockaddr *)client_addr
-                , sizeof(*client_addr)))
-    {
-        perror("sendto");
-        return ERR_NETWORK;
-    }
-    fprintf(stderr, "===>>> ACK (idx = %d, count = %d)\n", *idx, *idx + 1);
-    ack->file_name[0] = '\0';
-    *idx = 0;
-    return ERR_OK;
-}
-
-static int check_ack_set_file_name(struct UDP_FILE_ACK* ack
         , const char* file_name
-        , int idx)
+        , uint32_t offset)
 {
-    if(0 == idx)
+    // Add reaction on file name change
+    if(file_name)
     {
-        strcpy(ack->file_name, file_name);
-        return 0;
+        ack->off_arr[ack->count] = htonl(offset);
+        if(0 == ack->count)
+            strcpy(ack->file_name, file_name);
+        ack->count ++;
     }
-
-    if((idx + 1) == sizeof(ack->off_arr) / sizeof(ack->off_arr[0]))
-        return 1;
-
-    return strcmp(ack->file_name, file_name);
+    if((!file_name && ack->count)
+        || (sizeof(ack->off_arr) / sizeof(ack->off_arr[0]) == ack->count))
+    {
+        fprintf(stderr, "===>>> ACK -- %d\n", ack->count);
+        ack->count = htons(ack->count);
+        encrypt_chunk(mk, (struct UDP_CHUNK*)ack);
+        if(sizeof(*ack) != sendto(ss
+                    , ack
+                    , sizeof(*ack)
+                    , 0
+                    , (struct sockaddr *)client_addr
+                    , sizeof(*client_addr)))
+        {
+            perror("sendto");
+            return ERR_NETWORK;
+        }
+        ack->count = 0;
+    }
+    return ERR_OK;
 }
 
 static int recv_main()
@@ -574,7 +570,6 @@ static int recv_main()
         fprintf(stderr, "Invalid master key value. Must be 32 bytes length. Hex string.");
         return ERR_ARGV;
     }
-    int chunk_idx = 0;
     struct UDP_FILE_ACK ack =
     {
         .cmd = CMD_ACK_FILE_CHUNK, 
@@ -598,11 +593,9 @@ static int recv_main()
         int res = ERR_OK;
         if(0 > bytes_read && EWOULDBLOCK == errno)
         {
-            if(0 == chunk_idx)
-                continue;
-
-            if((res = enc_send_reset_ack(ss, &client_addr, mk, &ack, &chunk_idx)))
+            if((res = push_send_ack(ss, &client_addr, mk, &ack, 0, 0)))
                 break;
+
             continue;
         }
 
@@ -631,14 +624,10 @@ static int recv_main()
         if(res)
             return res;
 
-        ack.off_arr[chunk_idx] = htonl(chunk.offset);
-        if(check_ack_set_file_name(&ack, chunk.file_name, chunk_idx))
-        {
-            if((res = enc_send_reset_ack(ss, &client_addr, mk, &ack, &chunk_idx)))
-                break;
-            continue;
-        }
-        chunk_idx ++;
+        if((res = push_send_ack(ss, &client_addr, mk, &ack, chunk.file_name, chunk.offset)))
+            break;
+
+        continue;
     }
     fprintf(stderr, "\n");
     OPENSSL_free(mk);
