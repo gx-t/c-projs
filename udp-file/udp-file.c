@@ -492,9 +492,9 @@ static int enc_send_reset_ack(int ss
         , const struct sockaddr_in *client_addr
         , uint8_t mk[32]
         , struct UDP_FILE_ACK* ack
-        , int *count)
+        , int *idx)
 {
-    ack->count = htonl(*count);
+    ack->count = htonl(*idx + 1);
     encrypt_chunk(mk, (struct UDP_CHUNK*)ack);
     if(sizeof(*ack) != sendto(ss
                 , ack
@@ -506,23 +506,23 @@ static int enc_send_reset_ack(int ss
         perror("sendto");
         return ERR_NETWORK;
     }
-    fprintf(stderr, "===>>> ACK (count = %d)\n", *count);
+    fprintf(stderr, "===>>> ACK (idx = %d, count = %d)\n", *idx, *idx + 1);
     ack->file_name[0] = '\0';
-    *count = 0;
+    *idx = 0;
     return ERR_OK;
 }
 
 static int check_ack_set_file_name(struct UDP_FILE_ACK* ack
         , const char* file_name
-        , int count)
+        , int idx)
 {
-    if(0 == count)
+    if(0 == idx)
     {
         strcpy(ack->file_name, file_name);
         return 0;
     }
 
-    if(count == sizeof(ack->off_arr) / sizeof(ack->off_arr[0]))
+    if((idx + 1) == sizeof(ack->off_arr) / sizeof(ack->off_arr[0]))
         return 1;
 
     return strcmp(ack->file_name, file_name);
@@ -574,8 +574,7 @@ static int recv_main()
         fprintf(stderr, "Invalid master key value. Must be 32 bytes length. Hex string.");
         return ERR_ARGV;
     }
-    int total_count = 0;
-    int count = 0;
+    int chunk_idx = 0;
     struct UDP_FILE_ACK ack =
     {
         .cmd = CMD_ACK_FILE_CHUNK, 
@@ -599,10 +598,10 @@ static int recv_main()
         int res = ERR_OK;
         if(0 > bytes_read && EWOULDBLOCK == errno)
         {
-            if(0 == count)
+            if(0 == chunk_idx)
                 continue;
 
-            if((res = enc_send_reset_ack(ss, &client_addr, mk, &ack, &count)))
+            if((res = enc_send_reset_ack(ss, &client_addr, mk, &ack, &chunk_idx)))
                 break;
             continue;
         }
@@ -632,15 +631,14 @@ static int recv_main()
         if(res)
             return res;
 
-        ack.off_arr[count] = htonl(chunk.offset);
-        if(check_ack_set_file_name(&ack, chunk.file_name, count))
+        ack.off_arr[chunk_idx] = htonl(chunk.offset);
+        if(check_ack_set_file_name(&ack, chunk.file_name, chunk_idx))
         {
-            if((res = enc_send_reset_ack(ss, &client_addr, mk, &ack, &count)))
+            if((res = enc_send_reset_ack(ss, &client_addr, mk, &ack, &chunk_idx)))
                 break;
             continue;
         }
-        count ++;
-        total_count ++;
+        chunk_idx ++;
     }
     fprintf(stderr, "\n");
     OPENSSL_free(mk);
