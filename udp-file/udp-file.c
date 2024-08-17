@@ -54,7 +54,7 @@ static int show_usage(int err, const char* descr)
     fprintf(stderr, "\t%s dec <master-key> <inbox> < <in-file>\n", __argv__[0]);
     fprintf(stderr, "\t%s shuffle <file-name>\n", __argv__[0]);
     fprintf(stderr, "\t%s dump < <file-name>\n", __argv__[0]);
-    fprintf(stderr, "\t%s send <ip> <port> < <in-file>\n", __argv__[0]);
+    fprintf(stderr, "\t%s send <ip> <port> <enc-file>\n", __argv__[0]);
     fprintf(stderr, "\t%s recv <port> <out-dir> <master-key>\n", __argv__[0]);
     return err;
 }
@@ -73,7 +73,7 @@ struct UDP_FILE_CHUNK
 {
     uint8_t iv[16];
     uint8_t cmd;
-    uint8_t padding[9];
+    uint8_t reserved[9];
     char file_name[32];
     uint32_t offset;
     uint16_t data_len;
@@ -85,7 +85,7 @@ struct UDP_FILE_ACK
 {
     uint8_t iv[16];
     uint8_t cmd;
-    uint8_t padding[13];
+    uint8_t reserved[13];
     char file_name[32];
     uint16_t count;
     uint32_t off_arr[256];
@@ -95,6 +95,8 @@ struct UDP_FILE_ACK
 
 struct FILE_CHUNK
 {
+    char file_name[32];
+    uint32_t offset;
     uint16_t chunk_num;
     uint8_t flag;
     uint8_t send_count;
@@ -211,8 +213,9 @@ static int enc_main()
             .flag = FLAG_NONE,
             .send_count = 0
         };
+        strcpy(chunk_buff.file_name, file_name);
 
-        memset(&chunk_buff.udp_chunk, 0x55, sizeof(chunk_buff.udp_chunk));
+        memset(&chunk_buff.udp_chunk, 0x00, sizeof(chunk_buff.udp_chunk));
         chunk_buff.udp_chunk.cmd = CMD_SEND_FILE_CHUNK;
         strcpy(chunk_buff.udp_chunk.file_name, file_name);
         chunk_buff.udp_chunk.offset = htonl(offset);
@@ -329,16 +332,13 @@ static int dec_main()
     return ERR_OK;
 }
 
-static int shuffle_main()
+static struct FILE_CHUNK* open_chunk_file_mapping(const char* file_name, size_t* chunk_count)
 {
-    if(3 != __argc__)
-        return show_usage(ERR_ARGC, "Invalid number of arguments for \"shuffle\" subcommand");
-
-    int fd = open(__argv__[2], O_RDWR);
+    int fd = open(file_name, O_RDWR);
     if(-1 == fd)
     {
-        perror(__argv__[2]);
-        return show_usage(ERR_FILE, "Cannot open the file");
+        perror(file_name);
+        return NULL;
     }
 
     struct stat st;
@@ -346,14 +346,15 @@ static int shuffle_main()
     {
         perror("fstat");
         close(fd);
-        return ERR_FILE;
+        return NULL;
     }
     if(st.st_size % sizeof(struct FILE_CHUNK))
     {
         close(fd);
-        return show_usage(ERR_FILE, "Wrong file size.");
+        fprintf(stderr, "File size must be multiple of FILE_CHUNK\n");
+        return NULL;
     }
-    size_t num_blocks = st.st_size / sizeof(struct FILE_CHUNK);
+    *chunk_count = st.st_size / sizeof(struct FILE_CHUNK);
     struct FILE_CHUNK* data = (struct FILE_CHUNK*)mmap(NULL
             , st.st_size
             , PROT_READ | PROT_WRITE
@@ -365,8 +366,25 @@ static int shuffle_main()
     if(data == MAP_FAILED)
     {
         perror("mmap");
-        return ERR_FILE;
+        return NULL;
     }
+    return data;
+}
+
+static void close_chunk_file_mapping(struct FILE_CHUNK* data, size_t chunk_count)
+{
+    munmap(data, chunk_count * sizeof(struct FILE_CHUNK));
+}
+
+static int shuffle_main()
+{
+    if(3 != __argc__)
+        return show_usage(ERR_ARGC, "Invalid number of arguments for \"shuffle\" subcommand");
+
+    size_t num_blocks = 0;
+    struct FILE_CHUNK* data = open_chunk_file_mapping(__argv__[2], &num_blocks);
+    if(!data)
+        return ERR_FILE;
 
     size_t cnt = 2 * num_blocks;
     while(running && cnt --)
@@ -378,7 +396,7 @@ static int shuffle_main()
         data[i] = tmp;
     }
 
-    munmap(data, st.st_size);
+    close_chunk_file_mapping(data, num_blocks);
     return ERR_OK;
 }
 
@@ -413,11 +431,8 @@ static int dump_main()
     fprintf(stderr, "Block indexes ...\n");
     for(size_t i = 0; running && i < num_blocks; i ++)
     {
-        fprintf(stderr, "%05u ", data[i].chunk_num);
-        if(!(i % 16))
-            fprintf(stderr, "\n");
+        fprintf(stderr, "%s--%05u--%02d\n", data[i].file_name, data[i].chunk_num, data[i].send_count);
     }
-    fprintf(stderr, "\n");
 
     munmap(data, st.st_size);
     return ERR_OK;
@@ -425,7 +440,7 @@ static int dump_main()
 
 static int send_main()
 {
-    if(4 != __argc__)
+    if(5 != __argc__)
         return show_usage(ERR_ARGC, "Invalid number of arguments for \"send\" subcommand");
 
     struct sockaddr_in addr = {0};
@@ -450,29 +465,24 @@ static int send_main()
         perror("socket");
         return ERR_NETWORK;
     }
-    int res = ERR_OK;
-    int count = 0;
-    while(running)
+
+    size_t chunk_count = 0;
+    struct FILE_CHUNK* data = open_chunk_file_mapping(__argv__[4], &chunk_count);
+    if(!data)
     {
-        struct FILE_CHUNK chunk_buff;
-        ssize_t bytes_read = read(STDIN_FILENO, &chunk_buff, sizeof(chunk_buff));
-        if(0 == bytes_read)
-            break; //EOF
-        if(bytes_read != sizeof(chunk_buff))
-        {
-            fprintf(stderr
-                    , "File data chunk of invalid size (%ld vs %lu) read, ignoring.\n"
-                    , bytes_read
-                    , sizeof(chunk_buff));
-            res = ERR_FILE;
-            break;
-        }
-        if(chunk_buff.flag & FLAG_ACK)
+        close(ss);
+        return ERR_FILE;
+    }
+    int res = ERR_OK;
+    int sent_count = 0;
+    for(size_t cnt = 0; running && cnt < chunk_count; cnt ++)
+    {
+        if(data[cnt].flag & FLAG_ACK)
             continue;
 
-        if(sizeof(chunk_buff.udp_chunk) != sendto(ss
-                    , &chunk_buff.udp_chunk
-                    , sizeof(chunk_buff.udp_chunk)
+        if(sizeof(data[cnt].udp_chunk) != sendto(ss
+                    , &data[cnt].udp_chunk
+                    , sizeof(data[cnt].udp_chunk)
                     , 0
                     , (struct sockaddr *)&addr
                     , sizeof(addr)))
@@ -481,10 +491,12 @@ static int send_main()
             res = ERR_NETWORK;
             break;
         }
-        count ++;
+        data[cnt].send_count ++;
+        sent_count ++;
     }
+    close_chunk_file_mapping(data, chunk_count);
     close(ss);
-    fprintf(stderr, "==>> sent %d chunks\n", count);
+    fprintf(stderr, "==>> sent %d chunks\n", sent_count);
     return res;
 }
 
