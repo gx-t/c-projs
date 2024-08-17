@@ -74,8 +74,11 @@ struct UDP_FILE_CHUNK
     uint8_t iv[16];
     uint8_t cmd;
     uint8_t reserved[9];
-    char file_name[32];
-    uint32_t offset;
+    struct
+    {
+        char file_name[32];
+        uint32_t offset;
+    } id;
     uint16_t data_len;
     uint8_t data[CHUNK_SIZE];
     uint8_t hash[32];
@@ -85,18 +88,24 @@ struct UDP_FILE_ACK
 {
     uint8_t iv[16];
     uint8_t cmd;
-    uint8_t reserved[13];
-    char file_name[32];
+    uint8_t reserved[25];
     uint16_t count;
-    uint32_t off_arr[256];
+    struct
+    {
+        char file_name[32];
+        uint32_t offset;
+    } id[29];
     uint8_t hash[32];
 };
 #pragma pack(pop)
 
 struct FILE_CHUNK
 {
-    char file_name[32];
-    uint32_t offset;
+    struct
+    {
+        char file_name[32];
+        uint32_t offset;
+    }id;
     uint16_t chunk_num;
     uint8_t flag;
     uint8_t send_count;
@@ -213,12 +222,12 @@ static int enc_main()
             .flag = FLAG_NONE,
             .send_count = 0
         };
-        strcpy(chunk_buff.file_name, file_name);
+        strcpy(chunk_buff.id.file_name, file_name);
 
         memset(&chunk_buff.udp_chunk, 0x00, sizeof(chunk_buff.udp_chunk));
         chunk_buff.udp_chunk.cmd = CMD_SEND_FILE_CHUNK;
-        strcpy(chunk_buff.udp_chunk.file_name, file_name);
-        chunk_buff.udp_chunk.offset = htonl(offset);
+        strcpy(chunk_buff.udp_chunk.id.file_name, file_name);
+        chunk_buff.udp_chunk.id.offset = htonl(offset);
 
         ssize_t data_len = read(STDIN_FILENO, chunk_buff.udp_chunk.data, CHUNK_SIZE);
         if(0 == data_len)
@@ -250,17 +259,17 @@ static int enc_main()
 
 static int write_chunk_to_file(struct UDP_FILE_CHUNK* chunk)
 {
-    int fd = open(chunk->file_name, O_WRONLY | O_CREAT, 0644);
+    int fd = open(chunk->id.file_name, O_WRONLY | O_CREAT, 0644);
     if(-1 == fd)
     {
-        perror(chunk->file_name);
+        perror(chunk->id.file_name);
         return ERR_FILE;
     }
     int res = ERR_OK;
     do
     {
         lseek(fd, 0, SEEK_SET);
-        if(-1 == lseek(fd, chunk->offset, SEEK_SET))
+        if(-1 == lseek(fd, chunk->id.offset, SEEK_SET))
         {
             perror("lseek");
             res = ERR_FILE;
@@ -321,7 +330,7 @@ static int dec_main()
             fprintf(stderr, "Not CMD_SEND_FILE_CHUNK command! ignoring.\n");
             continue;
         }
-        chunk_buff.udp_chunk.offset = ntohl(chunk_buff.udp_chunk.offset);
+        chunk_buff.udp_chunk.id.offset = ntohl(chunk_buff.udp_chunk.id.offset);
         chunk_buff.udp_chunk.data_len = ntohs(chunk_buff.udp_chunk.data_len);
 
         int res = write_chunk_to_file(&chunk_buff.udp_chunk);
@@ -431,7 +440,7 @@ static int dump_main()
     fprintf(stderr, "Block indexes ...\n");
     for(size_t i = 0; running && i < num_blocks; i ++)
     {
-        fprintf(stderr, "%s--%05u--%02d\n", data[i].file_name, data[i].chunk_num, data[i].send_count);
+        fprintf(stderr, "%s--%05u--%02d\n", data[i].id.file_name, data[i].chunk_num, data[i].send_count);
     }
 
     munmap(data, st.st_size);
@@ -507,16 +516,14 @@ static int push_send_ack(int ss
         , const char* file_name
         , uint32_t offset)
 {
-    // Add reaction on file name change
     if(file_name)
     {
-        ack->off_arr[ack->count] = htonl(offset);
-        if(0 == ack->count)
-            strcpy(ack->file_name, file_name);
+        ack->id[ack->count].offset = htonl(offset);
+        strcpy(ack->id[ack->count].file_name, file_name);
         ack->count ++;
     }
     if((!file_name && ack->count)
-        || (sizeof(ack->off_arr) / sizeof(ack->off_arr[0]) == ack->count))
+        || (sizeof(ack->id) / sizeof(ack->id[0]) == ack->count))
     {
         fprintf(stderr, "===>>> ACK -- %d\n", ack->count);
         ack->count = htons(ack->count);
@@ -588,9 +595,8 @@ static int recv_main()
     struct UDP_FILE_ACK ack =
     {
         .cmd = CMD_ACK_FILE_CHUNK, 
-        .file_name = {0},
         .count = 0,
-        .off_arr = {0}
+        .id = {}
     };
 
     struct sockaddr_in client_addr = {0};
@@ -633,14 +639,14 @@ static int recv_main()
             continue;
         }
 
-        chunk.offset = ntohl(chunk.offset);
+        chunk.id.offset = ntohl(chunk.id.offset);
         chunk.data_len = ntohs(chunk.data_len);
 
         res = write_chunk_to_file(&chunk);
         if(res)
             return res;
 
-        if((res = push_send_ack(ss, &client_addr, mk, &ack, chunk.file_name, chunk.offset)))
+        if((res = push_send_ack(ss, &client_addr, mk, &ack, chunk.id.file_name, chunk.id.offset)))
             break;
 
         continue;
