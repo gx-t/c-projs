@@ -540,7 +540,6 @@ static int send_main()
             }
 
             uint16_t ack_count = htons(ack.count);
-            fprintf(stderr, "===>>> ACK Count: %u\n", ack_count);
             for(uint16_t i = 0; running && i < ack_count; i ++)
             {
                 for(size_t j = 0; running && j < chunk_count; j ++)
@@ -582,7 +581,7 @@ static int send_main()
         fprintf(stderr, "==>> sent %d chunks\n", sent_count);
         if(0 == sent_count)
             break;
-        sleep(1);
+        sleep(3);
     }
 end:
     kill(pid, SIGINT);
@@ -685,12 +684,12 @@ static int recv_main()
         .id = {}
     };
 
+    struct sockaddr_in client_addr = {0};
+    client_addr.sin_family = AF_INET;
+    socklen_t client_addr_len = sizeof(client_addr);
+
     while(running)
     {
-        struct sockaddr_in client_addr = {0};
-        client_addr.sin_family = AF_INET;
-        socklen_t client_addr_len = sizeof(client_addr);
-
         struct UDP_FILE_CHUNK chunk = {0};
         ssize_t bytes_read = recvfrom(ss
                 , &chunk
