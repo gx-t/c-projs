@@ -445,7 +445,11 @@ static int dump_main()
     fprintf(stderr, "Block indexes ...\n");
     for(size_t i = 0; running && i < num_blocks; i ++)
     {
-        fprintf(stderr, "%s--%05u--%02d\n", data[i].id.file_name, data[i].chunk_num, data[i].send_count);
+        fprintf(stdout, "%s--%05u--%02d--%01d\n"
+                , data[i].id.file_name
+                , data[i].chunk_num
+                , data[i].send_count
+                , data[i].flag);
     }
 
     munmap(data, st.st_size);
@@ -545,11 +549,11 @@ static int send_main()
                 for(size_t j = 0; running && j < chunk_count; j ++)
                 {
                     if(!strcmp(data[j].id.file_name, ack.id[i].file_name)
-                        && data[j].id.offset == ntohl(ack.id[i].offset))
-                        {
-                            data[j].flag |= FLAG_ACK;
-                            break;
-                        }
+                            && data[j].id.offset == ntohl(ack.id[i].offset))
+                    {
+                        data[j].flag |= FLAG_ACK;
+                        break;
+                    }
                 }
             }
 
@@ -607,7 +611,7 @@ static int push_send_ack(int ss
         ack->count ++;
     }
     if((!file_name && ack->count)
-        || (sizeof(ack->id) / sizeof(ack->id[0]) == ack->count))
+            || (sizeof(ack->id) / sizeof(ack->id[0]) == ack->count))
     {
         fprintf(stderr, "===>>> ACK -- %d\n", ack->count);
         ack->cmd = CMD_ACK_FILE_CHUNK;
