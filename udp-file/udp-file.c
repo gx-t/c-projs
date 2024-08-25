@@ -517,6 +517,48 @@ static pid_t fork_ack_recv_loop(int ss
     return pid;
 }
 
+static int file_send_loop(int ss
+        , struct sockaddr_in *addr
+        , struct FILE_CHUNK* data
+        , size_t chunk_count
+        , useconds_t sleep_us)
+{
+    int res = ERR_OK;
+    int sent_count = -1;
+    while(running && sent_count)
+    {
+        sent_count = 0;
+        for(size_t cnt = 0; running && cnt < chunk_count; cnt ++)
+        {
+            if(data[cnt].flag & FLAG_ACK)
+                continue;
+
+            if(sizeof(data[cnt].udp_chunk) != sendto(ss
+                        , &data[cnt].udp_chunk
+                        , sizeof(data[cnt].udp_chunk)
+                        , 0
+                        , (struct sockaddr *)addr
+                        , sizeof(*addr)))
+            {
+                if(errno == ENOBUFS)
+                {
+                    perror("sendto");
+                    usleep(sleep_us);
+                    continue;
+                }
+                perror("sendto");
+                res = ERR_NETWORK;
+                break;
+            }
+            data[cnt].sent_count ++;
+            sent_count ++;
+            usleep(sleep_us);
+        }
+        fprintf(stderr, "==>> sent %d chunks\n", sent_count);
+    }
+    return res;
+}
+
 static int send_main()
 {
     if(7 != __argc__)
@@ -527,7 +569,7 @@ static int send_main()
     struct FILE_CHUNK* data = NULL;
     long mk_len = 0;
     uint8_t* mk = NULL;
-    pid_t pid = -1;
+    pid_t ack_pid = -1;
 
     struct sockaddr_in addr = {0};
     addr.sin_family = AF_INET;
@@ -578,49 +620,18 @@ static int send_main()
         sleep_us = SLEEP_DEFAULT_US;
     }
 
-    pid = fork_ack_recv_loop(ss, mk, data, chunk_count);
-    if(-1 == pid)
+    ack_pid = fork_ack_recv_loop(ss, mk, data, chunk_count);
+    if(-1 == ack_pid)
     {
         res = ERR_FORK;
         goto end;
     }
-    if(!pid)
+    if(!ack_pid)
         goto clean;
 
-    int sent_count = -1;
-    while(running && sent_count)
-    {
-        sent_count = 0;
-        for(size_t cnt = 0; running && cnt < chunk_count; cnt ++)
-        {
-            if(data[cnt].flag & FLAG_ACK)
-                continue;
-
-            if(sizeof(data[cnt].udp_chunk) != sendto(ss
-                        , &data[cnt].udp_chunk
-                        , sizeof(data[cnt].udp_chunk)
-                        , 0
-                        , (struct sockaddr *)&addr
-                        , sizeof(addr)))
-            {
-                if(errno == ENOBUFS)
-                {
-                    perror("sendto");
-                    usleep(sleep_us);
-                    continue;
-                }
-                perror("sendto");
-                res = ERR_NETWORK;
-                break;
-            }
-            data[cnt].sent_count ++;
-            sent_count ++;
-            usleep(sleep_us);
-        }
-        fprintf(stderr, "==>> sent %d chunks\n", sent_count);
-    }
+    res = file_send_loop(ss, &addr, data, chunk_count, sleep_us);
 end:
-    kill(pid, SIGINT);
+    kill(ack_pid, SIGINT);
 clean:
     OPENSSL_free(mk);
     close_chunk_file_mapping(data, chunk_count);
