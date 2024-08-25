@@ -553,8 +553,9 @@ static int file_send_loop(int ss
             data[cnt].sent_count ++;
             sent_count ++;
             usleep(sleep_us);
+            fprintf(stderr, "\r==>> sent %d chunks", sent_count);
         }
-        fprintf(stderr, "==>> sent %d chunks\n", sent_count);
+        fprintf(stderr, "\n");
     }
     return res;
 }
