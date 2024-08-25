@@ -469,7 +469,6 @@ static int send_main()
     struct FILE_CHUNK* data = NULL;
     long mk_len = 0;
     uint8_t* mk = NULL;
-    pid_t pid = -1;
 
     struct sockaddr_in addr = {0};
     addr.sin_family = AF_INET;
@@ -520,61 +519,9 @@ static int send_main()
         sleep_us = SLEEP_DEFAULT_US;
     }
 
-    pid = fork();
-    if(-1 == pid)
-    {
-        perror("fork");
-        res = ERR_FORK;
-        goto end;
-    }
-    if(0 == pid)
-    {
-        fprintf(stderr, "===>> Child\n");
-        while(running)
-        {
-            struct UDP_FILE_ACK ack = {0};
-            ssize_t bytes_read = recvfrom(ss
-                    , &ack
-                    , sizeof(ack)
-                    , 0
-                    , NULL
-                    , NULL);
+    struct timeval tv = {.tv_sec = 0, .tv_usec = sleep_us};
+    setsockopt(ss, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-            if(bytes_read != sizeof(ack))
-            {
-                fprintf(stderr, "%ld bytes UDP datagram received\n", bytes_read);
-                continue;
-            }
-
-            if(ERR_OK != decrypt_chunk(mk, (struct UDP_CHUNK*)&ack))
-            {
-                fprintf(stderr, "Invalid hash! ignoring.\n");
-                continue;
-            }
-
-            if(CMD_ACK_FILE_CHUNK != ack.cmd)
-            {
-                fprintf(stderr, "Not CMD_ACK_FILE_CHUNK command! ignoring.\n");
-                continue;
-            }
-
-            uint16_t ack_count = htons(ack.count);
-            for(uint16_t i = 0; running && i < ack_count; i ++)
-            {
-                for(size_t j = 0; running && j < chunk_count; j ++)
-                {
-                    if(!strcmp(data[j].id.file_name, ack.id[i].file_name)
-                            && data[j].id.offset == ntohl(ack.id[i].offset))
-                    {
-                        data[j].flag |= FLAG_ACK;
-                        break;
-                    }
-                }
-            }
-
-        }
-        goto clean;
-    }
     int sent_count = -1;
     while(running && sent_count)
     {
@@ -603,13 +550,56 @@ static int send_main()
             }
             data[cnt].sent_count ++;
             sent_count ++;
-            usleep(sleep_us);
+            while(running)
+            {
+                struct UDP_FILE_ACK ack = {0};
+                ssize_t bytes_read = recvfrom(ss
+                        , &ack
+                        , sizeof(ack)
+                        , 0
+                        , NULL
+                        , NULL);
+
+                if(bytes_read != sizeof(ack))
+                {
+                    if(EWOULDBLOCK == errno)
+                        break;
+
+                    fprintf(stderr, "%ld bytes UDP datagram received\n", bytes_read);
+                    continue;
+                }
+
+                if(ERR_OK != decrypt_chunk(mk, (struct UDP_CHUNK*)&ack))
+                {
+                    fprintf(stderr, "Invalid hash! ignoring.\n");
+                    continue;
+                }
+
+                if(CMD_ACK_FILE_CHUNK != ack.cmd)
+                {
+                    fprintf(stderr, "Not CMD_ACK_FILE_CHUNK command! ignoring.\n");
+                    continue;
+                }
+
+                uint16_t ack_count = htons(ack.count);
+                for(uint16_t i = 0; running && i < ack_count; i ++)
+                {
+                    for(size_t j = 0; running && j < chunk_count; j ++)
+                    {
+                        if(!strcmp(data[j].id.file_name, ack.id[i].file_name)
+                                && data[j].id.offset == ntohl(ack.id[i].offset))
+                        {
+                            data[j].flag |= FLAG_ACK;
+                            break;
+                        }
+                    }
+                }
+
+            }
         }
         fprintf(stderr, "==>> sent %d chunks\n", sent_count);
     }
 end:
-    kill(pid, SIGINT);
-clean:
     OPENSSL_free(mk);
     close_chunk_file_mapping(data, chunk_count);
     close(ss);
