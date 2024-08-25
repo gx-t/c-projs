@@ -591,6 +591,12 @@ static int send_main()
                         , (struct sockaddr *)&addr
                         , sizeof(addr)))
             {
+                if(errno == ENOBUFS)
+                {
+                    perror("sendto");
+                    usleep(sleep_us);
+                    continue;
+                }
                 perror("sendto");
                 res = ERR_NETWORK;
                 break;
