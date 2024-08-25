@@ -17,6 +17,9 @@
 #include <openssl/sha.h>
 
 #define CHUNK_SIZE              1024
+#define SLEEP_MIN_US            100
+#define SLEEP_MAX_US            1000000
+#define SLEEP_DEFAULT_US        200
 
 static int __argc__;
 static char** __argv__;
@@ -56,7 +59,7 @@ static int show_usage(int err, const char* descr)
     fprintf(stderr, "\t%s dec <master-key> <inbox> < <in-file>\n", __argv__[0]);
     fprintf(stderr, "\t%s shuffle <file-name>\n", __argv__[0]);
     fprintf(stderr, "\t%s dump < <file-name>\n", __argv__[0]);
-    fprintf(stderr, "\t%s send <ip> <port> <enc-file> <master key>\n", __argv__[0]);
+    fprintf(stderr, "\t%s send <ip> <port> <enc-file> <master key> <chunk pause us>\n", __argv__[0]);
     fprintf(stderr, "\t%s recv <port> <out-dir> <master-key>\n", __argv__[0]);
     return err;
 }
@@ -110,7 +113,7 @@ struct FILE_CHUNK
     }id;
     uint16_t chunk_num;
     uint8_t flag;
-    uint8_t send_count;
+    uint8_t sent_count;
     struct UDP_FILE_CHUNK udp_chunk;
 };
 
@@ -222,7 +225,7 @@ static int enc_main()
         {
             .chunk_num = chunk_num,
             .flag = FLAG_NONE,
-            .send_count = 0
+            .sent_count = 0
         };
         strcpy(chunk_buff.id.file_name, file_name);
         chunk_buff.id.offset = offset;
@@ -448,7 +451,7 @@ static int dump_main()
         fprintf(stdout, "%s--%05u--%02d--%01d\n"
                 , data[i].id.file_name
                 , data[i].chunk_num
-                , data[i].send_count
+                , data[i].sent_count
                 , data[i].flag);
     }
 
@@ -458,7 +461,7 @@ static int dump_main()
 
 static int send_main()
 {
-    if(6 != __argc__)
+    if(7 != __argc__)
         return show_usage(ERR_ARGC, "Invalid number of arguments for \"send\" subcommand");
 
     int res = ERR_OK;
@@ -503,6 +506,18 @@ static int send_main()
         fprintf(stderr, "Invalid master key value. Must be 32 bytes length. Hex string.");
         res = ERR_ARGV;
         goto end;
+    }
+
+    useconds_t sleep_us = atoi(__argv__[6]);
+    fprintf(stderr, "Chunk send pause time is: %d microseconds\n", sleep_us);
+    if(sleep_us < SLEEP_MIN_US || sleep_us > SLEEP_MAX_US)
+    {
+        fprintf(stderr
+                , "Chunk send pause time is out of range (%d to %d), using default: %d\n"
+                , SLEEP_MIN_US
+                , SLEEP_MAX_US
+                , SLEEP_DEFAULT_US);
+        sleep_us = SLEEP_DEFAULT_US;
     }
 
     pid = fork();
@@ -560,9 +575,10 @@ static int send_main()
         }
         goto clean;
     }
-    while(running)
+    int sent_count = -1;
+    while(running && sent_count)
     {
-        int sent_count = 0;
+        sent_count = 0;
         for(size_t cnt = 0; running && cnt < chunk_count; cnt ++)
         {
             if(data[cnt].flag & FLAG_ACK)
@@ -579,13 +595,11 @@ static int send_main()
                 res = ERR_NETWORK;
                 break;
             }
-            data[cnt].send_count ++;
+            data[cnt].sent_count ++;
             sent_count ++;
+            usleep(sleep_us);
         }
         fprintf(stderr, "==>> sent %d chunks\n", sent_count);
-        if(0 == sent_count)
-            break;
-        sleep(3);
     }
 end:
     kill(pid, SIGINT);
