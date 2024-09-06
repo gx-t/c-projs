@@ -715,7 +715,7 @@ static int recv_main()
         goto end;
     }
 
-    struct timeval tv = {.tv_sec = 1, .tv_usec = 0};
+    struct timeval tv = {.tv_sec = 0, .tv_usec = 100000};
     setsockopt(ss, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
     mk = OPENSSL_hexstr2buf(__argv__[4], &mk_len);
