@@ -17,7 +17,7 @@
 #include <openssl/sha.h>
 
 #define CHUNK_SIZE              1024
-#define SLEEP_MIN_US            100
+#define SLEEP_MIN_US            1
 #define SLEEP_MAX_US            1000000
 #define SLEEP_DEFAULT_US        200
 
