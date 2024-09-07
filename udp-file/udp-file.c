@@ -82,7 +82,7 @@ struct UDP_FILE_CHUNK
     struct
     {
         char file_name[32];
-        uint32_t offset;
+        uint32_t chunk_num;
     } id;
     uint16_t data_len;
     uint8_t data[CHUNK_SIZE];
@@ -98,7 +98,7 @@ struct UDP_FILE_ACK
     struct
     {
         char file_name[32];
-        uint32_t offset;
+        uint32_t chunk_num;
     } id[29];
     uint8_t hash[32];
 };
@@ -109,9 +109,9 @@ struct FILE_CHUNK
     struct
     {
         char file_name[32];
-        uint32_t offset;
+        uint32_t chunk_num;
     }id;
-    uint16_t chunk_num;
+    uint32_t chunk_num;
     uint8_t flag;
     uint8_t sent_count;
     struct UDP_FILE_CHUNK udp_chunk;
@@ -198,9 +198,9 @@ static int enc_main()
     }
     fprintf(stderr, "==>>%lld\n", (long long)st.st_size);
 
-    if((1 > st.st_size) || (0xFFFF * CHUNK_SIZE < st.st_size))
+    if(1 > st.st_size || (off_t)0xFFFFFFFF * CHUNK_SIZE < st.st_size)
     {
-        fprintf(stderr, "Only redirection of files from 1B to 65535KB is supported.\n");
+        fprintf(stderr, "The file must be 1 to 4294967295 bytes length.\n");
         return ERR_FILE;
     }
 
@@ -214,11 +214,10 @@ static int enc_main()
         return show_usage(ERR_ARGV, "Invalid master key value. Must be 32 bytes length. Hex string.");
     }
 
-    uint16_t chunk_count = (st.st_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
+    uint32_t chunk_count = (st.st_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
     fprintf(stderr, "Chunk count: %u\n", chunk_count);
 
-    uint16_t chunk_num = 0;
-    uint32_t offset = 0;
+    uint32_t chunk_num = 0;
     while(running)
     {
         struct FILE_CHUNK chunk_buff =
@@ -228,18 +227,17 @@ static int enc_main()
             .sent_count = 0
         };
         strcpy(chunk_buff.id.file_name, file_name);
-        chunk_buff.id.offset = offset;
+        chunk_buff.id.chunk_num = chunk_num;
 
         memset(&chunk_buff.udp_chunk, 0x00, sizeof(chunk_buff.udp_chunk));
         chunk_buff.udp_chunk.cmd = CMD_SEND_FILE_CHUNK;
         strcpy(chunk_buff.udp_chunk.id.file_name, file_name);
-        chunk_buff.udp_chunk.id.offset = htonl(offset);
+        chunk_buff.udp_chunk.id.chunk_num = htonl(chunk_num);
 
         ssize_t data_len = read(STDIN_FILENO, chunk_buff.udp_chunk.data, CHUNK_SIZE);
         if(0 == data_len)
             break; //EOF
 
-        offset += data_len;
         if(data_len != CHUNK_SIZE)
             fprintf(stderr, "===>>> Last chunk length is %lu\n", data_len);
 
@@ -275,7 +273,7 @@ static int write_chunk_to_file(struct UDP_FILE_CHUNK* chunk)
     do
     {
         lseek(fd, 0, SEEK_SET);
-        if(-1 == lseek(fd, chunk->id.offset, SEEK_SET))
+        if(-1 == lseek(fd, CHUNK_SIZE * (off_t)chunk->id.chunk_num, SEEK_SET))
         {
             perror("lseek");
             res = ERR_FILE;
@@ -336,7 +334,7 @@ static int dec_main()
             fprintf(stderr, "Not CMD_SEND_FILE_CHUNK command! ignoring.\n");
             continue;
         }
-        chunk_buff.udp_chunk.id.offset = ntohl(chunk_buff.udp_chunk.id.offset);
+        chunk_buff.udp_chunk.id.chunk_num = ntohl(chunk_buff.udp_chunk.id.chunk_num);
         chunk_buff.udp_chunk.data_len = ntohs(chunk_buff.udp_chunk.data_len);
 
         int res = write_chunk_to_file(&chunk_buff.udp_chunk);
@@ -448,7 +446,7 @@ static int dump_main()
     fprintf(stderr, "Block indexes ...\n");
     for(size_t i = 0; running && i < num_blocks; i ++)
     {
-        fprintf(stdout, "%s--%05u--%02d--%01d\n"
+        fprintf(stdout, "%s--%08u--%02d--%01d\n"
                 , data[i].id.file_name
                 , data[i].chunk_num
                 , data[i].sent_count
@@ -505,7 +503,7 @@ static pid_t fork_ack_recv_loop(int ss
             for(size_t j = 0; running && j < chunk_count; j ++)
             {
                 if(!strcmp(data[j].id.file_name, ack.id[i].file_name)
-                        && data[j].id.offset == ntohl(ack.id[i].offset))
+                        && data[j].id.chunk_num == ntohl(ack.id[i].chunk_num))
                 {
                     data[j].flag |= FLAG_ACK;
                     break;
@@ -646,11 +644,11 @@ static int push_send_ack(int ss
         , uint8_t mk[32]
         , struct UDP_FILE_ACK* ack
         , const char* file_name
-        , uint32_t offset)
+        , uint32_t chunk_num)
 {
     if(file_name)
     {
-        ack->id[ack->count].offset = htonl(offset);
+        ack->id[ack->count].chunk_num = htonl(chunk_num);
         strcpy(ack->id[ack->count].file_name, file_name);
         ack->count ++;
     }
@@ -772,14 +770,14 @@ static int recv_main()
             continue;
         }
 
-        chunk.id.offset = ntohl(chunk.id.offset);
+        chunk.id.chunk_num = ntohl(chunk.id.chunk_num);
         chunk.data_len = ntohs(chunk.data_len);
 
         res = write_chunk_to_file(&chunk);
         if(res)
             return res;
 
-        if((res = push_send_ack(ss, &client_addr, mk, &ack, chunk.id.file_name, chunk.id.offset)))
+        if((res = push_send_ack(ss, &client_addr, mk, &ack, chunk.id.file_name, chunk.id.chunk_num)))
             break;
 
         continue;
