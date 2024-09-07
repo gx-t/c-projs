@@ -59,8 +59,8 @@ static int show_usage(int err, const char* descr)
     fprintf(stderr, "\t%s dec <master-key> <inbox> < <in-file>\n", __argv__[0]);
     fprintf(stderr, "\t%s shuffle <file-name>\n", __argv__[0]);
     fprintf(stderr, "\t%s dump < <file-name>\n", __argv__[0]);
-    fprintf(stderr, "\t%s send <ip> <port> <enc-file> <master key> <chunk pause us>\n", __argv__[0]);
-    fprintf(stderr, "\t%s recv <port> <out-dir> <master-key>\n", __argv__[0]);
+    fprintf(stderr, "\t%s send <master key> <ip> <port> <enc-file> <chunk pause us>\n", __argv__[0]);
+    fprintf(stderr, "\t%s recv <master-key> <port> <out-dir>\n", __argv__[0]);
     return err;
 }
 
@@ -180,10 +180,28 @@ static void encrypt_chunk(uint8_t mk[2 * AES_BLOCK_SIZE], struct UDP_CHUNK* chun
             , AES_ENCRYPT);
 }
 
+static uint8_t* mk_from_hex(const char* hex_str)
+{
+    long mk_len = 0;
+    uint8_t* mk = OPENSSL_hexstr2buf(__argv__[2], &mk_len);
+    if(mk)
+    {
+        if(2 * AES_BLOCK_SIZE == mk_len)
+            return mk;
+        OPENSSL_free(mk);
+    }
+    fprintf(stderr, "Invalid master key. Must be a 64-character hex string (32 bytes).\n");
+    return NULL;
+}
+
 static int enc_main()
 {
     if(4 != __argc__)
         return show_usage(ERR_ARGC, "Invalid number of arguments for \"enc\" subcommand");
+
+    uint8_t* mk = mk_from_hex(__argv__[2]);
+    if(!mk)
+        return ERR_ARGV;
 
     const char* file_name = __argv__[3];
 
@@ -205,14 +223,6 @@ static int enc_main()
     }
 
     int ret = ERR_OK;
-
-    long mk_len = 0;
-    uint8_t* mk = OPENSSL_hexstr2buf(__argv__[2], &mk_len);
-    if(!mk || 2 * AES_BLOCK_SIZE != mk_len)
-    {
-        OPENSSL_free(mk);
-        return show_usage(ERR_ARGV, "Invalid master key value. Must be 32 bytes length. Hex string.");
-    }
 
     uint32_t chunk_count = (st.st_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
     fprintf(stderr, "Chunk count: %u\n", chunk_count);
@@ -295,18 +305,14 @@ static int dec_main()
     if(4 != __argc__)
         return show_usage(ERR_ARGC, "Invalid number of arguments for \"dec\" subcommand");
 
+    uint8_t* mk = mk_from_hex(__argv__[2]);
+    if(!mk)
+        return ERR_ARGV;
+
     if(chdir(__argv__[3]))
     {
         perror(__argv__[3]);
         return show_usage(ERR_ARGV, "Cannot enter given \"Inbox\" directory");
-    }
-
-    long mk_len = 0;
-    uint8_t* mk = OPENSSL_hexstr2buf(__argv__[2], &mk_len);
-    if(!mk || 2 * AES_BLOCK_SIZE != mk_len)
-    {
-        OPENSSL_free(mk);
-        return show_usage(ERR_ARGV, "Invalid master key value. Must be 32 bytes length. Hex string.");
     }
 
     while(running)
@@ -563,23 +569,25 @@ static int send_main()
     if(7 != __argc__)
         return show_usage(ERR_ARGC, "Invalid number of arguments for \"send\" subcommand");
 
+    uint8_t* mk = mk_from_hex(__argv__[2]);
+    if(!mk)
+        return ERR_ARGV;
+
     int res = ERR_OK;
     size_t chunk_count = 0;
     struct FILE_CHUNK* data = NULL;
-    long mk_len = 0;
-    uint8_t* mk = NULL;
     pid_t ack_pid = -1;
 
     struct sockaddr_in addr = {0};
     addr.sin_family = AF_INET;
 
-    addr.sin_addr.s_addr = inet_addr(__argv__[2]);
+    addr.sin_addr.s_addr = inet_addr(__argv__[3]);
     if(INADDR_NONE == addr.sin_addr.s_addr)
     {
         fprintf(stderr, "Invalid IP address: %s\n", __argv__[3]);
         return ERR_NETWORK;
     }
-    int port = atoi(__argv__[3]);
+    int port = atoi(__argv__[4]);
     if(1024 > port || 0xFFFF < port)
     {
         fprintf(stderr, "Invalid port number: %s. Port number is integer from 1024 to 65565\n", __argv__[4]);
@@ -593,17 +601,10 @@ static int send_main()
         return ERR_NETWORK;
     }
 
-    data = open_chunk_file_mapping(__argv__[4], &chunk_count);
+    data = open_chunk_file_mapping(__argv__[5], &chunk_count);
     if(!data)
     {
         res = ERR_FILE;
-        goto end;
-    }
-    mk = OPENSSL_hexstr2buf(__argv__[5], &mk_len);
-    if(!mk || 2 * AES_BLOCK_SIZE != mk_len)
-    {
-        fprintf(stderr, "Invalid master key value. Must be 32 bytes length. Hex string.");
-        res = ERR_ARGV;
         goto end;
     }
 
@@ -679,19 +680,23 @@ static int recv_main()
     if(5 != __argc__)
         return show_usage(ERR_ARGC, "Invalid number of arguments for \"recv\" subcommand");
 
+    uint8_t* mk = mk_from_hex(__argv__[2]);
+    if(!mk)
+        return ERR_ARGV;
+
     struct sockaddr_in addr = {0};
     addr.sin_family = AF_INET;
 
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    int port = atoi(__argv__[2]);
+    int port = atoi(__argv__[3]);
     if(1024 > port || 0xFFFF < port)
     {
-        fprintf(stderr, "Invalid port number: %s. Port number is integer from 1024 to 65565\n", __argv__[4]);
+        fprintf(stderr, "Invalid port number: %s. Port number is integer from 1024 to 65565\n", __argv__[3]);
         return ERR_ARGV;
     }
-    if(chdir(__argv__[3]))
+    if(chdir(__argv__[4]))
     {
-        perror(__argv__[3]);
+        perror(__argv__[4]);
         return ERR_ARGV;
     }
     addr.sin_port = htons(port);
@@ -703,8 +708,6 @@ static int recv_main()
     }
 
     int res = ERR_OK;
-    long mk_len = 0;
-    uint8_t* mk = NULL;
 
     if(bind(ss, (struct sockaddr*)&addr, sizeof(addr)) != 0)
     {
@@ -716,13 +719,6 @@ static int recv_main()
     struct timeval tv = {.tv_sec = 0, .tv_usec = 100000};
     setsockopt(ss, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    mk = OPENSSL_hexstr2buf(__argv__[4], &mk_len);
-    if(!mk || 2 * AES_BLOCK_SIZE != mk_len)
-    {
-        res = ERR_ARGV;
-        fprintf(stderr, "Invalid master key value. Must be 32 bytes length. Hex string.");
-        goto end;
-    }
     struct UDP_FILE_ACK ack =
     {
         .cmd = CMD_ACK_FILE_CHUNK, 
@@ -798,7 +794,11 @@ static void ctrl_c(int sig)
 
 int main(int argc, char* argv[])
 {
-    fprintf(stderr, "==>> %lu, %lu, %lu\n", sizeof(struct UDP_CHUNK), sizeof(struct UDP_FILE_CHUNK), sizeof(struct UDP_FILE_ACK));
+    fprintf(stderr, "==>> %lu, %lu, %lu\n"
+            , sizeof(struct UDP_CHUNK)
+            , sizeof(struct UDP_FILE_CHUNK)
+            , sizeof(struct UDP_FILE_ACK));
+
     __argc__ = argc;
     __argv__ = argv;
 

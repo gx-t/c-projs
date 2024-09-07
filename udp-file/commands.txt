@@ -1,12 +1,3 @@
-./udp-file enc 55555555555555555555555555555555555555555555555555555555555555FF img1.jpeg < test-data/IMG_20240101_160447_HDR.jpg > /tmp/test.bin && ./udp-file enc 55555555555555555555555555555555555555555555555555555555555555FF img2.mp4 < test-data/IMG_1095-1.MP4 >> /tmp/test.bin && ./udp-file shuffle /tmp/test.bin && ./udp-file send 205.166.94.8 27000 /tmp/test.bin 55555555555555555555555555555555555555555555555555555555555555FF 250
-
-rm -f tmp/inbox/* && ./udp-file recv 27000 /tmp/inbox 55555555555555555555555555555555555555555555555555555555555555FF
-
-diff /tmp/inbox/img1.jpeg test-data/IMG_20240101_160447_HDR.jpg
-diff /tmp/inbox/img2.mp4 test-data/IMG_1095-1.MP4
-
-
 Add total number of chunks? Check if the file is complete
 Last acknowledge can be shorter than 29
 Send how many chunks are not acknoledged instead of total number
-Big file support
