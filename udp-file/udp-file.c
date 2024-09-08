@@ -194,6 +194,17 @@ static uint8_t* mk_from_hex(const char* hex_str)
     return NULL;
 }
 
+static off_t get_file_size(int fd)
+{
+    struct stat st;
+    if(-1 == fstat(STDIN_FILENO, &st))
+    {
+        perror("fstat");
+        return 0;
+    }
+    return st.st_size;
+}
+
 static int enc_main()
 {
     if(4 != __argc__)
@@ -208,15 +219,11 @@ static int enc_main()
     if(31 < strlen(file_name))
         return show_usage(ERR_ARGV, "File name is too long. Must be 1-31.");
 
-    struct stat st;
-    if(-1 == fstat(STDIN_FILENO, &st))
-    {
-        perror("fstat");
-        return ERR_FILE;
-    }
-    fprintf(stderr, "==>>%lld\n", (long long)st.st_size);
+    off_t file_size = get_file_size(STDIN_FILENO);
 
-    if(1 > st.st_size || (off_t)0xFFFFFFFF * CHUNK_SIZE < st.st_size)
+    fprintf(stderr, "==>>%lld\n", (long long)file_size);
+
+    if(1 > file_size || (off_t)0xFFFFFFFF * CHUNK_SIZE < file_size)
     {
         fprintf(stderr, "The file must be 1 to 4294967295 bytes length.\n");
         return ERR_FILE;
@@ -224,7 +231,7 @@ static int enc_main()
 
     int ret = ERR_OK;
 
-    uint32_t chunk_count = (st.st_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
+    uint32_t chunk_count = (file_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
     fprintf(stderr, "Chunk count: %u\n", chunk_count);
 
     uint32_t chunk_num = 0;
@@ -360,22 +367,17 @@ static struct FILE_CHUNK* open_chunk_file_mapping(const char* file_name, size_t*
         return NULL;
     }
 
-    struct stat st;
-    if(-1 == fstat(fd, &st))
-    {
-        perror("fstat");
-        close(fd);
-        return NULL;
-    }
-    if(st.st_size % sizeof(struct FILE_CHUNK))
+    off_t file_size = get_file_size(STDIN_FILENO);
+
+    if(!file_size || file_size % sizeof(struct FILE_CHUNK))
     {
         close(fd);
         fprintf(stderr, "File size must be multiple of FILE_CHUNK\n");
         return NULL;
     }
-    *chunk_count = st.st_size / sizeof(struct FILE_CHUNK);
+    *chunk_count = file_size / sizeof(struct FILE_CHUNK);
     struct FILE_CHUNK* data = (struct FILE_CHUNK*)mmap(NULL
-            , st.st_size
+            , file_size
             , PROT_READ | PROT_WRITE
             , MAP_SHARED
             , fd
@@ -426,18 +428,13 @@ static int dump_main()
     if(2 != __argc__)
         return show_usage(ERR_ARGC, "Invalid number of arguments for \"dump\" subcommand");
 
-    struct stat st;
-    if(-1 == fstat(STDIN_FILENO, &st))
-    {
-        perror("fstat");
-        return ERR_FILE;
-    }
-    if(st.st_size % sizeof(struct FILE_CHUNK))
+    off_t file_size = get_file_size(STDIN_FILENO);
+    if(!file_size || file_size % sizeof(struct FILE_CHUNK))
         return show_usage(ERR_FILE, "Wrong file size.");
 
-    size_t num_blocks = st.st_size / sizeof(struct FILE_CHUNK);
+    size_t num_blocks = file_size / sizeof(struct FILE_CHUNK);
     struct FILE_CHUNK* data = (struct FILE_CHUNK*)mmap(NULL
-            , st.st_size
+            , file_size
             , PROT_READ
             , MAP_SHARED
             , STDIN_FILENO
@@ -459,7 +456,7 @@ static int dump_main()
                 , data[i].flag);
     }
 
-    munmap(data, st.st_size);
+    munmap(data, file_size);
     return ERR_OK;
 }
 
