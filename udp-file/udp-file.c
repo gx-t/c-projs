@@ -55,7 +55,7 @@ enum
 static int show_usage(int err, const char* descr)
 {
     fprintf(stderr, "\n%s\nUsage:\n", descr);
-    fprintf(stderr, "\t%s enc <master-key> <file-name> < <in-file> > <out-file>\n", __argv__[0]);
+    fprintf(stderr, "\t%s enc <master-key> <file-name> <out-file> < <in-file>\n", __argv__[0]);
     fprintf(stderr, "\t%s dec <master-key> <inbox> < <in-file>\n", __argv__[0]);
     fprintf(stderr, "\t%s shuffle <file-name>\n", __argv__[0]);
     fprintf(stderr, "\t%s dump < <file-name>\n", __argv__[0]);
@@ -197,7 +197,7 @@ static uint8_t* mk_from_hex(const char* hex_str)
 static off_t get_file_size(int fd)
 {
     struct stat st;
-    if(-1 == fstat(STDIN_FILENO, &st))
+    if(-1 == fstat(fd, &st))
     {
         perror("fstat");
         return 0;
@@ -207,7 +207,7 @@ static off_t get_file_size(int fd)
 
 static int enc_main()
 {
-    if(4 != __argc__)
+    if(5 != __argc__)
         return show_usage(ERR_ARGC, "Invalid number of arguments for \"enc\" subcommand");
 
     uint8_t* mk = mk_from_hex(__argv__[2]);
@@ -234,36 +234,63 @@ static int enc_main()
     uint32_t chunk_count = (file_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
     fprintf(stderr, "Chunk count: %u\n", chunk_count);
 
+    int fd = open(__argv__[4], O_RDWR | O_CREAT, 0644);
+    if(-1 == fd)
+    {
+        perror(__argv__[4]);
+        return ERR_FILE;
+    }
+
+    if(ftruncate(fd, (off_t)chunk_count * sizeof(struct FILE_CHUNK)))
+    {
+        close(fd);
+        perror("ftruncate");
+        return ERR_FILE;
+    }
+
+    struct FILE_CHUNK* out_data = (struct FILE_CHUNK*)mmap(NULL
+            , (off_t)chunk_count * sizeof(struct FILE_CHUNK)
+            , PROT_WRITE
+            , MAP_SHARED
+            , fd
+            , 0);
+
+    close(fd);
+
+    if(out_data == MAP_FAILED)
+    {
+        perror("mmap");
+        return ERR_FILE;
+    }
+
     uint32_t chunk_num = 0;
+    struct FILE_CHUNK* pp = out_data;
     while(running)
     {
-        struct FILE_CHUNK chunk_buff =
-        {
-            .chunk_num = chunk_num,
-            .flag = FLAG_NONE,
-            .sent_count = 0
-        };
-        strcpy(chunk_buff.id.file_name, file_name);
-        chunk_buff.id.chunk_num = chunk_num;
+        pp->chunk_num = chunk_num;
+        pp->flag = FLAG_NONE;
+        pp->sent_count = 0;
+        strcpy(pp->id.file_name, file_name);
+        pp->id.chunk_num = chunk_num;
 
-        memset(&chunk_buff.udp_chunk, 0x00, sizeof(chunk_buff.udp_chunk));
-        chunk_buff.udp_chunk.cmd = CMD_SEND_FILE_CHUNK;
-        strcpy(chunk_buff.udp_chunk.id.file_name, file_name);
-        chunk_buff.udp_chunk.id.chunk_num = htonl(chunk_num);
+        memset(&pp->udp_chunk, 0x00, sizeof(pp->udp_chunk));
+        pp->udp_chunk.cmd = CMD_SEND_FILE_CHUNK;
+        strcpy(pp->udp_chunk.id.file_name, file_name);
+        pp->udp_chunk.id.chunk_num = htonl(chunk_num);
 
-        ssize_t data_len = read(STDIN_FILENO, chunk_buff.udp_chunk.data, CHUNK_SIZE);
+        ssize_t data_len = read(STDIN_FILENO, pp->udp_chunk.data, CHUNK_SIZE);
         if(0 == data_len)
             break; //EOF
 
         if(data_len != CHUNK_SIZE)
             fprintf(stderr, "===>>> Last chunk length is %lu\n", data_len);
 
-        chunk_buff.udp_chunk.data_len = htons((uint16_t)data_len);
+        pp->udp_chunk.data_len = htons((uint16_t)data_len);
 
-        encrypt_chunk(mk, (struct UDP_CHUNK*)&chunk_buff.udp_chunk);
-        write(STDOUT_FILENO, &chunk_buff, sizeof(chunk_buff));
+        encrypt_chunk(mk, (struct UDP_CHUNK*)&pp->udp_chunk);
 
         chunk_num ++;
+        pp ++;
     }
     if(chunk_num != chunk_count)
     {
@@ -274,6 +301,7 @@ static int enc_main()
     }
     fprintf(stderr, "==>> Processed chunks: %u\n", chunk_num);
 
+    munmap(out_data, chunk_count * sizeof(struct FILE_CHUNK));
     OPENSSL_free(mk);
     return ret;
 }
@@ -367,7 +395,8 @@ static struct FILE_CHUNK* open_chunk_file_mapping(const char* file_name, size_t*
         return NULL;
     }
 
-    off_t file_size = get_file_size(STDIN_FILENO);
+    off_t file_size = get_file_size(fd);
+    fprintf(stderr, "===>>> %lld\n", file_size);
 
     if(!file_size || file_size % sizeof(struct FILE_CHUNK))
     {
@@ -791,7 +820,8 @@ static void ctrl_c(int sig)
 
 int main(int argc, char* argv[])
 {
-    fprintf(stderr, "==>> %lu, %lu, %lu\n"
+    fprintf(stderr, "==>> %lu, %lu, %lu, %lu\n"
+            , sizeof(struct FILE_CHUNK)
             , sizeof(struct UDP_CHUNK)
             , sizeof(struct UDP_FILE_CHUNK)
             , sizeof(struct UDP_FILE_ACK));
