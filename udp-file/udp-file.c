@@ -21,10 +21,9 @@
 #define SLEEP_MAX_US            1000000
 #define SLEEP_DEFAULT_US        200
 
-#define PROC_POOL_SIZE          4
-
-static int __argc__;
-static char** __argv__;
+static int __argc__ = 0;
+static char** __argv__ = NULL;
+static long __cpu_core_count__ = 0;
 
 static int running = 1;
 static int ss = -1;
@@ -901,7 +900,7 @@ static int enc_send_main()
     }
     addr.sin_port = htons(port);
 
-    for(int i = 0; i < PROC_POOL_SIZE; i ++)
+    for(int i = 0; i < __cpu_core_count__; i ++)
     {
         if(!fork())
             return enc_send_file(mk);
@@ -917,7 +916,7 @@ static int enc_send_main()
 
 static void ctrl_c(int sig)
 {
-    fprintf(stderr, "\nSIGINT (%d)\n", getpid());
+    fprintf(stderr, "SIGINT (%d)\n", getpid());
     signal(SIGINT, ctrl_c);
     close(ss);
     fclose(stdin);
@@ -940,6 +939,8 @@ int main(int argc, char* argv[])
 
     signal(SIGINT, ctrl_c);
     srand(time(NULL));
+
+    __cpu_core_count__ = sysconf(_SC_NPROCESSORS_ONLN);
 
     if(!strcmp("enc", argv[1]))
         return enc_main();
