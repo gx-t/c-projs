@@ -21,6 +21,8 @@
 #define SLEEP_MAX_US            1000000
 #define SLEEP_DEFAULT_US        200
 
+#define PROC_POOL_SIZE          4
+
 static int __argc__;
 static char** __argv__;
 
@@ -61,6 +63,7 @@ static int show_usage(int err, const char* descr)
     fprintf(stderr, "\t%s dump < <file-name>\n", __argv__[0]);
     fprintf(stderr, "\t%s send <master key> <ip> <port> <enc-file> <chunk pause us>\n", __argv__[0]);
     fprintf(stderr, "\t%s recv <master-key> <port> <out-dir>\n", __argv__[0]);
+    fprintf(stderr, "\t%s enc-send <master-key> <ip> <port>\n", __argv__[0]);
     return err;
 }
 
@@ -634,7 +637,6 @@ static int send_main()
     if(!mk)
         return ERR_ARGV;
 
-    int res = ERR_OK;
     size_t chunk_count = 0;
     struct FILE_CHUNK* data = NULL;
     pid_t ack_pid = -1;
@@ -645,12 +647,14 @@ static int send_main()
     addr.sin_addr.s_addr = inet_addr(__argv__[3]);
     if(INADDR_NONE == addr.sin_addr.s_addr)
     {
+        OPENSSL_free(mk);
         fprintf(stderr, "Invalid IP address: %s\n", __argv__[3]);
         return ERR_NETWORK;
     }
     int port = atoi(__argv__[4]);
     if(1024 > port || 0xFFFF < port)
     {
+        OPENSSL_free(mk);
         fprintf(stderr, "Invalid port number: %s. Port number is integer from 1024 to 65565\n", __argv__[4]);
         return ERR_NETWORK;
     }
@@ -658,6 +662,7 @@ static int send_main()
     ss = socket(PF_INET, SOCK_DGRAM, 0);
     if(0 > ss)
     {
+        OPENSSL_free(mk);
         perror("socket");
         return ERR_NETWORK;
     }
@@ -665,8 +670,9 @@ static int send_main()
     data = open_chunk_file_mapping(__argv__[5], &chunk_count);
     if(!data)
     {
-        res = ERR_FILE;
-        goto end;
+        close(ss);
+        OPENSSL_free(mk);
+        return ERR_FILE;
     }
 
     useconds_t sleep_us = atoi(__argv__[6]);
@@ -684,20 +690,26 @@ static int send_main()
     ack_pid = fork_ack_recv_loop(ss, mk, data, chunk_count);
     if(-1 == ack_pid)
     {
-        res = ERR_FORK;
-        goto end;
+        close_chunk_file_mapping(data, chunk_count);
+        close(ss);
+        OPENSSL_free(mk);
+        return ERR_FORK;
     }
     if(!ack_pid)
-        goto clean;
+    {
+        close_chunk_file_mapping(data, chunk_count);
+        close(ss);
+        OPENSSL_free(mk);
+        return ERR_OK;
+    }
 
-    res = file_send_loop(ss, &addr, data, chunk_count, sleep_us);
-end:
+    int res = file_send_loop(ss, &addr, data, chunk_count, sleep_us);
+
     kill(ack_pid, SIGINT);
-clean:
-    OPENSSL_free(mk);
+    while(-1 != wait(0));
     close_chunk_file_mapping(data, chunk_count);
     close(ss);
-    while(-1 != wait(0));
+    OPENSSL_free(mk);
     return res;
 }
 
@@ -752,11 +764,13 @@ static int recv_main()
     int port = atoi(__argv__[3]);
     if(1024 > port || 0xFFFF < port)
     {
+        OPENSSL_free(mk);
         fprintf(stderr, "Invalid port number: %s. Port number is integer from 1024 to 65565\n", __argv__[3]);
         return ERR_ARGV;
     }
     if(chdir(__argv__[4]))
     {
+        OPENSSL_free(mk);
         perror(__argv__[4]);
         return ERR_ARGV;
     }
@@ -764,6 +778,7 @@ static int recv_main()
     ss = socket(PF_INET, SOCK_DGRAM, 0);
     if(0 > ss)
     {
+        OPENSSL_free(mk);
         perror("socket");
         return ERR_NETWORK;
     }
@@ -772,9 +787,10 @@ static int recv_main()
 
     if(bind(ss, (struct sockaddr*)&addr, sizeof(addr)) != 0)
     {
-        res = ERR_NETWORK;
+        OPENSSL_free(mk);
+        close(ss);
         perror("bind");
-        goto end;
+        return ERR_NETWORK;
     }
 
     struct timeval tv = {.tv_sec = 0, .tv_usec = 100000};
@@ -839,10 +855,64 @@ static int recv_main()
 
         continue;
     }
-end:
     OPENSSL_free(mk);
     close(ss);
     return res;
+}
+
+static int enc_send_file(uint8_t* mk)
+{
+    fprintf(stderr, "==>>> Child started: %d\n", getpid());
+    char file_path[0x400];
+    while(running && fgets(file_path, sizeof(file_path), stdin))
+    {
+        fprintf(stderr, "===>>> File name came to pid=%d\n", getpid());
+        sleep(1);
+    }
+    OPENSSL_free(mk);
+    return ERR_OK;
+}
+
+static int enc_send_main()
+{
+    if(5 != __argc__)
+        return show_usage(ERR_ARGC, "Invalid number of arguments for \"enc-send\" subcommand");
+
+    uint8_t* mk = mk_from_hex(__argv__[2]);
+    if(!mk)
+        return ERR_ARGV;
+
+    struct sockaddr_in addr = {0};
+    addr.sin_family = AF_INET;
+
+    addr.sin_addr.s_addr = inet_addr(__argv__[3]);
+    if(INADDR_NONE == addr.sin_addr.s_addr)
+    {
+        OPENSSL_free(mk);
+        fprintf(stderr, "Invalid IP address: %s\n", __argv__[3]);
+        return ERR_NETWORK;
+    }
+    int port = atoi(__argv__[4]);
+    if(1024 > port || 0xFFFF < port)
+    {
+        OPENSSL_free(mk);
+        fprintf(stderr, "Invalid port number: %s. Port number is integer from 1024 to 65565\n", __argv__[4]);
+        return ERR_NETWORK;
+    }
+    addr.sin_port = htons(port);
+
+    for(int i = 0; i < PROC_POOL_SIZE; i ++)
+    {
+        if(!fork())
+            return enc_send_file(mk);
+    }
+
+    pid_t pid = -1;
+    while(-1 != (pid = wait(0)))
+        fprintf(stderr, "===>>> Child stopped: %d\n", pid);
+
+    OPENSSL_free(mk);
+    return ERR_OK;
 }
 
 static void ctrl_c(int sig)
@@ -850,6 +920,7 @@ static void ctrl_c(int sig)
     fprintf(stderr, "\nSIGINT (%d)\n", getpid());
     signal(SIGINT, ctrl_c);
     close(ss);
+    fclose(stdin);
     running = 0;
 }
 
@@ -882,6 +953,8 @@ int main(int argc, char* argv[])
         return send_main();
     if(!strcmp("recv", argv[1]))
         return recv_main();
+    if(!strcmp("enc-send", argv[1]))
+        return enc_send_main();
 
     return show_usage(ERR_SUBCMD, "Unknown subcommand");
 }
