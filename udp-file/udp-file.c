@@ -431,7 +431,7 @@ static struct FILE_CHUNK* open_chunk_file_mapping(const char* file_name, size_t*
     }
 
     off_t file_size = get_file_size(fd);
-    fprintf(stderr, "===>>> %lld\n", file_size);
+    fprintf(stderr, "===>>> %lld\n", (long long)file_size);
 
     if(!file_size || file_size % sizeof(struct FILE_CHUNK))
     {
@@ -513,7 +513,7 @@ static int dump_main()
     fprintf(stderr, "Block indexes ...\n");
     for(size_t i = 0; running && i < num_blocks; i ++)
     {
-        fprintf(stdout, "%s--%08u--%02d--%01d\n"
+        fprintf(stdout, "%s--%10u--%02d--%01d\n"
                 , data[i].id.file_name
                 , data[i].chunk_num
                 , data[i].sent_count
