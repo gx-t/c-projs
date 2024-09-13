@@ -35,6 +35,7 @@ enum
         , ERR_SUBCMD
         , ERR_ARGV
         , ERR_FILE
+        , ERR_MAP
         , ERR_ALGO
         , ERR_INVALID_HASH
         , ERR_NETWORK
@@ -203,6 +204,9 @@ static off_t get_file_size(int fd)
         perror("fstat");
         return 0;
     }
+    if(S_ISDIR(st.st_mode))
+        return -1;
+
     return st.st_size;
 }
 
@@ -234,7 +238,7 @@ static int enc_main()
     if(1 > in_file_size || (off_t)0xFFFFFFFF * CHUNK_SIZE < in_file_size)
     {
         close(fd_in);
-        fprintf(stderr, "The input file must be 1 to 4294967295 bytes length.\n");
+        fprintf(stderr, "The input must be file, 1 to 4294967295 bytes length.\n");
         return ERR_FILE;
     }
 
@@ -860,17 +864,70 @@ static int recv_main()
     return res;
 }
 
-static int enc_send_file(uint8_t* mk)
+static void normalize_file_path(char* file_path)
 {
+    while(*file_path && *file_path != '\n')
+        file_path ++;
+    *file_path = 0;
+}
+
+static int enc_send_file(uint8_t* mk, struct sockaddr_in *addr)
+{
+    int res = ERR_OK;
     fprintf(stderr, "==>>> Child started: %d\n", getpid());
+    ss = socket(PF_INET, SOCK_DGRAM, 0);
+    if(0 > ss)
+    {
+        OPENSSL_free(mk);
+        perror("socket");
+        return ERR_NETWORK;
+    }
     char file_path[0x400];
     while(running && fgets(file_path, sizeof(file_path), stdin))
     {
-        fprintf(stderr, "===>>> File name came to pid=%d\n", getpid());
-        sleep(1);
+        fprintf(stderr, "===>>> Activated process: pid=%d\n", getpid());
+        normalize_file_path(file_path);
+        int fd_in = open(file_path, O_RDONLY);
+        if(-1 == fd_in)
+        {
+            perror(file_path);
+            continue;
+        }
+
+        off_t in_file_size = get_file_size(fd_in);
+
+        fprintf(stderr, "===>>> %s, %lld\n", file_path, (long long)in_file_size);
+
+        if(1 > in_file_size || (off_t)0xFFFFFFFF * CHUNK_SIZE < in_file_size)
+        {
+            close(fd_in);
+            fprintf(stderr, "The input must be file, 1 to 4294967295 bytes length.\n");
+            continue;
+        }
+
+        uint32_t chunk_count = (in_file_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
+
+        fprintf(stderr, "===>>> Chunk count: %u\n", chunk_count);
+
+        struct FILE_CHUNK* enc_buff = (struct FILE_CHUNK*)mmap(NULL
+                , (off_t)chunk_count * sizeof(struct FILE_CHUNK)
+                , PROT_READ | PROT_WRITE
+                , MAP_SHARED | MAP_ANONYMOUS
+                , -1
+                , 0);
+
+        if(enc_buff == MAP_FAILED)
+        {
+            res = ERR_MAP;
+            perror("mmap");
+            break;
+        }
+        munmap(enc_buff, chunk_count * sizeof(struct FILE_CHUNK));
+        close(fd_in);
     }
+    close(ss);
     OPENSSL_free(mk);
-    return ERR_OK;
+    return res;
 }
 
 static int enc_send_main()
@@ -906,7 +963,7 @@ static int enc_send_main()
     for(int i = 0; i < __cpu_core_count__; i ++)
     {
         if(!(pid = fork()))
-            return enc_send_file(mk);
+            return enc_send_file(mk, &addr);
 
         if(-1 == pid)
         {
