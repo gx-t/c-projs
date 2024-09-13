@@ -39,6 +39,7 @@ enum
         , ERR_INVALID_HASH
         , ERR_NETWORK
         , ERR_FORK
+        , ERR_CHILD
 };
 
 enum
@@ -900,18 +901,30 @@ static int enc_send_main()
     }
     addr.sin_port = htons(port);
 
+    pid_t pid = -1;
+    int res = ERR_OK;
     for(int i = 0; i < __cpu_core_count__; i ++)
     {
-        if(!fork())
+        if(!(pid = fork()))
             return enc_send_file(mk);
+
+        if(-1 == pid)
+        {
+            kill(-getpgrp(), SIGINT);
+            res = ERR_FORK;
+            break;
+        }
     }
 
-    pid_t pid = -1;
-    while(-1 != (pid = wait(0)))
-        fprintf(stderr, "===>>> Child stopped: %d\n", pid);
-
+    int status = 0;
+    while(-1 != (pid = wait(&status)))
+    {
+        fprintf(stderr, "===>>> Child stopped, pid = %d, status: %d\n", pid, status);
+        if(status)
+            res = ERR_CHILD;
+    }
     OPENSSL_free(mk);
-    return ERR_OK;
+    return res;
 }
 
 static void ctrl_c(int sig)
@@ -931,6 +944,7 @@ int main(int argc, char* argv[])
             , sizeof(struct UDP_FILE_CHUNK)
             , sizeof(struct UDP_FILE_ACK));
 
+    setpgid(0, 0);
     __argc__ = argc;
     __argv__ = argv;
 
