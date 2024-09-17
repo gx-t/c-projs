@@ -23,7 +23,6 @@
 
 static int __argc__ = 0;
 static char** __argv__ = NULL;
-static long __cpu_core_count__ = 0;
 
 static int running = 1;
 static int ss = -1;
@@ -864,11 +863,16 @@ static int recv_main()
     return res;
 }
 
-static void normalize_file_path(char* file_path)
+static const char* normalize_file_path(char* file_path)
 {
+    const char* file_name = file_path;
     while(*file_path && *file_path != '\n')
-        file_path ++;
+    {
+        if('/' == *file_path ++)
+            file_name = file_path;
+    }
     *file_path = 0;
+    return file_name;
 }
 
 static int enc_send_file(uint8_t* mk, struct sockaddr_in *addr)
@@ -886,7 +890,13 @@ static int enc_send_file(uint8_t* mk, struct sockaddr_in *addr)
     while(running && fgets(file_path, sizeof(file_path), stdin))
     {
         fprintf(stderr, "===>>> Activated process: pid=%d\n", getpid());
-        normalize_file_path(file_path);
+        const char* file_name = normalize_file_path(file_path);
+        if((!*file_name) || (31 < strlen(file_name)))
+        {
+            fprintf(stderr, "File name must be 1-31 characters long.\n");
+            continue;
+        }
+
         int fd_in = open(file_path, O_RDONLY);
         if(-1 == fd_in)
         {
@@ -896,14 +906,15 @@ static int enc_send_file(uint8_t* mk, struct sockaddr_in *addr)
 
         off_t in_file_size = get_file_size(fd_in);
 
-        fprintf(stderr, "===>>> %s, %lld\n", file_path, (long long)in_file_size);
+        fprintf(stderr, "===>>> %s, %s, %lld bytes\n", file_path, file_name, (long long)in_file_size);
 
         if(1 > in_file_size || (off_t)0xFFFFFFFF * CHUNK_SIZE < in_file_size)
         {
             close(fd_in);
-            fprintf(stderr, "The input must be file, 1 to 4294967295 bytes length.\n");
+            fprintf(stderr, "The input must be file with 1 to 4294967295 bytes of data.\n");
             continue;
         }
+
 
         uint32_t chunk_count = (in_file_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
 
@@ -922,6 +933,35 @@ static int enc_send_file(uint8_t* mk, struct sockaddr_in *addr)
             perror("mmap");
             break;
         }
+        struct FILE_CHUNK* pp = enc_buff;
+        for(uint32_t chunk_num = 0; running && chunk_num < chunk_count; chunk_num ++, pp ++)
+        {
+            pp->chunk_num = chunk_num;
+            pp->flag = FLAG_NONE;
+            pp->sent_count = 0;
+            strcpy(pp->id.file_name, file_name);
+            pp->id.chunk_num = chunk_num;
+
+            memset(&pp->udp_chunk, 0x00, sizeof(pp->udp_chunk));
+            pp->udp_chunk.cmd = CMD_SEND_FILE_CHUNK;
+            strcpy(pp->udp_chunk.id.file_name, file_name);
+            pp->udp_chunk.id.chunk_num = htonl(chunk_num);
+
+            ssize_t data_len = read(fd_in, pp->udp_chunk.data, CHUNK_SIZE);
+            if(0 == data_len)
+            {
+                fprintf(stderr, "===>>> Error, bytes read must never be zero!\n");
+                break;
+            }
+
+            if(chunk_num == (chunk_count - 1))
+                fprintf(stderr, "===>>> Last chunk length is %lu\n", data_len);
+
+            pp->udp_chunk.data_len = htons((uint16_t)data_len);
+
+            encrypt_chunk(mk, (struct UDP_CHUNK*)&pp->udp_chunk);
+        }
+        fprintf(stderr, "===>>> File finished: %s\n", file_name);
         munmap(enc_buff, chunk_count * sizeof(struct FILE_CHUNK));
         close(fd_in);
     }
@@ -960,7 +1000,8 @@ static int enc_send_main()
 
     pid_t pid = -1;
     int res = ERR_OK;
-    for(int i = 0; i < __cpu_core_count__; i ++)
+    const long cpu_core_count = sysconf(_SC_NPROCESSORS_ONLN);
+    for(int i = 0; i < cpu_core_count; i ++)
     {
         if(!(pid = fork()))
             return enc_send_file(mk, &addr);
@@ -1010,8 +1051,6 @@ int main(int argc, char* argv[])
 
     signal(SIGINT, ctrl_c);
     srand(time(NULL));
-
-    __cpu_core_count__ = sysconf(_SC_NPROCESSORS_ONLN);
 
     if(!strcmp("enc", argv[1]))
         return enc_main();
