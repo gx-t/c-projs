@@ -797,7 +797,7 @@ static int recv_main()
         return ERR_NETWORK;
     }
 
-    struct timeval tv = {.tv_sec = 0, .tv_usec = 10};
+    struct timeval tv = {.tv_sec = 0, .tv_usec = 10000};
     setsockopt(ss, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
     struct UDP_FILE_ACK ack =
