@@ -336,7 +336,7 @@ static int enc_main()
     if(chunk_num != chunk_count)
     {
         fprintf(stderr
-                , "Algo error! Calculated number of chunks = %u, prceeded = %u\n"
+                , "Algo error! Calculated number of chunks = %u, proceeded = %u\n"
                 , chunk_count, chunk_num);
         ret = ERR_ALGO;
     }
@@ -967,7 +967,8 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
         perror("socket");
         return ERR_NETWORK;
     }
-    struct timeval tv = {.tv_sec = 0, .tv_usec = 100};
+
+    struct timeval tv = {.tv_sec = 0, .tv_usec = 1};
     setsockopt(ss, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
     char file_path[0x400];
@@ -1002,7 +1003,7 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
 
         uint32_t chunk_count = (in_file_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
 
-        fprintf(stderr, "===>>> Chunk count: %u\n", chunk_count);
+        fprintf(stderr, "===>>> %s chunk count: %u\n", file_name, chunk_count);
 
         struct FILE_CHUNK* enc_buff = (struct FILE_CHUNK*)mmap(NULL
                 , (off_t)chunk_count * sizeof(struct FILE_CHUNK)
@@ -1040,7 +1041,7 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
             }
 
             if(chunk_num == (chunk_count - 1))
-                fprintf(stderr, "===>>> Last chunk length is %lu\n", data_len);
+                fprintf(stderr, "\n===>>> Last chunk length is %lu\n", data_len);
 
             pp->udp_chunk.data_len = htons((uint16_t)data_len);
 
@@ -1048,20 +1049,22 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
             if((res = send_chunk(ss, addr, pp, &sent_chunks)))
                 break;
             process_ack(mk, ss, chunk_count, enc_buff);
+            fprintf(stderr, "\r==>> %s encrypted and sent %u", file_name, chunk_num);
         }
-        while(running)
+        fprintf(stderr, "\n====>>>> %s encryption finished\n", file_name);
+        while(running && sent_chunks)
         {
-            uint32_t sent_chunks = 0;
+            sent_chunks = 0;
             for(uint32_t chunk_num = 0; running && chunk_num < chunk_count; chunk_num ++, pp ++)
             {
                 if((res = send_chunk(ss, addr, &enc_buff[chunk_num], &sent_chunks)))
                     break;
+                fprintf(stderr, "\r==>> %s checked or sent %u", file_name, chunk_num);
                 process_ack(mk, ss, chunk_count, enc_buff);
             }
-            if(0 == sent_chunks) // all ack received
-                break;
+            fprintf(stderr, "\n");
         }
-        fprintf(stderr, "===>>> File finished: %s, sent chunks: %u\n", file_name, sent_chunks);
+        fprintf(stderr, "===>>> File sent: %s\n", file_name);
         munmap(enc_buff, chunk_count * sizeof(struct FILE_CHUNK));
         close(fd_in);
     }
