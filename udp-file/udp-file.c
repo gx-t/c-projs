@@ -21,7 +21,7 @@
 #define SLEEP_MAX_US            1000000
 #define SLEEP_DEFAULT_US        200
 #define SENDTO_BUFF_PAUSE_US    1000
-#define MAX_SEND_ROUND          2
+#define MAX_SEND_ROUND          16
 
 static int __argc__ = 0;
 static char** __argv__ = NULL;
@@ -1019,7 +1019,7 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
         return ERR_NETWORK;
     }
 
-    struct timeval tv = {.tv_sec = 0, .tv_usec = 10}; //Adjust this
+    struct timeval tv = {.tv_sec = 0, .tv_usec = 1000}; //Adjust this
     setsockopt(ss, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
     char file_path[0x400];
