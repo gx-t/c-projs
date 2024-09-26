@@ -943,7 +943,8 @@ static int send_chunk(int ss
 
 static int process_ack(uint8_t* mk, int ss, uint32_t chunk_count, struct FILE_CHUNK* chunks)
 {
-    while(running)
+    int ack_count_to_send = 29;
+    while(running && ack_count_to_send)
     {
         struct UDP_FILE_ACK ack = {0};
         ssize_t bytes_read = recvfrom(ss
@@ -1002,7 +1003,7 @@ static int process_ack(uint8_t* mk, int ss, uint32_t chunk_count, struct FILE_CH
                 }
             }
         }
-
+        ack_count_to_send --;
     }
     return ERR_OK;
 }
@@ -1101,6 +1102,7 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
                 break;
             fprintf(stderr, "\r====>>>> %s encrypted and sent: %u", file_name, chunk_num);
         }
+        close(fd_in);
         fprintf(stderr, "\n====>>>> %s encryption finished, %u chunks sent\n", file_name, sent_chunks);
         fprintf(stderr, "====>>>> Starting send rounds for %s\n", file_name);
         int send_round = 0;
@@ -1117,7 +1119,6 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
         fprintf(stderr, "====>>>> File send finished: %s, %u/%u, %u/%u\n", file_name, sent_chunks, chunk_count, send_round, MAX_SEND_ROUND);
         dump_file_chunk_statistics(enc_buff, chunk_count);
         munmap(enc_buff, chunk_count * sizeof(struct FILE_CHUNK));
-        close(fd_in);
     }
     close(ss);
     OPENSSL_free(mk);
