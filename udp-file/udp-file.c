@@ -15,6 +15,7 @@
 #include <openssl/rand.h>
 #include <openssl/aes.h>
 #include <openssl/sha.h>
+#include <time.h>
 
 #define CHUNK_SIZE              1024
 #define SLEEP_MIN_US            1
@@ -806,7 +807,7 @@ static int recv_main()
         return ERR_NETWORK;
     }
 
-    struct timeval tv = {.tv_sec = 0, .tv_usec = 10000};
+    struct timeval tv = {.tv_sec = 0, .tv_usec = 100000};
     setsockopt(ss, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
     struct UDP_FILE_ACK ack =
@@ -994,7 +995,7 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
         return ERR_NETWORK;
     }
 
-    struct timeval tv = {.tv_sec = 0, .tv_usec = 1000}; //Adjust this
+    struct timeval tv = {.tv_sec = 0, .tv_usec = 500}; //Adjust this
     setsockopt(ss, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
     char file_path[0x400];
@@ -1046,6 +1047,8 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
         }
         struct FILE_CHUNK* pp = enc_buff;
         uint32_t sent_chunks = 0;
+        clock_t t1, t2;
+        t1 = clock();
         for(uint32_t chunk_num = 0; running && chunk_num < chunk_count; chunk_num ++, pp ++)
         {
             pp->chunk_num = chunk_num;
@@ -1090,7 +1093,14 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
                     break;
             }
         }
-        fprintf(stderr, "====>>>> File send finished: %s, %u/%u, %u/%u\n", file_name, sent_chunks, chunk_count, send_round, MAX_SEND_ROUND);
+        t2 = clock();
+        fprintf(stderr, "====>>>> File send finished: %s, %u/%u, %u/%u. %f sec\n"
+                , file_name
+                , sent_chunks
+                , chunk_count
+                , send_round
+                , MAX_SEND_ROUND
+                , (double)(t2 - t1) / CLOCKS_PER_SEC);
         dump_file_chunk_statistics(enc_buff, chunk_count);
         munmap(enc_buff, chunk_count * sizeof(struct FILE_CHUNK));
     }
