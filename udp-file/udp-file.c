@@ -539,24 +539,6 @@ static int dump_main()
     munmap(data, file_size);
     return ERR_OK;
 }
-/*
-static int cmp_file_chunk_id(const void* p1, const void* p2)
-{
-    const struct FILE_CHUNK* chunk1 = (const struct FILE_CHUNK*)p1;
-    const struct FILE_CHUNK* chunk2 = (const struct FILE_CHUNK*)p2;
-
-    int res = strcmp(chunk1->id.file_name, chunk2->id.file_name);
-    if(res)
-        return res;
-
-    if(chunk1->id.chunk_num < chunk2->id.chunk_num)
-        return -1;
-
-    if(chunk1->id.chunk_num > chunk2->id.chunk_num)
-        return 1;
-
-    return 0;
-}*/
 
 static pid_t fork_ack_recv_loop(int ss
         , uint8_t mk[2 * AES_BLOCK_SIZE]
@@ -978,30 +960,22 @@ static int process_ack(uint8_t* mk, int ss, uint32_t chunk_count, struct FILE_CH
         uint16_t ack_count = htons(ack.count);
         for(uint16_t i = 0; running && i < ack_count; i ++)
         {
-//            struct FILE_CHUNK_ID key = ack.id[i]; 
-//            key.chunk_num = ntohl(key.chunk_num);
-//
-//            struct FILE_CHUNK* chunk = bsearch(&key
-//                    , chunks
-//                    , chunk_count
-//                    , sizeof(chunks[0])
-//                    , cmp_file_chunk_id);
-//
-//            if(!chunk)
-//            {
-//                fprintf(stderr, "!!! Chunk not found, must never happen! %s %u\n", chunk->id.file_name, chunk->id.chunk_num);
-//                return ERR_GENERAL;
-//            }
-//            chunk->flag |= FLAG_ACK;
-            for(uint32_t j = 0; running && j < chunk_count; j ++)
+            uint32_t chunk_num = ntohl(ack.id[i].chunk_num);
+            if(chunk_num >= chunk_count
+                    || strncmp(ack.id[i].file_name
+                        , chunks[chunk_num].id.file_name
+                        , sizeof(ack.id[i].file_name))
+                    || chunk_num != chunks[chunk_num].id.chunk_num)
             {
-                if(!strcmp(chunks[j].id.file_name, ack.id[i].file_name)
-                        && chunks[j].id.chunk_num == ntohl(ack.id[i].chunk_num))
-                {
-                    chunks[j].flag |= FLAG_ACK;
-                    break;
-                }
+                fprintf(stderr, "!!! Chunk not found, must never happen! %s %u %s %u, %u\n"
+                        , ack.id[i].file_name
+                        , chunk_num
+                        , chunks[chunk_num].id.file_name
+                        , chunks[chunk_num].id.chunk_num
+                        , chunk_count);
+                return ERR_GENERAL;
             }
+            chunks[chunk_num].flag |= FLAG_ACK;
         }
         ack_count_to_send --;
     }
