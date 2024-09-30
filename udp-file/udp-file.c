@@ -3,6 +3,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <dirent.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
@@ -23,6 +24,7 @@
 #define SLEEP_DEFAULT_US        200
 #define SENDTO_BUFF_PAUSE_US    1000
 #define MAX_SEND_ROUND          16
+#define OUTBOX_SCAN_PAUSE_US    500000
 
 static int __argc__ = 0;
 static char** __argv__ = NULL;
@@ -67,7 +69,7 @@ static int show_usage(int err, const char* descr)
     fprintf(stderr, "\t%s dump < <file-name>\n", __argv__[0]);
     fprintf(stderr, "\t%s send <master key> <ip> <port> <enc-file> <chunk pause us>\n", __argv__[0]);
     fprintf(stderr, "\t%s recv <master-key> <port> <out-dir>\n", __argv__[0]);
-    fprintf(stderr, "\t%s enc-send <master-key> <ip> <port>\n", __argv__[0]);
+    fprintf(stderr, "\t%s enc-send <master-key> <ip> <port> <root>\n", __argv__[0]);
     return err;
 }
 
@@ -983,6 +985,39 @@ static int process_ack(uint8_t* mk, int ss, uint32_t chunk_count, struct FILE_CH
     return ERR_OK;
 }
 
+static int open_outbox_file(char file_name[32])
+{
+    *file_name = 0;
+    int fd = -1;
+    char tmp_name[32] = {};
+    sprintf(tmp_name, ".%d", getpid());
+    DIR *dir = opendir("outbox");
+    if(!dir)
+    {
+        perror("outbox");
+        return fd;
+    }
+    struct dirent *entry = NULL;
+
+    while(running
+            && (entry = readdir(dir))
+            && ('.' == entry->d_name[0]
+                || entry->d_type != DT_REG
+                || 31 < strlen(entry->d_name)
+                || rename(entry->d_name, tmp_name))
+         );
+    if(entry)
+    {
+        fd = open(tmp_name, O_RDONLY);
+        if(-1 == fd)
+            perror(tmp_name);
+        unlink(tmp_name);
+        strcpy(file_name, entry->d_name);
+    }
+    closedir(dir);
+    return fd;
+}
+
 static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
 {
     int res = ERR_OK;
@@ -1111,8 +1146,14 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
 
 static int enc_send_main()
 {
-    if(5 != __argc__)
+    if(6 != __argc__)
         return show_usage(ERR_ARGC, "Invalid number of arguments for \"enc-send\" subcommand");
+
+    if(chdir(__argv__[5]))
+    {
+        perror(__argv__[5]);
+        return ERR_ARGV;
+    }
 
     uint8_t* mk = mk_from_hex(__argv__[2]);
     if(!mk)
