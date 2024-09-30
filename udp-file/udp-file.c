@@ -69,7 +69,7 @@ static int show_usage(int err, const char* descr)
     fprintf(stderr, "\t%s dump < <file-name>\n", __argv__[0]);
     fprintf(stderr, "\t%s send <master key> <ip> <port> <enc-file> <chunk pause us>\n", __argv__[0]);
     fprintf(stderr, "\t%s recv <master-key> <port> <out-dir>\n", __argv__[0]);
-    fprintf(stderr, "\t%s enc-send <master-key> <ip> <port> <root>\n", __argv__[0]);
+    fprintf(stderr, "\t%s enc-send <master-key> <ip> <port> <outbox>\n", __argv__[0]);
     return err;
 }
 
@@ -876,19 +876,6 @@ static int recv_main()
     return res;
 }
 
-static const char* normalize_file_path(char* file_path)
-{
-    const char* file_name = file_path;
-    while(*file_path && *file_path != '\n')
-    {
-        if('/' == *file_path ++)
-            file_name = file_path;
-    }
-    *file_path = 0;
-    return file_name;
-}
-
-// TODO: use binary search to find the chunk that corresponds to ACK
 static int send_chunk(int ss
         , const struct sockaddr_in* addr
         , struct FILE_CHUNK* chunk
@@ -985,39 +972,6 @@ static int process_ack(uint8_t* mk, int ss, uint32_t chunk_count, struct FILE_CH
     return ERR_OK;
 }
 
-static int open_outbox_file(char file_name[32])
-{
-    *file_name = 0;
-    int fd = -1;
-    char tmp_name[32] = {};
-    sprintf(tmp_name, ".%d", getpid());
-    DIR *dir = opendir("outbox");
-    if(!dir)
-    {
-        perror("outbox");
-        return fd;
-    }
-    struct dirent *entry = NULL;
-
-    while(running
-            && (entry = readdir(dir))
-            && ('.' == entry->d_name[0]
-                || entry->d_type != DT_REG
-                || 31 < strlen(entry->d_name)
-                || rename(entry->d_name, tmp_name))
-         );
-    if(entry)
-    {
-        fd = open(tmp_name, O_RDONLY);
-        if(-1 == fd)
-            perror(tmp_name);
-        unlink(tmp_name);
-        strcpy(file_name, entry->d_name);
-    }
-    closedir(dir);
-    return fd;
-}
-
 static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
 {
     int res = ERR_OK;
@@ -1033,27 +987,57 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
     struct timeval tv = {.tv_sec = 0, .tv_usec = 500}; //Adjust this
     setsockopt(ss, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
-    char file_path[0x400];
-    while(running && fgets(file_path, sizeof(file_path), stdin))
+    char file_name[32];
+    while(running)
     {
-        fprintf(stderr, "===>>> Activated process: pid=%d\n", getpid());
-        const char* file_name = normalize_file_path(file_path);
-        if((!*file_name) || (31 < strlen(file_name)))
+        int fd_in = -1;
+        DIR *dir = opendir(".");
+        if(!dir)
         {
-            fprintf(stderr, "File name must be 1-31 characters long.\n");
-            continue;
+            perror("outbox");
+            res = ERR_FILE;
+            break;
         }
+        while(running)
+        {
+            struct dirent* entry = readdir(dir);
+            if(!entry)
+                break;
+            if('.' == entry->d_name[0] || entry->d_type != DT_REG)
+                continue;
 
-        int fd_in = open(file_path, O_RDONLY);
+            if(31 < strlen(entry->d_name))
+            {
+                fprintf(stderr, "====>>>> file name: %s is too long. Deleting.\n", entry->d_name);
+                unlink(entry->d_name);
+                continue;
+            }
+
+            char tmp_name[32] = {};
+            sprintf(tmp_name, ".data-%d", getpid());
+            if(!rename(entry->d_name, tmp_name))
+            {
+                fprintf(stderr, "====>>>> Found file: %s\n", entry->d_name);
+                fd_in = open(tmp_name, O_RDONLY);
+                unlink(tmp_name);
+                strcpy(file_name, entry->d_name);
+                break;
+            }
+        }
+        closedir(dir);
+
         if(-1 == fd_in)
         {
-            perror(file_path);
+            sleep(1);
             continue;
         }
 
         off_t in_file_size = get_file_size(fd_in);
 
-        fprintf(stderr, "===>>> %s, %s, %lld bytes\n", file_path, file_name, (long long)in_file_size);
+        fprintf(stderr, "===>>> pid=%d, %s, %lld bytes\n"
+                , getpid()
+                , file_name
+                , (long long)in_file_size);
 
         if(1 > in_file_size || (off_t)0xFFFFFFFF * CHUNK_SIZE < in_file_size)
         {
@@ -1061,7 +1045,6 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
             fprintf(stderr, "The input must be file with 1 to 4294967295 bytes of data.\n");
             continue;
         }
-
 
         uint32_t chunk_count = (in_file_size + CHUNK_SIZE - 1) / CHUNK_SIZE;
 
@@ -1080,10 +1063,12 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
             perror("mmap");
             continue;
         }
+
         struct FILE_CHUNK* pp = enc_buff;
         uint32_t sent_chunks = 0;
         clock_t t1, t2;
         t1 = clock();
+
         for(uint32_t chunk_num = 0; running && chunk_num < chunk_count; chunk_num ++, pp ++)
         {
             pp->chunk_num = chunk_num;
@@ -1115,9 +1100,12 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
             fprintf(stderr, "\r====>>>> %s encrypted and sent: %u", file_name, chunk_num);
         }
         close(fd_in);
+
         fprintf(stderr, "\n====>>>> %s encryption finished, %u chunks sent\n", file_name, sent_chunks);
         fprintf(stderr, "====>>>> Starting send rounds for %s\n", file_name);
+
         int send_round = 0;
+
         while(running && sent_chunks && (MAX_SEND_ROUND > ++ send_round))
         {
             sent_chunks = 0;
