@@ -1036,7 +1036,7 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
             encrypt_chunk(mk, (struct UDP_CHUNK*)&pp->udp_chunk);
             if((res = send_chunk(ss, addr, pp, &sent_chunks, mk, chunk_count, enc_buff, process_ack)))
                 break;
-            fprintf(stderr, "====>>>> %s encrypted and sent: %u\n", file_name, chunk_num);
+            fprintf(stderr, ".");
         }
         close(fd_in);
 
@@ -1053,10 +1053,11 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
             {
                 if((res = send_chunk(ss, addr, pp, &sent_chunks, mk, chunk_count, enc_buff, process_ack)))
                     break;
+                fprintf(stderr, ".");
             }
         }
         t2 = clock();
-        fprintf(stderr, "====>>>> File send finished: %s, %u/%u, %u/%u. %f sec\n"
+        fprintf(stderr, "\n====>>>> File send finished: %s, %u/%u, %u/%u. %f sec\n"
                 , file_name
                 , sent_chunks
                 , chunk_count
