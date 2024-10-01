@@ -828,7 +828,7 @@ static int recv_main()
         if((res = send_ack(ss, &client_addr, chunk.id.file_name, chunk.id.chunk_num)))
             break;
 
-        fprintf(stderr, "====>>>> ACK: %s, %u\n", chunk.id.file_name, chunk.id.chunk_num);
+        fprintf(stderr, ".");
         continue;
     }
     fprintf(stderr, "\n");
