@@ -102,12 +102,7 @@ struct UDP_FILE_CHUNK
 
 struct UDP_FILE_ACK
 {
-    uint8_t iv[16];
-    uint8_t cmd;
-    uint8_t reserved[25];
-    uint16_t count;
-    struct FILE_CHUNK_ID id[29];
-    uint8_t hash[32];
+    struct FILE_CHUNK_ID id;
 };
 #pragma pack(pop)
 
@@ -545,7 +540,7 @@ static int dump_main()
 
 static pid_t fork_ack_recv_loop(int ss
         , uint8_t mk[2 * AES_BLOCK_SIZE]
-        , struct FILE_CHUNK* data
+        , struct FILE_CHUNK* chunks
         , size_t chunk_count)
 {
     pid_t pid = fork();
@@ -560,7 +555,7 @@ static pid_t fork_ack_recv_loop(int ss
     fprintf(stderr, "===>> Acknowledge receive loop\n");
     while(running)
     {
-        struct UDP_FILE_ACK ack = {0};
+        struct UDP_FILE_ACK ack = {};
         ssize_t bytes_read = recvfrom(ss
                 , &ack
                 , sizeof(ack)
@@ -571,32 +566,18 @@ static pid_t fork_ack_recv_loop(int ss
         if(bytes_read != sizeof(ack))
             continue;
 
-        if(ERR_OK != decrypt_chunk(mk, (struct UDP_CHUNK*)&ack))
+        ack.id.chunk_num = ntohl(ack.id.chunk_num);
+        if(ack.id.chunk_num >= chunk_count
+            || strcmp(chunks[ack.id.chunk_num].id.file_name, ack.id.file_name)
+            || chunks[ack.id.chunk_num].id.chunk_num != ack.id.chunk_num)
         {
-            fprintf(stderr, "Invalid hash! ignoring.\n");
+            fprintf(stderr, "====>>>> INVALID ACK: %s, %u, %lu\n"
+                    , ack.id.file_name
+                    , ack.id.chunk_num
+                    , chunk_count);
             continue;
         }
-
-        if(CMD_ACK_FILE_CHUNK != ack.cmd)
-        {
-            fprintf(stderr, "Not CMD_ACK_FILE_CHUNK command! ignoring.\n");
-            continue;
-        }
-
-        uint16_t ack_count = htons(ack.count);
-        for(uint16_t i = 0; running && i < ack_count; i ++)
-        {
-            for(size_t j = 0; running && j < chunk_count; j ++)
-            {
-                if(!strcmp(data[j].id.file_name, ack.id[i].file_name)
-                        && data[j].id.chunk_num == ntohl(ack.id[i].chunk_num))
-                {
-                    data[j].flag |= FLAG_ACK;
-                    break;
-                }
-            }
-        }
-
+        chunks[ack.id.chunk_num].flag |= FLAG_ACK;
     }
     return pid;
 }
@@ -637,7 +618,7 @@ static int file_send_loop(int ss
             data[cnt].sent_count ++;
             sent_count ++;
             usleep(sleep_us);
-            fprintf(stderr, "\r==>> sent %d chunks", sent_count);
+            fprintf(stderr, "==>> sent %d chunks\n", sent_count);
         }
         fprintf(stderr, "\n");
     }
@@ -729,37 +710,23 @@ static int send_main()
     return res;
 }
 
-static int push_send_ack(int ss
+static int send_ack(int ss
         , const struct sockaddr_in *client_addr
-        , uint8_t mk[32]
-        , struct UDP_FILE_ACK* ack
         , const char* file_name
         , uint32_t chunk_num)
 {
-    if(file_name)
+    struct UDP_FILE_ACK ack = {};
+    strcpy(ack.id.file_name, file_name);
+    ack.id.chunk_num = htonl(chunk_num);
+    if(sizeof(ack) != sendto(ss
+                , &ack
+                , sizeof(ack)
+                , 0
+                , (struct sockaddr *)client_addr
+                , sizeof(*client_addr)))
     {
-        ack->id[ack->count].chunk_num = htonl(chunk_num);
-        strcpy(ack->id[ack->count].file_name, file_name);
-        ack->count ++;
-    }
-    if((!file_name && ack->count)
-            || (sizeof(ack->id) / sizeof(ack->id[0]) == ack->count))
-    {
-        fprintf(stderr, "===>>> ACK -- %d\n", ack->count);
-        ack->cmd = CMD_ACK_FILE_CHUNK;
-        ack->count = htons(ack->count);
-        encrypt_chunk(mk, (struct UDP_CHUNK*)ack);
-        if(sizeof(*ack) != sendto(ss
-                    , ack
-                    , sizeof(*ack)
-                    , 0
-                    , (struct sockaddr *)client_addr
-                    , sizeof(*client_addr)))
-        {
-            perror("sendto");
-            return ERR_NETWORK;
-        }
-        ack->count = 0;
+        perror("sendto");
+        return ERR_NETWORK;
     }
     return ERR_OK;
 }
@@ -809,16 +776,6 @@ static int recv_main()
         return ERR_NETWORK;
     }
 
-    struct timeval tv = {.tv_sec = 0, .tv_usec = 100000};
-    setsockopt(ss, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-
-    struct UDP_FILE_ACK ack =
-    {
-        .cmd = CMD_ACK_FILE_CHUNK, 
-        .count = 0,
-        .id = {}
-    };
-
     struct sockaddr_in client_addr = {0};
     client_addr.sin_family = AF_INET;
     socklen_t client_addr_len = sizeof(client_addr);
@@ -833,12 +790,14 @@ static int recv_main()
                 , (struct sockaddr *)&client_addr
                 , &client_addr_len);
 
-        if(0 > bytes_read && EWOULDBLOCK == errno)
+        if(0 > bytes_read)
         {
-            if((res = push_send_ack(ss, &client_addr, mk, &ack, NULL, 0)))
-                break;
-
-            continue;
+            if(running)
+            {
+                perror("recvfrom");
+                res = ERR_NETWORK;
+            }
+            break;
         }
 
         if(bytes_read != sizeof(chunk))
@@ -866,11 +825,13 @@ static int recv_main()
         if(res)
             return res;
 
-        if((res = push_send_ack(ss, &client_addr, mk, &ack, chunk.id.file_name, chunk.id.chunk_num)))
+        if((res = send_ack(ss, &client_addr, chunk.id.file_name, chunk.id.chunk_num)))
             break;
 
+        fprintf(stderr, "====>>>> ACK: %s, %u\n", chunk.id.file_name, chunk.id.chunk_num);
         continue;
     }
+    fprintf(stderr, "\n");
     OPENSSL_free(mk);
     close(ss);
     return res;
@@ -883,7 +844,7 @@ static int send_chunk(int ss
         , uint8_t* mk
         , uint32_t chunk_count
         , struct FILE_CHUNK* chunks
-        , int (*process_ack_proc)(uint8_t*, int, uint32_t, struct FILE_CHUNK*))
+        , int (*process_ack_proc)(int, uint32_t, struct FILE_CHUNK*))
 {
     if(chunk->flag & FLAG_ACK)
         return ERR_OK;
@@ -900,7 +861,7 @@ static int send_chunk(int ss
             perror("sendto");
             if(errno == ENOBUFS)
             {
-                process_ack_proc(mk, ss, chunk_count, chunks);
+                process_ack_proc(ss, chunk_count, chunks);
                 continue;
             }
             return ERR_NETWORK;
@@ -909,13 +870,13 @@ static int send_chunk(int ss
     }
     chunk->sent_count ++;
     (*sent_chunks) ++;
-    process_ack_proc(mk, ss, chunk_count, chunks);
+    process_ack_proc(ss, chunk_count, chunks);
     return ERR_OK;
 }
 
-static int process_ack(uint8_t* mk, int ss, uint32_t chunk_count, struct FILE_CHUNK* chunks)
+static int process_ack(int ss, uint32_t chunk_count, struct FILE_CHUNK* chunks)
 {
-    int ack_count_to_send = 29;
+    int ack_count_to_send = 32;
     while(running && ack_count_to_send)
     {
         struct UDP_FILE_ACK ack = {0};
@@ -931,43 +892,21 @@ static int process_ack(uint8_t* mk, int ss, uint32_t chunk_count, struct FILE_CH
 
         if(bytes_read != sizeof(ack)) //wrong UDP datagram
         {
-            fprintf(stderr, "%ld bytes UDP datagram received\n", bytes_read);
+            fprintf(stderr, "%ld bytes ACK data received, wrong\n", bytes_read);
             continue;
         }
-
-        if(ERR_OK != decrypt_chunk(mk, (struct UDP_CHUNK*)&ack))
+        ack.id.chunk_num = ntohl(ack.id.chunk_num);
+        if(ack.id.chunk_num >= chunk_count
+                || strcmp(chunks[ack.id.chunk_num].id.file_name, ack.id.file_name)
+                || chunks[ack.id.chunk_num].id.chunk_num != ack.id.chunk_num)
         {
-            fprintf(stderr, "Invalid hash! ignoring.\n");
+            fprintf(stderr, "====>>>> INVALID ACK: %s, %u, %u\n"
+                    , ack.id.file_name
+                    , ack.id.chunk_num
+                    , chunk_count);
             continue;
         }
-
-        if(CMD_ACK_FILE_CHUNK != ack.cmd)
-        {
-            fprintf(stderr, "Not CMD_ACK_FILE_CHUNK command! ignoring.\n");
-            continue;
-        }
-
-        uint16_t ack_count = htons(ack.count);
-        for(uint16_t i = 0; running && i < ack_count; i ++)
-        {
-            uint32_t chunk_num = ntohl(ack.id[i].chunk_num);
-            if(chunk_num >= chunk_count
-                    || strncmp(ack.id[i].file_name
-                        , chunks[chunk_num].id.file_name
-                        , sizeof(ack.id[i].file_name))
-                    || chunk_num != chunks[chunk_num].id.chunk_num)
-            {
-                fprintf(stderr, "!!! Chunk not found, must never happen! %s %u %s %u, %u\n"
-                        , ack.id[i].file_name
-                        , chunk_num
-                        , chunks[chunk_num].id.file_name
-                        , chunks[chunk_num].id.chunk_num
-                        , chunk_count);
-                return ERR_GENERAL;
-            }
-            chunks[chunk_num].flag |= FLAG_ACK;
-        }
-        ack_count_to_send --;
+        chunks[ack.id.chunk_num].flag |= FLAG_ACK;
     }
     return ERR_OK;
 }
@@ -1097,7 +1036,7 @@ static int enc_send_file(uint8_t* mk, const struct sockaddr_in* addr)
             encrypt_chunk(mk, (struct UDP_CHUNK*)&pp->udp_chunk);
             if((res = send_chunk(ss, addr, pp, &sent_chunks, mk, chunk_count, enc_buff, process_ack)))
                 break;
-            fprintf(stderr, "\r====>>>> %s encrypted and sent: %u", file_name, chunk_num);
+            fprintf(stderr, "====>>>> %s encrypted and sent: %u\n", file_name, chunk_num);
         }
         close(fd_in);
 
