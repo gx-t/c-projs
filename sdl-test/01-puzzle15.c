@@ -8,11 +8,18 @@ const static int cellWidth = 50;
 const static int boardX = 50;
 const static int boardY = 50;
 static int boardState[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0};
-
-static void tileNumToRect(SDL_Rect* rc, int tileNum)
+static int board[4][4] =
 {
-    rc->x = (tileNum % 4) * cellWidth;
-    rc->y = (tileNum / 4) * cellWidth;
+    {1, 2, 3, 4},
+    {5, 6, 7, 8},
+    {9, 10, 11, 12},
+    {13, 14, 15, 0}
+};
+
+static void tileNumToRect(SDL_Rect* rc, int x, int y)
+{
+    rc->x = x * cellWidth;
+    rc->y = y * cellWidth;
     rc->w = cellWidth;
     rc->h = cellWidth;
 }
@@ -22,42 +29,44 @@ static void prepareSprite(SDL_Renderer* rend, SDL_Texture* sprite)
     TTF_Font* font = TTF_OpenFont(TTF_PATH, cellWidth / 2);
     const SDL_Color numColor = {0xFF, 0xFF, 0xFF, 0xFF};
 
-    for(int num = 0; num < 16; num ++)
-    {
-        SDL_Rect rc;
-        tileNumToRect(&rc, num);
+    for(int y = 0; y < 4; y ++)
+        for(int x = 0; x < 4; x ++)
+        {
+            SDL_Rect rc;
+            tileNumToRect(&rc, x, y);
 
-        SDL_SetRenderDrawColor(rend, 0, 0xFF, 0x00, 0xFF);
-        SDL_SetRenderTarget(rend, sprite);
-        SDL_RenderDrawRect(rend, &rc);
+            SDL_SetRenderDrawColor(rend, 0, 0xFF, 0x00, 0xFF);
+            SDL_SetRenderTarget(rend, sprite);
+            SDL_RenderDrawRect(rend, &rc);
 
-        if(!num)
-            continue;
+            int num = x + 4 * y;
+            if(!num)
+                continue;
 
-        char str[8] = {0};
+            char str[8] = {0};
 
-        if(num)
-            sprintf(str, "%d", num);
-        SDL_Surface* surface = TTF_RenderText_Blended(font, str, numColor);
-        SDL_Texture* tmpText = SDL_CreateTextureFromSurface(rend, surface);
-        SDL_FreeSurface(surface);
+            if(num)
+                sprintf(str, "%d", num);
+            SDL_Surface* surface = TTF_RenderText_Blended(font, str, numColor);
+            SDL_Texture* tmpText = SDL_CreateTextureFromSurface(rend, surface);
+            SDL_FreeSurface(surface);
 
-        SDL_QueryTexture(tmpText, NULL, NULL, &rc.w, &rc.h);
-        rc.x += (cellWidth - rc.w) / 2;
-        rc.y += (cellWidth - rc.h) / 2;
-        SDL_SetRenderTarget(rend, sprite);
-        SDL_RenderCopy(rend, tmpText, NULL, &rc);
-        SDL_DestroyTexture(tmpText);
-    }
+            SDL_QueryTexture(tmpText, NULL, NULL, &rc.w, &rc.h);
+            rc.x += (cellWidth - rc.w) / 2;
+            rc.y += (cellWidth - rc.h) / 2;
+            SDL_SetRenderTarget(rend, sprite);
+            SDL_RenderCopy(rend, tmpText, NULL, &rc);
+            SDL_DestroyTexture(tmpText);
+        }
 
     TTF_CloseFont(font);
 }
 
-static void copyTile(SDL_Renderer* rend, SDL_Texture* sprite, int idxTile, int posBoard)
+static void copyTile(SDL_Renderer* rend, SDL_Texture* sprite, int num, int x, int y)
 {
     SDL_Rect src, dst;
-    tileNumToRect(&src, idxTile);
-    tileNumToRect(&dst, posBoard);
+    tileNumToRect(&src, num % 4, num / 4);
+    tileNumToRect(&dst, x, y);
     dst.x += boardX;
     dst.y += boardY;
     SDL_RenderCopy(rend, sprite, &src, &dst);
@@ -68,53 +77,55 @@ static void drawBoard(SDL_Renderer* rend, SDL_Texture* sprite)
     SDL_SetRenderTarget(rend, NULL);
     SDL_SetRenderDrawColor(rend, 0x55, 0x55, 0x55, 0xFF);
     SDL_RenderClear(rend);
-    for(int num = 0; num < 16; num ++)
-        copyTile(rend, sprite, boardState[num], num);
+    for(int y = 0; y < 4; y ++)
+        for(int x = 0; x < 4; x ++)
+            copyTile(rend, sprite, board[y][x], x, y);
 }
 
-static int numFromCoord(int x, int y)
+static void find_empty(int* x, int* y)
 {
-    x -= boardX;
-    y -= boardY;
-    if(0 > x || 0 > y)
-        return -1;
-
-    int num = (x / cellWidth) + 4 * (y / cellWidth);
-
-    if(15 < num)
-        return -1;
-
-    return num;
-}
-
-static void swapTile(SDL_Renderer* rend, SDL_Texture* sprite, int num)
-{
-    int numEmpty = 0;
-    while(boardState[numEmpty])
-        numEmpty ++;
-
-    if(((num / 4 == numEmpty / 4) && (1 == abs(num - numEmpty)))
-            || ((num % 4 == numEmpty % 4) && (4 == abs(num - numEmpty))))
+    for(*y = 0; *y < 4; (*y) ++)
     {
-        int tmp = boardState[num];
-        boardState[num] = boardState[numEmpty];
-        boardState[numEmpty] = tmp;
+        for(*x = 0; *x < 4; (*x) ++)
+        {
+            if(!board[*y][*x])
+                return;
+        }
+    }
+}
+
+static void swapTile(SDL_Renderer* rend, SDL_Texture* sprite, int x, int y)
+{
+    int x_empty = 0;
+    int y_empty = 0;
+
+    find_empty(&x_empty, &y_empty);
+
+    if(((x_empty == x) && (1 == abs(y_empty - y)))
+        || ((y_empty == y) && (1 == abs(x_empty - x))))
+    {
+        board[y_empty][x_empty] = board[y][x];
+        board[y][x] = 0;
     }
 }
 
 static void handleLeftClick(SDL_Renderer* rend, SDL_Texture* sprite, int x, int y)
 {
-    int numClicked = numFromCoord(x, y);
-    if(0 > numClicked)
+    x -= boardX;
+    y -= boardY;
+    if(0 > x || 0 > y)
         return;
 
-    swapTile(rend, sprite, numClicked);
+    x /= cellWidth;
+    y /= cellWidth;
+
+    swapTile(rend, sprite, x, y);
 }
 
 static void shuffle(SDL_Renderer* rend, SDL_Texture* sprite)
 {
     for(int i = 0; i < 10000; i ++)
-        swapTile(rend, sprite, rand() % 16);
+        swapTile(rend, sprite, rand() % 4, rand() % 4);
 }
 
 int main()
