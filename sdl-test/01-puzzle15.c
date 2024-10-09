@@ -30,6 +30,7 @@ static void prepareSprite(SDL_Renderer* rend, SDL_Texture* sprite)
     const SDL_Color numColor = {0xFF, 0xFF, 0xFF, 0xFF};
 
     for(int y = 0; y < 4; y ++)
+    {
         for(int x = 0; x < 4; x ++)
         {
             SDL_Rect rc;
@@ -58,40 +59,9 @@ static void prepareSprite(SDL_Renderer* rend, SDL_Texture* sprite)
             SDL_RenderCopy(rend, tmpText, NULL, &rc);
             SDL_DestroyTexture(tmpText);
         }
+    }
 
     TTF_CloseFont(font);
-}
-
-static void copyTile(SDL_Renderer* rend, SDL_Texture* sprite, int num, int x, int y)
-{
-    SDL_Rect src, dst;
-    tileNumToRect(&src, num % 4, num / 4);
-    tileNumToRect(&dst, x, y);
-    dst.x += boardX;
-    dst.y += boardY;
-    SDL_RenderCopy(rend, sprite, &src, &dst);
-}
-
-static void drawBoard(SDL_Renderer* rend, SDL_Texture* sprite)
-{
-    SDL_SetRenderTarget(rend, NULL);
-    SDL_SetRenderDrawColor(rend, 0x55, 0x55, 0x55, 0xFF);
-    SDL_RenderClear(rend);
-    for(int y = 0; y < 4; y ++)
-        for(int x = 0; x < 4; x ++)
-            copyTile(rend, sprite, board[y][x], x, y);
-}
-
-static void find_empty(int* x, int* y)
-{
-    for(*y = 0; *y < 4; (*y) ++)
-    {
-        for(*x = 0; *x < 4; (*x) ++)
-        {
-            if(!board[*y][*x])
-                return;
-        }
-    }
 }
 
 static void swapTile(SDL_Renderer* rend, SDL_Texture* sprite, int x, int y)
@@ -99,8 +69,16 @@ static void swapTile(SDL_Renderer* rend, SDL_Texture* sprite, int x, int y)
     int x_empty = 0;
     int y_empty = 0;
 
-    find_empty(&x_empty, &y_empty);
+    for(y_empty = 0; y_empty < 4; y_empty ++)
+    {
+        for(x_empty = 0; x_empty < 4; x_empty ++)
+        {
+            if(!board[y_empty][x_empty])
+                goto found;
+        }
+    }
 
+found:
     if(((x_empty == x) && (1 == abs(y_empty - y)))
         || ((y_empty == y) && (1 == abs(x_empty - x))))
     {
@@ -182,7 +160,22 @@ int main()
                 }
             }
         }
-        drawBoard(rend, sprite);
+        //draw the board
+        SDL_SetRenderTarget(rend, NULL);
+        SDL_SetRenderDrawColor(rend, 0x55, 0x55, 0x55, 0xFF);
+        SDL_RenderClear(rend);
+        for(int y = 0; y < 4; y ++)
+        {
+            for(int x = 0; x < 4; x ++)
+            {
+                SDL_Rect src, dst;
+                tileNumToRect(&src, board[y][x] % 4, board[y][x] / 4);
+                tileNumToRect(&dst, x, y);
+                dst.x += boardX;
+                dst.y += boardY;
+                SDL_RenderCopy(rend, sprite, &src, &dst);
+            }
+        }
         SDL_RenderPresent(rend);
 
         if(shuffling)
