@@ -71,19 +71,25 @@ static void swapTile(SDL_Renderer* rend, SDL_Texture* sprite, int x, int y)
 
     for(y_empty = 0; y_empty < 4; y_empty ++)
     {
-        for(x_empty = 0; x_empty < 4; x_empty ++)
-        {
-            if(!board[y_empty][x_empty])
-                goto found;
-        }
-    }
+        if(board[y_empty][x])
+            continue;
+        if(1 != abs(y_empty - y))
+            return;
 
-found:
-    if(((x_empty == x) && (1 == abs(y_empty - y)))
-        || ((y_empty == y) && (1 == abs(x_empty - x))))
-    {
-        board[y_empty][x_empty] = board[y][x];
+        board[y_empty][x] = board[y][x];
         board[y][x] = 0;
+        return;
+    }
+    for(x_empty = 0; x_empty < 4; x_empty ++)
+    {
+        if(board[y][x_empty])
+            continue;
+        if(1 != abs(x_empty - x))
+            return;
+
+        board[y][x_empty] = board[y][x];
+        board[y][x] = 0;
+        return;
     }
 }
 
