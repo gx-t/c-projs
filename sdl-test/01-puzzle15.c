@@ -16,6 +16,9 @@ static int board[4][4] =
     {13, 14, 15, 0}
 };
 
+static int x_empty = 3;
+static int y_empty = 3;
+
 static void tileNumToRect(SDL_Rect* rc, int x, int y)
 {
     rc->x = x * cellWidth;
@@ -66,29 +69,26 @@ static void prepareSprite(SDL_Renderer* rend, SDL_Texture* sprite)
 
 static void swapTile(SDL_Renderer* rend, SDL_Texture* sprite, int x, int y)
 {
-    int x_empty = 0;
-    int y_empty = 0;
-
-    for(y_empty = 0; y_empty < 4; y_empty ++)
+    if(x_empty == x)
     {
-        if(board[y_empty][x])
-            continue;
-        if(1 != abs(y_empty - y))
-            return;
-
-        board[y_empty][x] = board[y][x];
-        board[y][x] = 0;
+        int y_dist = y - y_empty;
+        int step = (y_dist > 0) - (y_dist < 0);
+        for(; y_empty != y; y_empty += step)
+        {
+            board[y_empty][x] = board[y_empty + step][x];
+            board[y_empty + step][x] = 0;
+        }
         return;
     }
-    for(x_empty = 0; x_empty < 4; x_empty ++)
+    if(y_empty == y)
     {
-        if(board[y][x_empty])
-            continue;
-        if(1 != abs(x_empty - x))
-            return;
-
-        board[y][x_empty] = board[y][x];
-        board[y][x] = 0;
+        int x_dist = x - x_empty;
+        int step = (x_dist > 0) - (x_dist < 0);
+        for(; x_empty != x; x_empty += step)
+        {
+            board[y][x_empty] = board[y][x_empty + step];
+            board[y][x_empty + step] = 0;
+        }
         return;
     }
 }
