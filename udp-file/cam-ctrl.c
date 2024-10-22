@@ -93,6 +93,11 @@ static int ctrl_main(int arc, char* argv[])
 
 static int filter_main(int argc, char* argv[])
 {
+    enum
+    {
+        ACK_OFF = 1,
+        ACK_ON  = 2
+    } mode = ACK_ON;
     const char file_ready[] = "Complete download. File:";
     while(running)
     {
@@ -102,27 +107,22 @@ static int filter_main(int argc, char* argv[])
         char* ss = strstr(buff, file_ready);
         if(ss)
         {
-            fprintf(stdout, "%s", ss + sizeof(file_ready));
+            ss += sizeof(file_ready);
+            if(ACK_OFF == mode)
+                *--ss = '-';
+            fprintf(stdout, "%s", ss);
             continue;
         }
-        if(strstr(buff, "enc on"))
+        if('-' == *buff)
         {
-            fprintf(stderr, "enc on\n");
-            continue;
-        }
-        if(strstr(buff, "enc off"))
-        {
-            fprintf(stderr, "enc off\n");
-            continue;
-        }
-        if(strstr(buff, "ack on"))
-        {
-            fprintf(stderr, "ack on\n");
-            continue;
-        }
-        if(strstr(buff, "ack off"))
-        {
+            mode = ACK_OFF;
             fprintf(stderr, "ack off\n");
+            continue;
+        }
+        if('+' == *buff)
+        {
+            mode = ACK_ON;
+            fprintf(stderr, "ack on\n");
             continue;
         }
     }

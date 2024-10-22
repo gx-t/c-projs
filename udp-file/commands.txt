@@ -1,3 +1,8 @@
 Add total number of chunks? Check if the file is complete
 Last acknowledge can be shorter than 29
 Send how many chunks are not acknoledged instead of total number
+
+cp test-data/IMG_20240101_160447_HDR.jpg /tmp && echo -/tmp/IMG_20240101_160447_HDR.jpg | ./udp-file enc 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF
+rm /tmp/inbox/*.jpg && ./udp-file recv 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF 27000 /tmp/inbox
+diff /tmp/inbox/IMG_20240101_160447_HDR.jpg test-data/IMG_20240101_160447_HDR.jpg
+echo -/tmp/IMG_20240101_160447_HDR.jpg | ./udp-file send 00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF 127.0.0.1 27000 100

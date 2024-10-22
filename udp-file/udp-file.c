@@ -60,6 +60,11 @@ enum
         , FLAG_ACK = 1
 };
 
+enum
+{
+    UDP_FILE_NEED_ACK = 1
+};
+
 static int show_usage(int err, const char* descr)
 {
     fprintf(stderr, "\n%s\nUsage:\n", descr);
@@ -92,7 +97,8 @@ struct UDP_FILE_CHUNK
 {
     uint8_t iv[16];
     uint8_t cmd;
-    uint8_t reserved[9];
+    uint8_t use_ack : 1;
+    uint8_t reserved[8];
     struct FILE_CHUNK_ID id;
     uint16_t data_len;
     uint8_t data[CHUNK_SIZE];
@@ -203,15 +209,22 @@ static off_t get_file_size(int fd)
     return st.st_size;
 }
 
-static const char* normalize_file_path(char* file_path)
+static const char* parse_file_cmd(char* file_cmd, const char** file_path, uint8_t* use_ack)
 {
-    const char* file_name = file_path;
-    while(*file_path && *file_path != '\n')
+    *use_ack = 1;
+    if('-' == *file_cmd)
     {
-        if('/' == *file_path ++)
-            file_name = file_path;
+        *use_ack = 0;
+        file_cmd ++;
     }
-    *file_path = 0;
+    const char* file_name = file_cmd;
+    *file_path = file_cmd;
+    while(*file_cmd && *file_cmd != '\n')
+    {
+        if('/' == *file_cmd ++)
+            file_name = file_cmd;
+    }
+    *file_cmd = 0;
     return file_name;
 }
 
@@ -225,10 +238,12 @@ static int enc_main()
         return ERR_ARGV;
 
     int ret = ERR_OK;
-    char file_path[256] = {};
-    while(running && fgets(file_path, sizeof(file_path), stdin))
+    char file_cmd[256] = {};
+    while(running && fgets(file_cmd, sizeof(file_cmd), stdin))
     {
-        const char* file_name = normalize_file_path(file_path);
+        uint8_t use_ack = 0;
+        const char* file_path = NULL;
+        const char* file_name = parse_file_cmd(file_cmd, &file_path, &use_ack);
 
         if(31 < strlen(file_name))
             return show_usage(ERR_ARGV, "File name is too long. Must be 1-31.");
@@ -319,6 +334,7 @@ static int enc_main()
 
             memset(&pp_out->udp_chunk, 0x00, sizeof(pp_out->udp_chunk));
             pp_out->udp_chunk.cmd = CMD_SEND_FILE_CHUNK;
+            pp_out->udp_chunk.use_ack = use_ack;
             strcpy(pp_out->udp_chunk.id.file_name, file_name);
             pp_out->udp_chunk.id.chunk_num = htonl(chunk_num);
 
@@ -356,7 +372,7 @@ static int enc_main()
         munmap(out_data, chunk_count * sizeof(struct FILE_CHUNK));
         if(!ret)
         {
-            fprintf(stdout, "%s\n", file_path);
+            fprintf(stdout, "%s%s\n", use_ack ? "" : "-", file_path);
             fflush(stdout);
         }
     }
@@ -489,7 +505,7 @@ static void close_chunk_file_mapping(struct FILE_CHUNK* data, size_t chunk_count
 
 static void dump_file_chunk_statistics(const struct FILE_CHUNK* chunks, uint32_t num_blocks)
 {
-    fprintf(stderr, "File chunk send state ...\n");
+    fprintf(stderr, "\nFile chunk send state ...\n");
     uint32_t hist[256];
     memset(hist, 0, sizeof(hist));
     while(running && num_blocks --)
@@ -580,19 +596,22 @@ static int file_send_loop(int ss
         , struct sockaddr_in *addr
         , struct FILE_CHUNK* data
         , size_t chunk_count
-        , useconds_t sleep_us)
+        , useconds_t sleep_us
+        , uint8_t use_ack)
 {
     int res = ERR_OK;
     int sent_count = -1;
-    while(running && sent_count)
+    int attempt = 0;
+    while(running && attempt < 8 && sent_count)
     {
         sent_count = 0;
+        fprintf(stderr, "\n===>>> Attempt: %d\n", attempt++);
         for(size_t cnt = 0; running && cnt < chunk_count; cnt ++)
         {
             if(data[cnt].flag & FLAG_ACK)
                 continue;
 
-            if(sizeof(data[cnt].udp_chunk) != sendto(ss
+            while(sizeof(data[cnt].udp_chunk) != sendto(ss
                         , &data[cnt].udp_chunk
                         , sizeof(data[cnt].udp_chunk)
                         , 0
@@ -601,20 +620,25 @@ static int file_send_loop(int ss
             {
                 if(errno == ENOBUFS)
                 {
-//                    perror("sendto");
-                    usleep(sleep_us);
+                    //                    perror("sendto");
+                    fprintf(stderr, "*");
+                    usleep(8 * sleep_us); //adjust
                     continue;
                 }
                 perror("sendto");
                 res = ERR_NETWORK;
+                running = 0;
                 break;
             }
+            if(!running)
+                continue;
             data[cnt].sent_count ++;
             sent_count ++;
             usleep(sleep_us);
             fprintf(stderr, ".");
         }
-        fprintf(stderr, "\n");
+        if(!use_ack)
+            sent_count = 0;
     }
     return res;
 }
@@ -654,50 +678,59 @@ static int send_main()
         return ERR_NETWORK;
     }
 
-    int res = ERR_OK;
     useconds_t sleep_us = atoi(__argv__[5]);
-    char file_path[256] = {};
-    while(running && fgets(file_path, sizeof(file_path), stdin))
+
+    fprintf(stderr, "Chunk send pause time is: %d microseconds\n", sleep_us);
+    if(sleep_us < SLEEP_MIN_US || sleep_us > SLEEP_MAX_US)
+    {
+        fprintf(stderr
+                , "Chunk send pause time is out of range (%d to %d), using default: %d\n"
+                , SLEEP_MIN_US
+                , SLEEP_MAX_US
+                , SLEEP_DEFAULT_US);
+        sleep_us = SLEEP_DEFAULT_US;
+    }
+
+    int res = ERR_OK;
+    char file_cmd[256] = {};
+    while(running && fgets(file_cmd, sizeof(file_cmd), stdin))
     {
         size_t chunk_count = 0;
         struct FILE_CHUNK* data = NULL;
         pid_t ack_pid = -1;
 
-        normalize_file_path(file_path);
+        uint8_t use_ack = 0;
+        const char* file_path = NULL;
+        parse_file_cmd(file_cmd, &file_path, &use_ack);
         data = open_chunk_file_mapping(file_path, &chunk_count);
         if(!data)
             continue;
 
-        fprintf(stderr, "Chunk send pause time is: %d microseconds\n", sleep_us);
-        if(sleep_us < SLEEP_MIN_US || sleep_us > SLEEP_MAX_US)
+        if(use_ack)
         {
-            fprintf(stderr
-                    , "Chunk send pause time is out of range (%d to %d), using default: %d\n"
-                    , SLEEP_MIN_US
-                    , SLEEP_MAX_US
-                    , SLEEP_DEFAULT_US);
-            sleep_us = SLEEP_DEFAULT_US;
+            ack_pid = fork_ack_recv_loop(ss, mk, data, chunk_count);
+            if(-1 == ack_pid)
+            {
+                close_chunk_file_mapping(data, chunk_count);
+                close(ss);
+                OPENSSL_free(mk);
+                return ERR_FORK;
+            }
+            if(!ack_pid)
+            {
+                close_chunk_file_mapping(data, chunk_count);
+                close(ss);
+                OPENSSL_free(mk);
+                return ERR_OK;
+            }
         }
 
-        ack_pid = fork_ack_recv_loop(ss, mk, data, chunk_count);
-        if(-1 == ack_pid)
+        res = file_send_loop(ss, &addr, data, chunk_count, sleep_us, use_ack);
+        if(use_ack)
         {
-            close_chunk_file_mapping(data, chunk_count);
-            close(ss);
-            OPENSSL_free(mk);
-            return ERR_FORK;
+            kill(ack_pid, SIGINT);
+            while(-1 != wait(0));
         }
-        if(!ack_pid)
-        {
-            close_chunk_file_mapping(data, chunk_count);
-            close(ss);
-            OPENSSL_free(mk);
-            return ERR_OK;
-        }
-
-        res = file_send_loop(ss, &addr, data, chunk_count, sleep_us);
-        kill(ack_pid, SIGINT);
-        while(-1 != wait(0));
         dump_file_chunk_statistics(data, chunk_count);
         close_chunk_file_mapping(data, chunk_count);
 
