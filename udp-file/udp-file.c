@@ -578,18 +578,43 @@ static pid_t fork_ack_recv_loop(int ss
 
         ack.id.chunk_num = ntohl(ack.id.chunk_num);
         if(ack.id.chunk_num >= chunk_count
-            || strcmp(chunks[ack.id.chunk_num].id.file_name, ack.id.file_name)
-            || chunks[ack.id.chunk_num].id.chunk_num != ack.id.chunk_num)
+                || strcmp(chunks[ack.id.chunk_num].id.file_name, ack.id.file_name)
+                || chunks[ack.id.chunk_num].id.chunk_num != ack.id.chunk_num)
         {
-//            fprintf(stderr, "====>>>> INVALID ACK: %s, %u, %lu\n"
-//                    , ack.id.file_name
-//                    , ack.id.chunk_num
-//                    , chunk_count);
+            //            fprintf(stderr, "====>>>> INVALID ACK: %s, %u, %lu\n"
+            //                    , ack.id.file_name
+            //                    , ack.id.chunk_num
+            //                    , chunk_count);
             continue;
         }
         chunks[ack.id.chunk_num].flag |= FLAG_ACK;
     }
     return pid;
+}
+
+static int send_udp_chunk(int ss
+        , struct sockaddr_in *addr
+        , struct UDP_FILE_CHUNK* udp_chunk
+        , useconds_t sleep_us)
+{
+    while(sizeof(*udp_chunk) != sendto(ss
+                , udp_chunk
+                , sizeof(*udp_chunk)
+                , 0
+                , (struct sockaddr *)addr
+                , sizeof(*addr)))
+    {
+        if(errno == ENOBUFS)
+        {
+            fprintf(stderr, "*");
+            usleep(sleep_us);
+            continue;
+        }
+        perror("sendto");
+        running = 0;
+        return ERR_NETWORK;
+    }
+    return ERR_OK;
 }
 
 static int file_send_loop(int ss
@@ -602,7 +627,7 @@ static int file_send_loop(int ss
     int res = ERR_OK;
     int sent_count = -1;
     int attempt = 0;
-    while(running && attempt < 8 && sent_count)
+    while(running && attempt < 8 && sent_count) //adjust
     {
         sent_count = 0;
         fprintf(stderr, "\n===>>> Attempt: %d\n", attempt++);
@@ -611,27 +636,8 @@ static int file_send_loop(int ss
             if(data[cnt].flag & FLAG_ACK)
                 continue;
 
-            while(sizeof(data[cnt].udp_chunk) != sendto(ss
-                        , &data[cnt].udp_chunk
-                        , sizeof(data[cnt].udp_chunk)
-                        , 0
-                        , (struct sockaddr *)addr
-                        , sizeof(*addr)))
-            {
-                if(errno == ENOBUFS)
-                {
-                    //                    perror("sendto");
-                    fprintf(stderr, "*");
-                    usleep(8 * sleep_us); //adjust
-                    continue;
-                }
-                perror("sendto");
-                res = ERR_NETWORK;
-                running = 0;
+            if((res = send_udp_chunk(ss, addr, &data[cnt].udp_chunk, 8 * sleep_us))) //adjust
                 break;
-            }
-            if(!running)
-                continue;
             data[cnt].sent_count ++;
             sent_count ++;
             usleep(sleep_us);
