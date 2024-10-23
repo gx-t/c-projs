@@ -111,6 +111,7 @@ static int filter_main(int argc, char* argv[])
             if(ACK_OFF == mode)
                 *--ss = '-';
             fprintf(stdout, "%s", ss);
+            fflush(stdout);
             continue;
         }
         if('-' == *buff)
