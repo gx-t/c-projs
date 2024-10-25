@@ -1,0 +1,42 @@
+For a JPEG file to be partially visible before fully transferring, the key parts are:
+
+    1.  SOI (Start of Image) Marker: This marks the beginning of the JPEG file and is critical. The JPEG viewer won’t start decoding without it.
+    2.  JFIF/EXIF Header: Contains metadata. Not essential for displaying the image but important for orientation, color profiles, etc. If this part is missing, some quality may degrade (e.g., wrong colors), but the image can still be displayed.
+    3.  Huffman Tables (DHT): These are essential for decoding compressed data. At least one set of these tables must be transmitted for any part of the image to be viewable.
+    4.  Start of Frame (SOF): Defines the image dimensions and color components. This is required to begin decoding the image.
+    5.  SOS (Start of Scan): Marks the beginning of compressed image data. Once this is transmitted, the actual image can begin to display progressively, even if the rest isn’t sent yet.
+    6.  Compressed Image Data: This contains the actual image information. JPEG images are often stored progressively or in blocks, meaning that you can display a lower-quality version of the image with partial data.
+
+Key for Partial Visibility:
+
+• JPEG images using progressive encoding will show a low-quality version of the entire image after receiving the initial scans. This is ideal for what you’re aiming to achieve over UDP.
+
+====
+
+Progressive encoding in JPEG splits the image data into multiple passes. Instead of sending the image line by line (as in baseline encoding), it sends the image in a series of scans that gradually improve quality.
+
+1.  First Pass: A rough, low-quality version of the entire image is displayed.
+2.  Subsequent Passes: More detailed data is progressively added to sharpen the image.
+
+This allows viewers to see a blurry version of the image early and then watch it get clearer as more data is received. It’s ideal for partial transmission scenarios, like UDP.
+
+===
+
+Recommended Order for UDP send:
+
+    1.  Headers (SOI, SOF, DHT, SOS) – First packet.
+    2.  First scan (progressive) – Next few packets.
+    3.  Additional scans – Sent in sequence to improve image clarity.
+
+This approach ensures the image is visible early with lower quality and gets clearer as more data arrives.
+
+===
+
+- The word "Interlace" is actually used
+- convert IMG_20240101_160447_HDR.jpg -interlace Plane test.jpeg
+- identify -verbose test.jpeg | grep Interlace
+    - Interlace: None
+    - Interlace: JPEG
+- jpeginfo -c test.jpeg
+    - ... 24bit N JFIF ...
+    - ... 24bit P JFIF ...
