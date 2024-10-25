@@ -246,7 +246,10 @@ static int enc_main()
         const char* file_name = parse_file_cmd(file_cmd, &file_path, &use_ack);
 
         if(31 < strlen(file_name))
-            return show_usage(ERR_ARGV, "File name is too long. Must be 1-31.");
+        {
+            fprintf(stderr, "%s: The file name is too long. Must be 1-31.", file_name);
+            continue;
+        }
 
         int fd_in = open(file_path, O_RDONLY);
         unlink(file_path);
@@ -263,7 +266,9 @@ static int enc_main()
         if(1 > in_file_size || (off_t)0xFFFFFFFF * CHUNK_SIZE < in_file_size)
         {
             close(fd_in);
-            fprintf(stderr, "The input must be file, 1 to 4294967295 bytes length.\n");
+            fprintf(stderr
+                    , "%s: The file size is out of range, must be 1 to 4294967295 bytes length.\n"
+                    , file_path);
             continue;
         }
 
@@ -627,7 +632,7 @@ static int file_send_loop(int ss
     int res = ERR_OK;
     int sent_count = -1;
     int attempt = 0;
-    while(running && attempt < 8 && sent_count) //adjust
+    while(running && attempt < 256 && sent_count) //adjust
     {
         sent_count = 0;
         fprintf(stderr, "\n===>>> Attempt: %d\n", attempt++);
@@ -636,7 +641,7 @@ static int file_send_loop(int ss
             if(data[cnt].flag & FLAG_ACK)
                 continue;
 
-            if((res = send_udp_chunk(ss, addr, &data[cnt].udp_chunk, 8 * sleep_us))) //adjust
+            if((res = send_udp_chunk(ss, addr, &data[cnt].udp_chunk, sleep_us))) //adjust
                 break;
             data[cnt].sent_count ++;
             sent_count ++;
