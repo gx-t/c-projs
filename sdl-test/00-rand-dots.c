@@ -4,19 +4,15 @@
 
 static int running = 1;
 
-static void draw_rand_points(SDL_Texture* texture, int count)
-{
-}
-
 int main(int argc, char *argv[])
 {
+    int res = 0;
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0)
     {
         fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
         return 1;
     }
 
-    int res = 0;
     SDL_Window* win = 0;
     SDL_Renderer* rend = 0;
     TTF_Font* font = 0;
@@ -58,7 +54,7 @@ int main(int argc, char *argv[])
             break;
         }
 
-        SDL_Color color = {255, 0, 0, 128};
+//        SDL_Color color = {255, 0, 0, 128};
 //        SDL_Surface* surface = TTF_RenderText_Solid(font, "SDL Test", color);
 //        if(!surface)
 //        {
@@ -138,5 +134,5 @@ int main(int argc, char *argv[])
     TTF_Quit();
     SDL_Quit();
     
-    return 0;
+    return res;
 }

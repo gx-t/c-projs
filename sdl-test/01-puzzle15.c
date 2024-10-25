@@ -4,10 +4,11 @@
 #include <stdlib.h>
 #include <time.h>
 
+static SDL_bool running = SDL_TRUE;
+
 const static int cellWidth = 50;
 const static int boardX = 50;
 const static int boardY = 50;
-static int boardState[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0};
 static int board[4][4] =
 {
     {1, 2, 3, 4},
@@ -112,6 +113,80 @@ static void shuffle(SDL_Renderer* rend, SDL_Texture* sprite)
         swapTile(rend, sprite, rand() % 4, rand() % 4);
 }
 
+static void drawBoard(SDL_Renderer* rend, SDL_Texture* sprite)
+{
+    SDL_SetRenderTarget(rend, NULL);
+    SDL_SetRenderDrawColor(rend, 0x55, 0x55, 0x55, 0xFF);
+    SDL_RenderClear(rend);
+    for(int y = 0; y < 4; y ++)
+    {
+        for(int x = 0; x < 4; x ++)
+        {
+            SDL_Rect src, dst;
+            tileNumToRect(&src, board[y][x] % 4, board[y][x] / 4);
+            tileNumToRect(&dst, x, y);
+            dst.x += boardX;
+            dst.y += boardY;
+            SDL_RenderCopy(rend, sprite, &src, &dst);
+        }
+    }
+    SDL_RenderPresent(rend);
+}
+
+static void shuffleLoop(SDL_Event *evt, SDL_Renderer* rend, SDL_Texture* sprite)
+{
+    while(running)
+    {
+        while(SDL_PollEvent(evt))
+        {
+            if(SDL_QUIT == evt->type)
+            {
+                running = SDL_FALSE;
+                continue;
+            }
+            if(SDL_MOUSEBUTTONDOWN == evt->type
+                    && (SDL_BUTTON_LEFT == evt->button.button
+                        || SDL_BUTTON_RIGHT == evt->button.button))
+            {
+                handleLeftClick(rend, sprite, evt->button.x, evt->button.y);
+                return;
+            }
+        }
+        drawBoard(rend, sprite);
+        shuffle(rend, sprite);
+    }
+}
+
+static void eventLoop(SDL_Event *evt, SDL_Renderer* rend, SDL_Texture* sprite)
+{
+    while(running)
+    {
+        while(SDL_PollEvent(evt))
+        {
+            if(SDL_QUIT == evt->type)
+            {
+                running = SDL_FALSE;
+                continue;
+            }
+            if(SDL_MOUSEBUTTONDOWN == evt->type)
+            {
+                if(SDL_BUTTON_LEFT == evt->button.button)
+                {
+                    handleLeftClick(rend, sprite, evt->button.x, evt->button.y);
+                    continue;
+                }
+                if(SDL_BUTTON_RIGHT == evt->button.button)
+                {
+                    shuffleLoop(evt, rend, sprite);
+                    continue;
+                }
+            }
+        }
+        drawBoard(rend, sprite);
+        SDL_Delay(300);
+    }
+}
+
 int main()
 {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER);
@@ -137,59 +212,8 @@ int main()
 
     srand(time(NULL));
 
-    SDL_bool running = SDL_TRUE;
-    SDL_bool shuffling = SDL_FALSE;
-
-    while(running)
-    {
-        SDL_Event evt;
-        while(SDL_PollEvent(&evt))
-        {
-            if(SDL_QUIT == evt.type)
-            {
-                running = SDL_FALSE;
-                continue;
-            }
-            if(SDL_MOUSEBUTTONDOWN == evt.type)
-            {
-                if(SDL_BUTTON_LEFT == evt.button.button)
-                {
-                    shuffling = SDL_FALSE;
-                    handleLeftClick(rend, sprite, evt.button.x, evt.button.y);
-                    continue;
-                }
-                if(SDL_BUTTON_RIGHT == evt.button.button)
-                {
-                    shuffling = !shuffling;
-                    handleLeftClick(rend, sprite, evt.button.x, evt.button.y);
-                    continue;
-                }
-            }
-        }
-        //draw the board
-        SDL_SetRenderTarget(rend, NULL);
-        SDL_SetRenderDrawColor(rend, 0x55, 0x55, 0x55, 0xFF);
-        SDL_RenderClear(rend);
-        for(int y = 0; y < 4; y ++)
-        {
-            for(int x = 0; x < 4; x ++)
-            {
-                SDL_Rect src, dst;
-                tileNumToRect(&src, board[y][x] % 4, board[y][x] / 4);
-                tileNumToRect(&dst, x, y);
-                dst.x += boardX;
-                dst.y += boardY;
-                SDL_RenderCopy(rend, sprite, &src, &dst);
-            }
-        }
-        SDL_RenderPresent(rend);
-
-        if(shuffling)
-            shuffle(rend, sprite);
-
-        if(!shuffling)
-            SDL_Delay(300);
-    }
+    SDL_Event evt;
+    eventLoop(&evt, rend, sprite);
 
     SDL_DestroyTexture(sprite);
     SDL_DestroyRenderer(rend);
