@@ -19,9 +19,9 @@ rel: 00-rel 01-rel 02-rel
 	$(CC) -O3 -Wall -Wno-deprecated-declarations $(MAC_PREFIX) udp-file.c -o udp-file -lcrypto
 
 00-deb:
-	$(CC) -Wall -g -Wno-deprecated-declarations udp-file.c -o udp-file -lcrypto
+	$(CC) -Wall -g -Wno-deprecated-declarations udp-file.c -o udp-file `pkg-config --cflags --libs libcrypto`
 00-rel:
-	$(CC) -O3 -s -Wall -s -Wno-deprecated-declarations udp-file.c -o udp-file -lcrypto
+	$(CC) -O3 -s -Wall -s -Wno-deprecated-declarations udp-file.c -o udp-file `pkg-config --cflags --libs libcrypto`
 
 01-deb:
 	$(CC) -Wall -g cam-ctrl.c -o cam-ctrl
@@ -34,9 +34,9 @@ rel: 00-rel 01-rel 02-rel
 	$(CC) -O3 -Wall $(MAC_PREFIX) jpeg-ctrl.c -o jpeg-ctrl -ljpeg
 
 02-deb:
-	$(CC) -Wall -g jpeg-ctrl.c -o jpeg-ctrl -ljpeg
+	$(CC) -Wall -g jpeg-ctrl.c -o jpeg-ctrl `pkg-config --cflags --libs libjpeg`
 02-rel:
-	$(CC) -O3 -Wall jpeg-ctrl.c -o jpeg-ctrl -ljpeg
+	$(CC) -O3 -Wall jpeg-ctrl.c -o jpeg-ctrl -ljpeg `pkg-config --cflags --libs libjpeg`
 
 clean:
 	rm -rf udp-file cam-ctrl jpeg-ctrl *.dSYM
