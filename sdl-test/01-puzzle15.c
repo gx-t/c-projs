@@ -133,57 +133,55 @@ static void drawBoard(SDL_Renderer* rend, SDL_Texture* sprite)
     SDL_RenderPresent(rend);
 }
 
-static void shuffleLoop(SDL_Event *evt, SDL_Renderer* rend, SDL_Texture* sprite)
+static void shuffleLoop(SDL_Renderer* rend, SDL_Texture* sprite)
 {
     while(running)
     {
-        while(SDL_PollEvent(evt))
+        SDL_Event evt;
+        while(SDL_PollEvent(&evt))
         {
-            if(SDL_QUIT == evt->type)
+            if(SDL_QUIT == evt.type)
             {
                 running = SDL_FALSE;
-                continue;
-            }
-            if(SDL_MOUSEBUTTONDOWN == evt->type
-                    && (SDL_BUTTON_LEFT == evt->button.button
-                        || SDL_BUTTON_RIGHT == evt->button.button))
-            {
-                handleLeftClick(rend, sprite, evt->button.x, evt->button.y);
                 return;
             }
+            if(SDL_MOUSEBUTTONDOWN == evt.type
+                    && (SDL_BUTTON_LEFT == evt.button.button
+                        || SDL_BUTTON_RIGHT == evt.button.button))
+                return;
         }
         drawBoard(rend, sprite);
         shuffle(rend, sprite);
     }
 }
 
-static void eventLoop(SDL_Event *evt, SDL_Renderer* rend, SDL_Texture* sprite)
+static void mainScreenEventLoop(SDL_Renderer* rend, SDL_Texture* sprite)
 {
-    while(running)
+    SDL_Event evt;
+    while(running && SDL_WaitEvent(&evt))
     {
-        while(SDL_PollEvent(evt))
+        switch(evt.type)
         {
-            if(SDL_QUIT == evt->type)
-            {
+            case SDL_QUIT:
                 running = SDL_FALSE;
-                continue;
-            }
-            if(SDL_MOUSEBUTTONDOWN == evt->type)
-            {
-                if(SDL_BUTTON_LEFT == evt->button.button)
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                switch(evt.button.button)
                 {
-                    handleLeftClick(rend, sprite, evt->button.x, evt->button.y);
-                    continue;
+                    case SDL_BUTTON_LEFT:
+                        handleLeftClick(rend, sprite, evt.button.x, evt.button.y);
+                        break;
+                    case SDL_BUTTON_RIGHT:
+                        shuffleLoop(rend, sprite);
+                        break;
                 }
-                if(SDL_BUTTON_RIGHT == evt->button.button)
-                {
-                    shuffleLoop(evt, rend, sprite);
-                    continue;
-                }
-            }
+                drawBoard(rend, sprite);
+                break;
+            case SDL_WINDOWEVENT:
+                if(SDL_WINDOWEVENT_EXPOSED == evt.window.event)
+                    drawBoard(rend, sprite);
+                break;
         }
-        drawBoard(rend, sprite);
-        SDL_Delay(300);
     }
 }
 
@@ -212,8 +210,7 @@ int main()
 
     srand(time(NULL));
 
-    SDL_Event evt;
-    eventLoop(&evt, rend, sprite);
+     mainScreenEventLoop(rend, sprite);
 
     SDL_DestroyTexture(sprite);
     SDL_DestroyRenderer(rend);
