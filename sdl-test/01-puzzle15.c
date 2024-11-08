@@ -7,8 +7,6 @@
 static SDL_bool running = SDL_TRUE;
 
 const static int cellWidth = 50;
-const static int boardX = 50;
-const static int boardY = 50;
 static int board[4][4] =
 {
     {1, 2, 3, 4},
@@ -96,9 +94,7 @@ static void swapTile(SDL_Renderer* rend, SDL_Texture* sprite, int x, int y)
 
 static void handleLeftClick(SDL_Renderer* rend, SDL_Texture* sprite, int x, int y)
 {
-    x -= boardX;
-    y -= boardY;
-    if(0 > x || 0 > y)
+    if(0 > x || 0 > y || 4 * cellWidth < x || 4 * cellWidth < y)
         return;
 
     x /= cellWidth;
@@ -125,8 +121,6 @@ static void drawBoard(SDL_Renderer* rend, SDL_Texture* sprite)
             SDL_Rect src, dst;
             tileNumToRect(&src, board[y][x] % 4, board[y][x] / 4);
             tileNumToRect(&dst, x, y);
-            dst.x += boardX;
-            dst.y += boardY;
             SDL_RenderCopy(rend, sprite, &src, &dst);
         }
     }
@@ -192,25 +186,27 @@ int main()
     SDL_Window* win = SDL_CreateWindow("Puzzle-15"
             , SDL_WINDOWPOS_CENTERED
             , SDL_WINDOWPOS_CENTERED
-            , 640
-            , 480
+            , 400
+            , 400
             , SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
     SDL_Renderer* rend = SDL_CreateRenderer(win
             , -1
             , SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
+    SDL_RenderSetLogicalSize(rend, cellWidth * 4, cellWidth * 4);
+
     SDL_Texture* sprite = SDL_CreateTexture(rend
             , SDL_PIXELFORMAT_RGBA8888
             , SDL_TEXTUREACCESS_TARGET
-            , 200
-            , 200);
+            , cellWidth * 4
+            , cellWidth * 4);
 
     prepareSprite(rend, sprite);
 
     srand(time(NULL));
 
-     mainScreenEventLoop(rend, sprite);
+    mainScreenEventLoop(rend, sprite);
 
     SDL_DestroyTexture(sprite);
     SDL_DestroyRenderer(rend);
