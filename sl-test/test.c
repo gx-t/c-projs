@@ -5,14 +5,15 @@
 
 #define COUNT 1000000
 
-struct SL_NODE {
+struct SL_NODE
+{
     struct SL_NODE* next;
-    char str[1];
+    char str[0];
 };
 
 static void sl_add(const char* str, struct SL_NODE** head_ptr)
 {
-    struct SL_NODE* new_node = (struct SL_NODE*)malloc(sizeof(struct SL_NODE) + strlen(str));
+    struct SL_NODE* new_node = (struct SL_NODE*)malloc(sizeof(struct SL_NODE) + strlen(str) + 1);
     new_node->next = *head_ptr;
     strcpy(new_node->str, str);
     *head_ptr = new_node;
@@ -20,7 +21,8 @@ static void sl_add(const char* str, struct SL_NODE** head_ptr)
 
 static void sl_free(struct SL_NODE** head_ptr)
 {
-    while(*head_ptr) {
+    while(*head_ptr)
+    {
         struct SL_NODE* next = (*head_ptr)->next;
         free(*head_ptr);
         *head_ptr = next;
@@ -43,14 +45,17 @@ static struct SL_NODE* sl_partition(struct SL_NODE* head, struct SL_NODE* end, s
     struct SL_NODE* curr = head;
     struct SL_NODE* tail = pivot;
 
-    while(curr != pivot) {
-        if(0 > strcmp(curr->str, pivot->str)) {
+    while(curr != pivot)
+    {
+        if(0 > strcmp(curr->str, pivot->str))
+        {
             if(!*new_head)
                 *new_head = curr;
             prev = curr;
             curr = curr->next;
         }
-        else {
+        else
+        {
             if(prev)
                 prev->next = curr->next;
             struct SL_NODE* tmp = curr->next;
@@ -77,7 +82,8 @@ static struct SL_NODE* sl_quick_sort_r(struct SL_NODE* head, struct SL_NODE* end
 
     struct SL_NODE* pivot = sl_partition(head, end, &new_head, &new_end);
 
-    if(new_head != pivot) {
+    if(new_head != pivot)
+    {
         struct SL_NODE* tmp = new_head;
         while(tmp->next != pivot)
             tmp = tmp->next;
@@ -108,9 +114,10 @@ static void sl_print(struct SL_NODE* node)
 static void test_gen_random_str(char buff[64])
 {
     const char arr[] = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    int len = 3 + random() % 64;
+    int len = 3 + random() % 60;
     char* pp = buff;
-    while(len --) {
+    while(len --)
+    {
         *pp ++ = arr[random() % sizeof(arr)];
     }
     *pp = 0;
@@ -118,11 +125,14 @@ static void test_gen_random_str(char buff[64])
 
 static void test1()
 {
+    int count = 10000;
+    fprintf(stderr, "===>>> test1: %d element SL list creation/deletion ... ", count);
     struct SL_NODE* list = 0;
     char str[64];
-    int i = 100000;
+    int i = count;
     srandom(time(0));
-    while(i--) {
+    while(i--)
+    {
         test_gen_random_str(str);
         sl_add(str, &list);
     }
@@ -131,12 +141,13 @@ static void test1()
 
 static void test2()
 {
-    fprintf(stderr, "===>>> test2 ... ");
+    fprintf(stderr, "===>>> test2: %d element SL list quick sort ... ", COUNT);
     struct SL_NODE* list = 0;
     char str[64];
     int i = COUNT;
     srandom(time(0));
-    while(i--) {
+    while(i--)
+    {
         test_gen_random_str(str);
         sl_add(str, &list);
     }
@@ -149,7 +160,7 @@ static void test2()
 static char str[COUNT][64];
 static void test3()
 {
-    fprintf(stderr, "===>>> test3 ... ");
+    fprintf(stderr, "===>>> test3: %d element array quick sort ... ", COUNT);
     for(int i = 0; i < COUNT; i ++)
         test_gen_random_str(str[i]);
     clock_t clk = clock();
@@ -159,6 +170,7 @@ static void test3()
 
 int main()
 {
+//    test1();
     test2();
     test3();
     return 0;
