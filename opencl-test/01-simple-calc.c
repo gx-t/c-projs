@@ -17,11 +17,11 @@ int main() {
     cl_int err;
 
     // Get the first available device
-    cl_device_id device;
+    cl_device_id gpu;
     err = clGetDeviceIDs(NULL
             , CL_DEVICE_TYPE_GPU
             , 1
-            , &device
+            , &gpu
             , NULL);
 
     if(err != CL_SUCCESS)
@@ -34,7 +34,7 @@ int main() {
     cl_context context;
     context = clCreateContext(NULL
             , 1
-            , &device
+            , &gpu
             , NULL
             , NULL
             , &err);
@@ -47,7 +47,7 @@ int main() {
 
     // Create a command queue
     cl_command_queue queue = clCreateCommandQueue(context
-            , device
+            , gpu
             , 0
             , &err);
 
@@ -76,7 +76,7 @@ int main() {
     // Build the program
     err = clBuildProgram(program
             , 1
-            , &device
+            , &gpu
             , NULL
             , NULL
             , NULL);
@@ -84,9 +84,9 @@ int main() {
     if(err != CL_SUCCESS)
     {
         size_t logSize;
-        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &logSize);
+        clGetProgramBuildInfo(program, gpu, CL_PROGRAM_BUILD_LOG, 0, NULL, &logSize);
         char log[logSize];
-        clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, logSize, log, NULL);
+        clGetProgramBuildInfo(program, gpu, CL_PROGRAM_BUILD_LOG, logSize, log, NULL);
         fprintf(stderr, "%s\n", log);
         clReleaseProgram(program);
         clReleaseCommandQueue(queue);
@@ -99,10 +99,11 @@ int main() {
             , "vector_add"
             , &err);
 
+    clReleaseProgram(program);
+
     if(err != CL_SUCCESS)
     {
         fprintf(stderr, "clCreateKernel failed: %d\n", err);
-        clReleaseProgram(program);
         clReleaseCommandQueue(queue);
         clReleaseContext(context);
         return 6;
@@ -138,6 +139,8 @@ int main() {
             , NULL
             , NULL);
 
+    clReleaseContext(context);
+
     // Set kernel arguments
     clSetKernelArg(kernel, 0, sizeof(cl_mem), &a);
     clSetKernelArg(kernel, 1, sizeof(cl_mem), &b);
@@ -155,16 +158,14 @@ int main() {
             , NULL
             , NULL);
 
+    clReleaseKernel(kernel);
+    clReleaseMemObject(a);
+    clReleaseMemObject(b);
     if(err != CL_SUCCESS)
     {
         fprintf(stderr, "clEnqueueNDRangeKernel failed: %d\n", err);
-        clReleaseMemObject(a);
-        clReleaseMemObject(b);
         clReleaseMemObject(result);
-        clReleaseKernel(kernel);
-        clReleaseProgram(program);
         clReleaseCommandQueue(queue);
-        clReleaseContext(context);
         return 7;
     }
 
@@ -179,16 +180,12 @@ int main() {
             , NULL
             , NULL);
 
+    clReleaseCommandQueue(queue);
+
     if(err != CL_SUCCESS)
     {
         printf("clEnqueueReadBuffer failed: %d\n", err);
-        clReleaseMemObject(a);
-        clReleaseMemObject(b);
         clReleaseMemObject(result);
-        clReleaseKernel(kernel);
-        clReleaseProgram(program);
-        clReleaseCommandQueue(queue);
-        clReleaseContext(context);
         return 8;
     }
 
@@ -197,15 +194,8 @@ int main() {
     {
         printf("Result[%d] = %f\n", i, host_result[i]);
     }
-
-    // Clean up
-    clReleaseMemObject(a);
-    clReleaseMemObject(b);
     clReleaseMemObject(result);
-    clReleaseKernel(kernel);
-    clReleaseProgram(program);
-    clReleaseCommandQueue(queue);
-    clReleaseContext(context);
+
     return 0;
 }
 
