@@ -3,17 +3,48 @@
 
 #define VECTOR_SIZE 1024
 
-const char* krnl_src = 
-"__kernel void vector_add(__global const float* A,\n"
-"   __global const float* B,\n"
-"   __global float* C)\n"
-"{\n"
-"   int id = get_global_id(0);\n"
-"   C[id] = sin(A[id]) + cos(B[id]);\n"
-"}\n";
+static int create_program_from_kernel(const char* fname, const cl_context context, cl_program* program)
+{
+    FILE* fp = fopen(fname, "r");
+    if(!fp)
+    {
+        perror(fname);
+        return -1;
+    }
+    fseek(fp, 0, SEEK_END);
+    long length = ftell(fp);
+    if(-1 == length)
+    {
+        perror(fname);
+        fclose(fp);
+        return -1;
+    }
+    char src[length];
+    fseek(fp, 0, SEEK_SET);
+    if(1 != fread(src, length, 1, fp))
+    {
+        perror(fname);
+        fclose(fp);
+        return -1;
+    }
+    fclose(fp);
+
+    cl_int err;
+    const char* ss = src;
+    *program = clCreateProgramWithSource(context
+            , 1
+            , &ss
+            , NULL
+            , &err);
+    if(err != CL_SUCCESS)
+    {
+        fprintf(stderr, "clCreateProgramWithSource failed: %d\n", err);
+        return -1;
+    }
+    return 0;
+}
 
 int main() {
-    // Create a context
     cl_int err;
 
     // Get the first available device
@@ -59,15 +90,9 @@ int main() {
     }
 
     // Create a program
-    cl_program program = clCreateProgramWithSource(context
-            , 1
-            , &krnl_src
-            , NULL
-            , &err);
-
-    if(err != CL_SUCCESS)
+    cl_program program;
+    if(create_program_from_kernel("01-kernel.cl", context, &program))
     {
-        fprintf(stderr, "clCreateProgramWithSource failed: %d\n", err);
         clReleaseCommandQueue(queue);
         clReleaseContext(context);
         return 4;
