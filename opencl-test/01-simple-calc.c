@@ -76,62 +76,11 @@ int main() {
         return 2;
     }
 
-    // Create a command queue
-    cl_command_queue queue = clCreateCommandQueue(context
-            , gpu
-            , 0
-            , &err);
-
     if(err != CL_SUCCESS)
     {
         clReleaseContext(context);
         fprintf(stderr, "clCreateCommandQueue failed: %d\n", err);
         return 3;
-    }
-
-    // Create a program
-    cl_program program;
-    if(create_program_from_kernel("01-kernel.cl", context, &program))
-    {
-        clReleaseCommandQueue(queue);
-        clReleaseContext(context);
-        return 4;
-    }
-
-    // Build the program
-    err = clBuildProgram(program
-            , 1
-            , &gpu
-            , NULL
-            , NULL
-            , NULL);
-
-    if(err != CL_SUCCESS)
-    {
-        size_t logSize;
-        clGetProgramBuildInfo(program, gpu, CL_PROGRAM_BUILD_LOG, 0, NULL, &logSize);
-        char log[logSize];
-        clGetProgramBuildInfo(program, gpu, CL_PROGRAM_BUILD_LOG, logSize, log, NULL);
-        fprintf(stderr, "%s\n", log);
-        clReleaseProgram(program);
-        clReleaseCommandQueue(queue);
-        clReleaseContext(context);
-        return 5;
-    }
-
-    // Create a kernel
-    cl_kernel kernel = clCreateKernel(program
-            , "vector_add"
-            , &err);
-
-    clReleaseProgram(program);
-
-    if(err != CL_SUCCESS)
-    {
-        fprintf(stderr, "clCreateKernel failed: %d\n", err);
-        clReleaseCommandQueue(queue);
-        clReleaseContext(context);
-        return 6;
     }
 
     // Initialize host data
@@ -166,10 +115,58 @@ int main() {
 
     clReleaseContext(context);
 
+    // Create a program
+    cl_program program;
+    if(create_program_from_kernel("01-kernel.cl", context, &program))
+    {
+        clReleaseContext(context);
+        return 4;
+    }
+
+    // Build the program
+    err = clBuildProgram(program
+            , 1
+            , &gpu
+            , NULL
+            , NULL
+            , NULL);
+
+    if(err != CL_SUCCESS)
+    {
+        size_t logSize;
+        clGetProgramBuildInfo(program, gpu, CL_PROGRAM_BUILD_LOG, 0, NULL, &logSize);
+        char log[logSize];
+        clGetProgramBuildInfo(program, gpu, CL_PROGRAM_BUILD_LOG, logSize, log, NULL);
+        fprintf(stderr, "%s\n", log);
+        clReleaseProgram(program);
+        clReleaseContext(context);
+        return 5;
+    }
+
+    // Create a kernel
+    cl_kernel kernel = clCreateKernel(program
+            , "vector_add"
+            , &err);
+
+    clReleaseProgram(program);
+
+    if(err != CL_SUCCESS)
+    {
+        fprintf(stderr, "clCreateKernel failed: %d\n", err);
+        clReleaseContext(context);
+        return 6;
+    }
+
     // Set kernel arguments
     clSetKernelArg(kernel, 0, sizeof(cl_mem), &a);
     clSetKernelArg(kernel, 1, sizeof(cl_mem), &b);
     clSetKernelArg(kernel, 2, sizeof(cl_mem), &result);
+
+    // Create a command queue
+    cl_command_queue queue = clCreateCommandQueue(context
+            , gpu
+            , 0
+            , &err);
 
     // Execute the kernel
     size_t global_work_size = VECTOR_SIZE;
@@ -183,6 +180,7 @@ int main() {
             , NULL
             , NULL);
 
+    clFinish(queue);
     clReleaseKernel(kernel);
     clReleaseMemObject(a);
     clReleaseMemObject(b);
@@ -216,9 +214,8 @@ int main() {
 
     // Print result
     for(int i = 0; i < VECTOR_SIZE; i++)
-    {
         printf("Result[%d] = %f\n", i, host_result[i]);
-    }
+
     clReleaseMemObject(result);
 
     return 0;
