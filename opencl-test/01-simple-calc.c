@@ -44,7 +44,8 @@ static int create_program_from_kernel(const char* fname, const cl_context contex
     return 0;
 }
 
-int main() {
+int main()
+{
     cl_int err;
 
     // Get the first available device

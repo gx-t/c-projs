@@ -29,6 +29,11 @@ static void tileNumToRect(SDL_Rect* rc, int x, int y)
 static void prepareSprite(SDL_Renderer* rend, SDL_Texture* sprite)
 {
     TTF_Font* font = TTF_OpenFont(TTF_PATH, cellWidth / 2);
+    if(!font)
+    {
+        fprintf(stderr, "TTF_OpenFont Error: %s\n", TTF_GetError());
+        return;
+    }
     const SDL_Color numColor = {0xFF, 0xFF, 0xFF, 0xFF};
 
     for(int y = 0; y < 4; y ++)
