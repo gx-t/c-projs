@@ -1,5 +1,4 @@
-#include <stdio.h>
-#include <OpenCL/opencl.h>
+#include "common.h"
 
 int main()
 {
