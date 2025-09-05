@@ -125,18 +125,20 @@ static void test_gen_random_str(char buff[64])
 
 static void test1()
 {
-    int count = 10000;
+    int count = COUNT;
     fprintf(stderr, "===>>> test1: %d element SL list creation/deletion ... ", count);
     struct SL_NODE* list = 0;
-    char str[64];
+    char str[64] = "abcdefgihijklmnopqrstuvwxyzABCDEFGIHIJKLMNOPQRSTUVWXYZ123456789";
     int i = count;
     srandom(time(0));
+    clock_t clk = clock();
     while(i--)
     {
-        test_gen_random_str(str);
+//        test_gen_random_str(str);
         sl_add(str, &list);
     }
     sl_free(&list);
+    fprintf(stderr, "%g sec\n", (float)(clock() - clk) / CLOCKS_PER_SEC);
 }
 
 static void test2()
@@ -170,7 +172,7 @@ static void test3()
 
 int main()
 {
-//    test1();
+    test1();
     test2();
     test3();
     return 0;
