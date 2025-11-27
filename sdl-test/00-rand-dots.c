@@ -1,97 +1,73 @@
-#include <SDL3/SDL.h>
 #include <stdio.h>
 #include <stdlib.h>
+#define SDL_MAIN_USE_CALLBACKS 1
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 
-static int running = 1;
+static SDL_Window* win = NULL;
+static SDL_Renderer* rend = NULL;
 
-int main(int argc, char *argv[])
+SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
 {
-    int res = 0;
+    static const SDL_Color colorArr[] =
+    {
+        {0xFF, 0x00, 0x00, 0xFF}
+        , {0x00, 0xFF, 0x00, 0xFF}
+        , {0x00, 0x00, 0xFF, 0xFF}
+        , {0xFF, 0xFF, 0x00, 0xFF}
+        , {0xFF, 0x00, 0xFF, 0xFF}
+        , {0x00, 0xFF, 0xFF, 0xFF}
+        , {0xFF, 0xFF, 0xFF, 0xFF}
+    };
+    *app_context = (void*)colorArr;
+
+    SDL_SetAppMetadata("SDL3 test: random dots", "0.0", "shah32768.sdf.org");
     if(!SDL_Init(SDL_INIT_VIDEO))
     {
         fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
-        return 1;
+        return SDL_APP_FAILURE;
+    }
+    if(!SDL_CreateWindowAndRenderer("SDL test"
+                , 640
+                , 480
+                , SDL_WINDOW_RESIZABLE
+                , &win
+                , &rend))
+    {
+        fprintf(stderr, "SDL_CreateWindow Error: %s\n", SDL_GetError());
+        return SDL_APP_FAILURE;
     }
 
-    SDL_Window* win = 0;
-    SDL_Renderer* rend = 0;
-    SDL_Texture* texture = 0;
-
-    do {
-        if(!(win = SDL_CreateWindow("SDL test"
-                        , 640
-                        , 480
-                        , SDL_WINDOW_RESIZABLE)))
-        {
-            fprintf(stderr, "SDL_CreateWindow Error: %s\n", SDL_GetError());
-            res = 2;
-            break;
-        }
-        SDL_SetWindowPosition(win, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
-
-        if(!(rend = SDL_CreateRenderer(win, NULL)))
-        {
-            fprintf(stderr, "SDL_CreateRenderer Error: %s\n", SDL_GetError());
-            res = 3;
-            break;
-        }
-        SDL_SetRenderVSync(rend, 1);
-        if(!(texture = SDL_CreateTexture(rend
-                        , SDL_PIXELFORMAT_RGBA8888
-                        , SDL_TEXTUREACCESS_TARGET
-                        , 64
-                        , 48)))
-        {
-            fprintf(stderr, "SDL_CreateTextureFromSurface Error: %s\n", SDL_GetError());
-            res = 6;
-            break;
-        }
-
-        while(running)
-        {
-            SDL_Event e;
-            while(SDL_PollEvent(&e))
-            {
-                if(SDL_EVENT_QUIT == e.type)
-                    running = 0;
-            }
-
-            int count = 8;
-            const SDL_Color colorArr[] =
-            {
-                {0xFF, 0x00, 0x00, 0xFF}
-                , {0x00, 0xFF, 0x00, 0xFF}
-                , {0x00, 0x00, 0xFF, 0xFF}
-                , {0xFF, 0xFF, 0x00, 0xFF}
-                , {0xFF, 0x00, 0xFF, 0xFF}
-                , {0x00, 0xFF, 0xFF, 0xFF}
-                , {0xFF, 0xFF, 0xFF, 0xFF}
-            };
-            SDL_SetRenderTarget(rend, texture);
-            SDL_SetRenderDrawColor(rend, 0x00, 0x00, 0x00, 0xFF);
-            SDL_RenderClear(rend);
-            SDL_SetRenderScale(rend, 1.0, 1.0);
-            while(count --)
-            {
-                const SDL_Color* clr = &colorArr[rand() % sizeof(colorArr) / sizeof(colorArr[0])];
-                SDL_SetRenderDrawColor(rend, clr->r, clr->g, clr->b, clr->a);
-                SDL_RenderPoint(rend, rand() % 64, rand() % 48);
-            }
-
-            //            SDL_RenderDrawPoints(rend, pointArr, sizeof(pointArr) / sizeof(pointArr[0]));
-            SDL_SetRenderTarget(rend, NULL);
-
-            SDL_RenderClear(rend);
-            SDL_RenderTexture(rend, texture, NULL, NULL);
-            SDL_RenderPresent(rend);
-            SDL_Delay(50);
-        }
-    } while(0);
-
-    SDL_DestroyTexture(texture);
-    SDL_DestroyRenderer(rend);
-    SDL_DestroyWindow(win);
-    SDL_Quit();
-
-    return res;
+    SDL_SetWindowPosition(win, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    SDL_SetRenderLogicalPresentation(rend, 64, 48, SDL_LOGICAL_PRESENTATION_STRETCH);
+    SDL_SetRenderVSync(rend, 1);
+    return SDL_APP_CONTINUE;
 }
+
+SDL_AppResult SDL_AppEvent(void* app_context, SDL_Event* evt)
+{
+    if(SDL_EVENT_QUIT == evt->type)
+        return SDL_APP_SUCCESS;
+    return SDL_APP_CONTINUE;
+}
+
+SDL_AppResult SDL_AppIterate(void* app_context)
+{
+    const SDL_Color* color_arr = (const SDL_Color*)app_context;
+    SDL_SetRenderDrawColor(rend, 0x00, 0x00, 0x00, 0xFF);
+    SDL_RenderClear(rend);
+    int count = 8;
+    while(count --)
+    {
+        const SDL_Color* clr = &color_arr[rand() % 7];
+        SDL_SetRenderDrawColor(rend, clr->r, clr->g, clr->b, clr->a);
+        SDL_RenderPoint(rend, rand() % 64, rand() % 48);
+    }
+    SDL_RenderPresent(rend);
+    return SDL_APP_CONTINUE;
+}
+
+void SDL_AppQuit(void* app_context, SDL_AppResult result)
+{
+}
+
