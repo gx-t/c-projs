@@ -1,10 +1,14 @@
-#include <SDL3/SDL.h>
-#include <SDL3_ttf/SDL_ttf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
+#include <SDL3_ttf/SDL_ttf.h>
 
 static bool running = true;
+static SDL_Window* win = NULL;
+static SDL_Renderer* rend = NULL;
+static SDL_Texture* sprite = NULL;
 
 const static int cellWidth = 50;
 static int board[4][4] =
@@ -26,13 +30,15 @@ static void tileNumToRect(SDL_FRect* rc, int x, int y)
     rc->h = cellWidth;
 }
 
-static void prepareSprite(SDL_Renderer* rend, SDL_Texture* sprite)
+static bool prepareSprite()
 {
-    TTF_Font* font = TTF_OpenFont(TTF_PATH, cellWidth / 2);
-    if(!font)
+    TTF_Font* font = NULL;
+    if(!TTF_Init()
+            || !(font = TTF_OpenFont(TTF_PATH, cellWidth / 2)))
     {
         fprintf(stderr, "TTF_OpenFont Error: %s\n", SDL_GetError());
-        return;
+        TTF_Quit();
+        return false;
     }
     const SDL_Color numColor = {0xFF, 0xFF, 0xFF, 0xFF};
 
@@ -69,9 +75,11 @@ static void prepareSprite(SDL_Renderer* rend, SDL_Texture* sprite)
     }
 
     TTF_CloseFont(font);
+    TTF_Quit();
+    return true;
 }
 
-static void swapTile(SDL_Renderer* rend, SDL_Texture* sprite, int x, int y)
+static void swapTile(int x, int y)
 {
     if(x_empty == x)
     {
@@ -97,13 +105,13 @@ static void swapTile(SDL_Renderer* rend, SDL_Texture* sprite, int x, int y)
     }
 }
 
-static void shuffle(SDL_Renderer* rend, SDL_Texture* sprite)
+static void shuffle()
 {
     for(int i = 0; i < 10000; i ++)
-        swapTile(rend, sprite, rand() % 4, rand() % 4);
+        swapTile(rand() % 4, rand() % 4);
 }
 
-static void drawBoard(SDL_Renderer* rend, SDL_Texture* sprite)
+static void drawBoard()
 {
     SDL_SetRenderTarget(rend, NULL);
     SDL_SetRenderDrawColor(rend, 0x55, 0x55, 0x55, 0xFF);
@@ -121,30 +129,29 @@ static void drawBoard(SDL_Renderer* rend, SDL_Texture* sprite)
     SDL_RenderPresent(rend);
 }
 
-int main()
+static void shuffle_event_loop()
 {
-    SDL_Init(SDL_INIT_VIDEO);
-    TTF_Init();
-    SDL_Window* win = SDL_CreateWindow("Puzzle-15"
-            , 400
-            , 400
-            , SDL_WINDOW_RESIZABLE);
-    SDL_SetWindowPosition(win, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    SDL_Event evt;
+    while(running)
+    {
+        if(!SDL_PollEvent(&evt))
+        {
+            shuffle();
+            drawBoard();
+            continue;
+        }
+        if(SDL_EVENT_QUIT == evt.type)
+        {
+            running = false;
+            break;
+        }
+        if(SDL_EVENT_MOUSE_BUTTON_DOWN == evt.type)
+            break;
+    }
+}
 
-    SDL_Renderer* rend = SDL_CreateRenderer(win, NULL);
-    SDL_SetRenderVSync(rend, 1);
-    SDL_SetRenderLogicalPresentation(rend, cellWidth * 4, cellWidth * 4, SDL_LOGICAL_PRESENTATION_STRETCH);
-
-    SDL_Texture* sprite = SDL_CreateTexture(rend
-            , SDL_PIXELFORMAT_RGBA8888
-            , SDL_TEXTUREACCESS_TARGET
-            , cellWidth * 4
-            , cellWidth * 4);
-
-    prepareSprite(rend, sprite);
-
-    srand(time(NULL));
-
+static void main_event_loop()
+{
     SDL_Event evt;
     while(running && SDL_WaitEvent(&evt))
     {
@@ -160,45 +167,53 @@ int main()
                         {
                             int w, h;
                             SDL_GetWindowSize(win, &w, &h);
-                            swapTile(rend
-                                    , sprite
-                                    , (int)(4.0 * evt.button.x / w)
+                            swapTile((int)(4.0 * evt.button.x / w)
                                     , (int)(4.0 * evt.button.y / h));
                         }
                         break;
                     case SDL_BUTTON_RIGHT:
-                        while(running)
-                        {
-                            while(SDL_PollEvent(&evt))
-                            {
-                                if(SDL_EVENT_QUIT == evt.type)
-                                {
-                                    running = false;
-                                    goto stop_shuffle;
-                                }
-                                if(SDL_EVENT_MOUSE_BUTTON_DOWN == evt.type
-                                        && (SDL_BUTTON_LEFT == evt.button.button
-                                            || SDL_BUTTON_RIGHT == evt.button.button))
-                                    goto stop_shuffle;
-                            }
-                            drawBoard(rend, sprite);
-                            shuffle(rend, sprite);
-                        }
-stop_shuffle:
+                        shuffle_event_loop();
                         break;
                 }
-                drawBoard(rend, sprite);
+                drawBoard();
                 break;
             case SDL_EVENT_WINDOW_EXPOSED:
-                drawBoard(rend, sprite);
+                drawBoard();
                 break;
         }
     }
+}
+
+int main()
+{
+    if(!SDL_Init(SDL_INIT_VIDEO)
+            || !SDL_CreateWindowAndRenderer("Puzzle-15"
+                , 400
+                , 400
+                , SDL_WINDOW_RESIZABLE
+                , &win
+                , &rend)
+            || !SDL_SetWindowPosition(win, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED)
+            || !SDL_SetRenderVSync(rend, 1)
+            || !SDL_SetRenderLogicalPresentation(rend, cellWidth * 4, cellWidth * 4, SDL_LOGICAL_PRESENTATION_STRETCH)
+            || !(sprite = SDL_CreateTexture(rend
+                    , SDL_PIXELFORMAT_RGBA8888
+                    , SDL_TEXTUREACCESS_TARGET
+                    , cellWidth * 4
+                    , cellWidth * 4))
+            || !prepareSprite())
+    {
+        fprintf(stderr, "Application initialization Error: %s\n", SDL_GetError());
+        SDL_Quit();
+        return 1;
+    }
+
+    srand(time(NULL));
+    main_event_loop();
 
     SDL_DestroyTexture(sprite);
     SDL_DestroyRenderer(rend);
     SDL_DestroyWindow(win);
-    TTF_Quit();
     SDL_Quit();
     return 0;
 }
