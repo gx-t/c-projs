@@ -185,6 +185,7 @@ static void main_event_loop()
     }
 }
 
+//Move to SDL_main style
 int main()
 {
     if(!SDL_Init(SDL_INIT_VIDEO)
