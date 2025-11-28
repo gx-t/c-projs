@@ -165,11 +165,8 @@ static void main_event_loop()
                 {
                     case SDL_BUTTON_LEFT:
                         {
-// HINT: SDL_ConvertEventToRenderCoordinates
-                            int w, h;
-                            SDL_GetWindowSize(win, &w, &h);
-                            swapTile((int)(4.0 * evt.button.x / w)
-                                    , (int)(4.0 * evt.button.y / h));
+                            SDL_ConvertEventToRenderCoordinates(rend, &evt);
+                            swapTile((int)(evt.button.x / cellWidth), (int)(evt.button.y / cellWidth));
                         }
                         break;
                     case SDL_BUTTON_RIGHT:
