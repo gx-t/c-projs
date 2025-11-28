@@ -85,6 +85,23 @@ static bool prepareSprite()
     return true;
 }
 
+static void check_if_won()
+{
+    int val = 0;
+    for(int y = 0; y < 4; y ++)
+    {
+        for(int x = 0; x < 4; x ++)
+        {
+            if(0 == board[y][x])
+                continue;
+            if(val > board[y][x])
+                return;
+            val = board[y][x];
+        }
+    }
+    fprintf(stderr, "==>> won\n");
+}
+
 static void swapTile(int x, int y)
 {
     if(x_empty == x)
@@ -177,6 +194,7 @@ SDL_AppResult SDL_AppEvent(void* app_context, SDL_Event* evt)
     {
         SDL_ConvertEventToRenderCoordinates(rend, evt);
         swapTile((int)(evt->button.x / cellWidth), (int)(evt->button.y / cellWidth));
+        check_if_won();
         return SDL_APP_CONTINUE;
     }
 
