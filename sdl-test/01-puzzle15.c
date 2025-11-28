@@ -1,11 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#define SDL_MAIN_USE_CALLBACKS 1
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
-static bool running = true;
+enum
+{
+    STATE_MAIN
+    , STATE_SHUFFLE
+}static state = STATE_MAIN;
+
 static SDL_Window* win = NULL;
 static SDL_Renderer* rend = NULL;
 static SDL_Texture* sprite = NULL;
@@ -129,61 +135,7 @@ static void drawBoard()
     SDL_RenderPresent(rend);
 }
 
-static void shuffle_event_loop()
-{
-    SDL_Event evt;
-    while(running)
-    {
-        if(!SDL_PollEvent(&evt))
-        {
-            shuffle();
-            drawBoard();
-            continue;
-        }
-        if(SDL_EVENT_QUIT == evt.type)
-        {
-            running = false;
-            break;
-        }
-        if(SDL_EVENT_MOUSE_BUTTON_DOWN == evt.type)
-            break;
-    }
-}
-
-static void main_event_loop()
-{
-    SDL_Event evt;
-    while(running && SDL_WaitEvent(&evt))
-    {
-        switch(evt.type)
-        {
-            case SDL_EVENT_QUIT:
-                running = false;
-                break;
-            case SDL_EVENT_MOUSE_BUTTON_DOWN:
-                switch(evt.button.button)
-                {
-                    case SDL_BUTTON_LEFT:
-                        {
-                            SDL_ConvertEventToRenderCoordinates(rend, &evt);
-                            swapTile((int)(evt.button.x / cellWidth), (int)(evt.button.y / cellWidth));
-                        }
-                        break;
-                    case SDL_BUTTON_RIGHT:
-                        shuffle_event_loop();
-                        break;
-                }
-                drawBoard();
-                break;
-            case SDL_EVENT_WINDOW_EXPOSED:
-                drawBoard();
-                break;
-        }
-    }
-}
-
-//Move to SDL_main style
-int main()
+SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
 {
     if(!SDL_Init(SDL_INIT_VIDEO)
             || !SDL_CreateWindowAndRenderer("Puzzle-15"
@@ -203,16 +155,51 @@ int main()
             || !prepareSprite())
     {
         fprintf(stderr, "Application initialization Error: %s\n", SDL_GetError());
-        SDL_Quit();
-        return 1;
+        return SDL_APP_FAILURE;
+    }
+    srand(time(NULL));
+    return SDL_APP_CONTINUE;
+}
+
+SDL_AppResult SDL_AppEvent(void* app_context, SDL_Event* evt)
+{
+    if(SDL_EVENT_QUIT == evt->type)
+        return SDL_APP_SUCCESS;
+
+    if(SDL_EVENT_MOUSE_BUTTON_DOWN != evt->type)
+        return SDL_APP_CONTINUE;
+    if(STATE_SHUFFLE == state)
+    {
+        state = STATE_MAIN;
+        return SDL_APP_CONTINUE;
+    }
+    if(SDL_BUTTON_LEFT == evt->button.button)
+    {
+        SDL_ConvertEventToRenderCoordinates(rend, evt);
+        swapTile((int)(evt->button.x / cellWidth), (int)(evt->button.y / cellWidth));
+        return SDL_APP_CONTINUE;
     }
 
-    srand(time(NULL));
-    main_event_loop();
+    if(SDL_BUTTON_RIGHT == evt->button.button)
+        state = STATE_SHUFFLE;
 
-    SDL_DestroyTexture(sprite);
-    SDL_DestroyRenderer(rend);
-    SDL_DestroyWindow(win);
-    SDL_Quit();
-    return 0;
+    return SDL_APP_CONTINUE;
+}
+
+SDL_AppResult SDL_AppIterate(void* app_context)
+{
+    if(STATE_SHUFFLE == state)
+        shuffle();
+
+    drawBoard();
+
+    SDL_Event e;
+    if(STATE_MAIN == state && SDL_WaitEvent(&e))
+        return SDL_AppEvent(app_context, &e);
+
+    return SDL_APP_CONTINUE;
+}
+
+void SDL_AppQuit(void* app_context, SDL_AppResult result)
+{
 }
