@@ -165,6 +165,7 @@ static void main_event_loop()
                 {
                     case SDL_BUTTON_LEFT:
                         {
+// HINT: SDL_ConvertEventToRenderCoordinates
                             int w, h;
                             SDL_GetWindowSize(win, &w, &h);
                             swapTile((int)(4.0 * evt.button.x / w)
