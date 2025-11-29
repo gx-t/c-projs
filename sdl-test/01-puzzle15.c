@@ -8,9 +8,9 @@
 
 enum
 {
-    STATE_MAIN
-    , STATE_SHUFFLE
-}static state = STATE_MAIN;
+    STATE_PLAY
+        , STATE_SHUFFLE
+}static state = STATE_PLAY;
 
 static SDL_Window* win = NULL;
 static SDL_Renderer* rend = NULL;
@@ -128,13 +128,7 @@ static void swapTile(int x, int y)
     }
 }
 
-static void shuffle()
-{
-    for(int i = 0; i < 10000; i ++)
-        swapTile(rand() % 4, rand() % 4);
-}
-
-static void drawBoard()
+static SDL_AppResult draw_board()
 {
     SDL_SetRenderTarget(rend, NULL);
     SDL_SetRenderDrawColor(rend, 0x55, 0x55, 0x55, 0xFF);
@@ -150,6 +144,14 @@ static void drawBoard()
         }
     }
     SDL_RenderPresent(rend);
+    return SDL_APP_CONTINUE;
+}
+
+static SDL_AppResult shuffle()
+{
+    for(int i = 0; i < 10000; i ++)
+        swapTile(rand() % 4, rand() % 4);
+    return draw_board();
 }
 
 SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
@@ -187,7 +189,7 @@ SDL_AppResult SDL_AppEvent(void* app_context, SDL_Event* evt)
         return SDL_APP_CONTINUE;
     if(STATE_SHUFFLE == state)
     {
-        state = STATE_MAIN;
+        state = STATE_PLAY;
         return SDL_APP_CONTINUE;
     }
     if(SDL_BUTTON_LEFT == evt->button.button)
@@ -207,12 +209,10 @@ SDL_AppResult SDL_AppEvent(void* app_context, SDL_Event* evt)
 SDL_AppResult SDL_AppIterate(void* app_context)
 {
     if(STATE_SHUFFLE == state)
-        shuffle();
+        return shuffle();
 
-    drawBoard();
-
-    if(STATE_MAIN == state)
-        SDL_WaitEvent(NULL);
+    if(STATE_PLAY == state)
+        return draw_board();
 
     return SDL_APP_CONTINUE;
 }
