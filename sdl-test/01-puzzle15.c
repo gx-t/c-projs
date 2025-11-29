@@ -6,13 +6,6 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
-enum
-{
-    STATE_PLAY
-        , STATE_SHUFFLE
-        , STATE_VICTORY
-}static state = STATE_PLAY;
-
 static SDL_Window* win = NULL;
 static SDL_Renderer* rend = NULL;
 static SDL_Texture* sprite = NULL;
@@ -28,6 +21,34 @@ static int board[4][4] =
 
 static int x_empty = 3;
 static int y_empty = 3;
+
+static void (*idle_proc)();
+static void (*mouse_down)(SDL_Event* evt);
+
+static void play_idle();
+static void play_mouse_down(SDL_Event* evt);
+static void shuffle_idle();
+static void shuffle_mouse_down(SDL_Event* evt);
+static void victory_idle();
+static void victory_mouse_down(SDL_Event* evt);
+
+static void set_play_mode()
+{
+    idle_proc = play_idle;
+    mouse_down = play_mouse_down;
+}
+
+static void set_shuffle_mode()
+{
+    idle_proc = shuffle_idle;
+    mouse_down = shuffle_mouse_down;
+}
+
+static void set_victory_mode()
+{
+    idle_proc = victory_idle;
+    mouse_down = victory_mouse_down;
+}
 
 static void tileNumToRect(SDL_FRect* rc, int x, int y)
 {
@@ -130,7 +151,7 @@ static void swapTile(int x, int y)
     }
 }
 
-static SDL_AppResult draw_board()
+void play_idle()
 {
     SDL_SetRenderTarget(rend, NULL);
     SDL_SetRenderDrawColor(rend, 0x55, 0x55, 0x55, 0xFF);
@@ -146,14 +167,42 @@ static SDL_AppResult draw_board()
         }
     }
     SDL_RenderPresent(rend);
-    return SDL_APP_CONTINUE;
 }
 
-static SDL_AppResult shuffle()
+void play_mouse_down(SDL_Event* evt)
+{
+    if(SDL_BUTTON_LEFT == evt->button.button)
+    {
+        SDL_ConvertEventToRenderCoordinates(rend, evt);
+        swapTile((int)(evt->button.x / cellWidth), (int)(evt->button.y / cellWidth));
+        if(check_victory())
+            set_victory_mode();
+        return;
+    }
+    if(SDL_BUTTON_RIGHT == evt->button.button)
+        set_shuffle_mode();
+}
+
+void shuffle_idle()
 {
     for(int i = 0; i < 10000; i ++)
         swapTile(rand() % 4, rand() % 4);
-    return draw_board();
+    play_idle();
+}
+
+void shuffle_mouse_down(SDL_Event* evt)
+{
+    set_play_mode();
+}
+
+void victory_idle()
+{
+    set_play_mode();
+}
+
+void victory_mouse_down(SDL_Event* evt)
+{
+    set_play_mode();
 }
 
 SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
@@ -179,6 +228,7 @@ SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
         return SDL_APP_FAILURE;
     }
     srand(time(NULL));
+    set_play_mode();
     return SDL_APP_CONTINUE;
 }
 
@@ -189,36 +239,13 @@ SDL_AppResult SDL_AppEvent(void* app_context, SDL_Event* evt)
 
     if(SDL_EVENT_MOUSE_BUTTON_DOWN != evt->type)
         return SDL_APP_CONTINUE;
-    if(STATE_SHUFFLE == state)
-    {
-        state = STATE_PLAY;
-        return SDL_APP_CONTINUE;
-    }
-    if(SDL_BUTTON_LEFT == evt->button.button)
-    {
-        SDL_ConvertEventToRenderCoordinates(rend, evt);
-        swapTile((int)(evt->button.x / cellWidth), (int)(evt->button.y / cellWidth));
-        if(check_victory())
-            state = STATE_VICTORY;
-        return SDL_APP_CONTINUE;
-    }
-
-    if(SDL_BUTTON_RIGHT == evt->button.button)
-        state = STATE_SHUFFLE;
-
+    mouse_down(evt);
     return SDL_APP_CONTINUE;
 }
 
 SDL_AppResult SDL_AppIterate(void* app_context)
 {
-    if(STATE_SHUFFLE == state)
-        return shuffle();
-
-    if(STATE_PLAY == state)
-        return draw_board();
-
-    if(STATE_VICTORY == state)
-        state = STATE_PLAY;// TEMP
+    idle_proc();
     return SDL_APP_CONTINUE;
 }
 
