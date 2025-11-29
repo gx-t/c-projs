@@ -211,9 +211,8 @@ SDL_AppResult SDL_AppIterate(void* app_context)
 
     drawBoard();
 
-    SDL_Event e;
-    if(STATE_MAIN == state && SDL_WaitEvent(&e))
-        return SDL_AppEvent(app_context, &e);
+    if(STATE_MAIN == state)
+        SDL_WaitEvent(NULL);
 
     return SDL_APP_CONTINUE;
 }
