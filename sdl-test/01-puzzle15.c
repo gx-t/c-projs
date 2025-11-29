@@ -10,6 +10,7 @@ enum
 {
     STATE_PLAY
         , STATE_SHUFFLE
+        , STATE_VICTORY
 }static state = STATE_PLAY;
 
 static SDL_Window* win = NULL;
@@ -85,7 +86,7 @@ static bool prepareSprite()
     return true;
 }
 
-static void check_if_won()
+static bool check_victory()
 {
     int val = 0;
     for(int y = 0; y < 4; y ++)
@@ -95,11 +96,12 @@ static void check_if_won()
             if(0 == board[y][x])
                 continue;
             if(val > board[y][x])
-                return;
+                return false;
             val = board[y][x];
         }
     }
     fprintf(stderr, "==>> won\n");
+    return true;
 }
 
 static void swapTile(int x, int y)
@@ -196,7 +198,8 @@ SDL_AppResult SDL_AppEvent(void* app_context, SDL_Event* evt)
     {
         SDL_ConvertEventToRenderCoordinates(rend, evt);
         swapTile((int)(evt->button.x / cellWidth), (int)(evt->button.y / cellWidth));
-        check_if_won();
+        if(check_victory())
+            state = STATE_VICTORY;
         return SDL_APP_CONTINUE;
     }
 
@@ -214,6 +217,8 @@ SDL_AppResult SDL_AppIterate(void* app_context)
     if(STATE_PLAY == state)
         return draw_board();
 
+    if(STATE_VICTORY == state)
+        state = STATE_PLAY;// TEMP
     return SDL_APP_CONTINUE;
 }
 
