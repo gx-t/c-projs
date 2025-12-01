@@ -6,6 +6,8 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
+#define PI				3.14159265358979323846
+
 static SDL_Window* win = NULL;
 static SDL_Renderer* rend = NULL;
 static SDL_Texture* sprite = NULL;
@@ -18,6 +20,9 @@ static int board[4][4] =
     {9, 10, 11, 12},
     {13, 14, 15, 0}
 };
+
+static float osc_x = 0.0;
+static float osc_y = 0.0;
 
 static int x_empty = 3;
 static int y_empty = 3;
@@ -48,6 +53,8 @@ static void set_victory_mode()
 {
     idle_proc = victory_idle;
     mouse_down = victory_mouse_down;
+    osc_x = 1.0;
+    osc_y = 0.0;
 }
 
 static void tileNumToRect(SDL_FRect* rc, int x, int y)
@@ -155,16 +162,20 @@ static void draw_victory()
 {
     SDL_SetRenderTarget(rend, NULL);
     SDL_SetRenderDrawColor(rend, 0x00, 0x00, 0x00, 0xFF);
-    SDL_FPoint point_arr[2] =
-    {
-        [0].x = 10.0
-        , [0].y = 10.0
-        , [1].x = 150.0
-        , [1].y = 150.0
-    };
+    SDL_FPoint point_arr[5];
     SDL_RenderClear(rend);
     SDL_SetRenderDrawColor(rend, 0x00, 0xFF, 0x00, 0xFF);
-    SDL_RenderLines(rend, point_arr, 2);
+    for(int j = 0; j < 5; j ++)
+    {
+        for(int i = 0; i < 50; i ++)
+        {
+            osc_x += osc_y * 0.003;
+            osc_y -= osc_x * 0.003;
+        }
+        point_arr[j].x = 100.0 + osc_x * 50.0;
+        point_arr[j].y = 100.0 + osc_y * 50.0;
+    }
+    SDL_RenderLines(rend, point_arr, 5);
 }
 
 static void draw_board()
@@ -184,14 +195,14 @@ static void draw_board()
     }
 }
 
-void play_idle()
+static void play_idle()
 {
     draw_board();
     SDL_RenderPresent(rend);
     SDL_Delay(100);
 }
 
-void play_mouse_down(SDL_Event* evt)
+static void play_mouse_down(SDL_Event* evt)
 {
     if(SDL_BUTTON_LEFT == evt->button.button)
     {
@@ -205,7 +216,7 @@ void play_mouse_down(SDL_Event* evt)
         set_shuffle_mode();
 }
 
-void shuffle_idle()
+static void shuffle_idle()
 {
     for(int i = 0; i < 10000; i ++)
         swapTile(rand() % 4, rand() % 4);
@@ -213,18 +224,18 @@ void shuffle_idle()
     SDL_RenderPresent(rend);
 }
 
-void shuffle_mouse_down(SDL_Event* evt)
+static void shuffle_mouse_down(SDL_Event* evt)
 {
     set_play_mode();
 }
 
-void victory_idle()
+static void victory_idle()
 {
     draw_victory();
     SDL_RenderPresent(rend);
 }
 
-void victory_mouse_down(SDL_Event* evt)
+static void victory_mouse_down(SDL_Event* evt)
 {
     set_play_mode();
 }
