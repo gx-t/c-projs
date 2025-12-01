@@ -151,7 +151,23 @@ static void swapTile(int x, int y)
     }
 }
 
-void play_idle()
+static void draw_victory()
+{
+    SDL_SetRenderTarget(rend, NULL);
+    SDL_SetRenderDrawColor(rend, 0x00, 0x00, 0x00, 0xFF);
+    SDL_FPoint point_arr[2] =
+    {
+        [0].x = 10.0
+        , [0].y = 10.0
+        , [1].x = 150.0
+        , [1].y = 150.0
+    };
+    SDL_RenderClear(rend);
+    SDL_SetRenderDrawColor(rend, 0x00, 0xFF, 0x00, 0xFF);
+    SDL_RenderLines(rend, point_arr, 2);
+}
+
+static void draw_board()
 {
     SDL_SetRenderTarget(rend, NULL);
     SDL_SetRenderDrawColor(rend, 0x55, 0x55, 0x55, 0xFF);
@@ -166,7 +182,13 @@ void play_idle()
             SDL_RenderTexture(rend, sprite, &src, &dst);
         }
     }
+}
+
+void play_idle()
+{
+    draw_board();
     SDL_RenderPresent(rend);
+    SDL_Delay(100);
 }
 
 void play_mouse_down(SDL_Event* evt)
@@ -187,7 +209,8 @@ void shuffle_idle()
 {
     for(int i = 0; i < 10000; i ++)
         swapTile(rand() % 4, rand() % 4);
-    play_idle();
+    draw_board();
+    SDL_RenderPresent(rend);
 }
 
 void shuffle_mouse_down(SDL_Event* evt)
@@ -197,7 +220,8 @@ void shuffle_mouse_down(SDL_Event* evt)
 
 void victory_idle()
 {
-    set_play_mode();
+    draw_victory();
+    SDL_RenderPresent(rend);
 }
 
 void victory_mouse_down(SDL_Event* evt)
