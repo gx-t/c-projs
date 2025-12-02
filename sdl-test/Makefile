@@ -1,3 +1,5 @@
+.PHONY: 00-deb 00-rel 01-deb 01-rel clean
+
 # Detect the operating system
 UNAME_S := $(shell uname -s)
 
