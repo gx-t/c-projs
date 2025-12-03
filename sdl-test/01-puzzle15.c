@@ -21,12 +21,6 @@ static int board[4][4] =
     {13, 14, 15, 0}
 };
 
-static float osc_x[2];
-static float osc_y[2];
-
-static int x_empty = 3;
-static int y_empty = 3;
-
 static void (*idle_proc)();
 static void (*mouse_down)(SDL_Event* evt);
 
@@ -53,8 +47,6 @@ static void set_victory_mode()
 {
     idle_proc = victory_idle;
     mouse_down = victory_mouse_down;
-    osc_x[1] = osc_x[0] = 1.0;
-    osc_y[1] = osc_y[0] = 0.0;
 }
 
 static void tileNumToRect(SDL_FRect* rc, int x, int y)
@@ -134,6 +126,9 @@ static bool check_victory()
 
 static void swapTile(int x, int y)
 {
+    static int x_empty = 3;
+    static int y_empty = 3;
+
     if(x_empty == x)
     {
         int y_dist = y - y_empty;
@@ -160,6 +155,8 @@ static void swapTile(int x, int y)
 
 static void draw_victory()
 {
+    static float osc_x[2] = {1.0, 1.0};
+    static float osc_y[2] = {0.0, 0.0};
     SDL_SetRenderTarget(rend, NULL);
     SDL_SetRenderDrawColor(rend, 0x00, 0x00, 0x00, 0xFF);
     SDL_FPoint point_arr1[256];
@@ -293,4 +290,7 @@ SDL_AppResult SDL_AppIterate(void* app_context)
 
 void SDL_AppQuit(void* app_context, SDL_AppResult result)
 {
+    SDL_DestroyTexture(sprite);
+    SDL_DestroyRenderer(rend);
+    SDL_DestroyWindow(win);
 }

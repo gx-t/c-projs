@@ -1,4 +1,4 @@
-.PHONY: 00-deb 00-rel 01-deb 01-rel clean
+.PHONY: 00-deb 00-rel 01-deb 01-rel 02-deb 02-rel clean
 
 # Detect the operating system
 UNAME_S := $(shell uname -s)
@@ -29,7 +29,15 @@ endif
 	$(CC) -Wall -O2 -o 01-puzzle15 01-puzzle15.c $(CFLAGS)
 	strip 01-puzzle15
 
+02-deb:
+	$(CC) -Wall -g -o 02-direct 02-direct.c $(CFLAGS)
+
+02-rel:
+	$(CC) -Wall -O2 -o 02-direct 02-direct.c  $(CFLAGS)
+	strip 02-direct
+
+
 clean:
-	rm -rf 00-rand-dots 01-puzzle15 *.dsym
+	rm -rf 00-rand-dots 01-puzzle15 02-direct *.dsym
 
 

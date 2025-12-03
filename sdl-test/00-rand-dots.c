@@ -24,7 +24,7 @@ SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
     SDL_SetAppMetadata("SDL3 test: random dots", "0.0", "shah32768.sdf.org");
     if(!SDL_Init(SDL_INIT_VIDEO))
     {
-        fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
+        fprintf(stderr, "SDL_CreateWindowAndRenderer Error: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
     }
     if(!SDL_CreateWindowAndRenderer("SDL test"
@@ -69,5 +69,7 @@ SDL_AppResult SDL_AppIterate(void* app_context)
 
 void SDL_AppQuit(void* app_context, SDL_AppResult result)
 {
+    SDL_DestroyRenderer(rend);
+    SDL_DestroyWindow(win);
 }
 
