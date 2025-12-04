@@ -159,27 +159,50 @@ static void draw_victory()
     static float osc_y[2] = {0.0, 0.0};
     SDL_SetRenderTarget(rend, NULL);
     SDL_SetRenderDrawColor(rend, 0x00, 0x00, 0x00, 0xFF);
-    SDL_FPoint point_arr1[256];
-    SDL_FPoint point_arr2[256];
+    SDL_FPoint buf5[2][5];
+    SDL_FPoint star[2][6];
     SDL_RenderClear(rend);
-    float f[2] = {2.0 * PI / 255.0, f[0] * 1.001};
-    for(int i = 0; i < 255; i ++)
+    float f[2] = {2.0 * PI / 25.2, f[0] * 1.001};
+    for(int j = 0; j < 5; j ++)
     {
-        osc_x[0] += osc_y[0] * f[0];
-        osc_y[0] -= osc_x[0] * f[0];
-        osc_x[1] += osc_y[1] * f[1];
-        osc_y[1] -= osc_x[1] * f[1];
-        point_arr1[i].x = 100.0 + osc_x[0] * 50.0;
-        point_arr1[i].y = 100.0 + osc_y[1] * 50.0;
-        point_arr2[i].x = 100.0 + osc_y[0] * 50.0;
-        point_arr2[i].y = 100.0 + osc_x[1] * 50.0;
+        buf5[0][j].x = osc_x[0];
+        buf5[0][j].y = osc_y[0];
+        buf5[1][j].x = osc_y[1];
+        buf5[1][j].y = osc_x[1];
+        for(int i = 0; i < 5; i ++)
+        {
+            osc_x[0] += osc_y[0] * f[0];
+            osc_y[0] -= osc_x[0] * f[0];
+            osc_x[1] += osc_y[1] * f[1];
+            osc_y[1] -= osc_x[1] * f[1];
+        }
     }
-    point_arr1[255] = point_arr1[0];
-    point_arr2[255] = point_arr2[0];
+    int idx_tbl_star[] = {0, 2, 4, 1, 3, 0};
+    for(int i = 0; i < 5; i ++)
+    {
+        star[0][i].x = 100.0 + 50.0 * buf5[0][idx_tbl_star[i]].x;
+        star[0][i].y = 100.0 + 50.0 * buf5[1][idx_tbl_star[i]].y;
+    }
+    star[0][5] = star[0][0];
+    for(int i = 0; i < 5; i ++)
+    {
+        star[1][i].x = 30.0 + 25.0 * buf5[1][idx_tbl_star[i]].x;
+        star[1][i].y = 30.0 + 25.0 * buf5[1][idx_tbl_star[i]].y;
+    }
+    star[1][5] = star[1][0];
     SDL_SetRenderDrawColor(rend, 0x00, 0xFF, 0x00, 0xFF);
-    SDL_RenderLines(rend, point_arr1, 256);
+    SDL_RenderLines(rend, star[0], 6);
     SDL_SetRenderDrawColor(rend, 0xFF, 0x00, 0x00, 0xFF);
-    SDL_RenderLines(rend, point_arr2, 256);
+    SDL_RenderLines(rend, star[1], 6);
+    for(int i = 0; i < 6; i ++)
+        star[1][i].x += 130.0;
+    SDL_RenderLines(rend, star[1], 6);
+    for(int i = 0; i < 6; i ++)
+        star[1][i].y += 130.0;
+    SDL_RenderLines(rend, star[1], 6);
+    for(int i = 0; i < 6; i ++)
+        star[1][i].x -= 130.0;
+    SDL_RenderLines(rend, star[1], 6);
 }
 
 static void draw_board()
