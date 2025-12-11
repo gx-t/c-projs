@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #define SDL_MAIN_USE_CALLBACKS 1
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -16,11 +17,11 @@ static SDL_Texture* texture = NULL;
 
 struct
 {
-    uint8_t clear_rgb[3];
+    uint8_t clear_rgba[4];
     struct
     {
         uint8_t draw : 1;
-        uint8_t rgb[3];
+        uint8_t rgba[4];
     }cells[CELL_COUNT];
 
     struct
@@ -28,7 +29,7 @@ struct
         int x;
         int w;
         int h;
-        uint8_t rgb[3];
+        uint8_t rgba[4];
     }pad;
 
     struct
@@ -36,37 +37,38 @@ struct
         int x;
         int y;
         int r;
-        uint8_t rgb[3];
+        uint8_t rgba[4];
     }ball;
 }static scene;
 
 static void init_board()
 {
-    scene.clear_rgb[0] = 0x33;
-    scene.clear_rgb[1] = 0x33;
-    scene.clear_rgb[2] = 0x33;
+    scene.clear_rgba[0] = 0x33;
+    scene.clear_rgba[1] = 0x33;
+    scene.clear_rgba[2] = 0x33;
+    scene.clear_rgba[3] = 0xFF;
 
     int i = 0;
     for(; i < CELL_COUNT / 2; i ++)
     {
         scene.cells[i].draw = 1;
-        scene.cells[i].rgb[0] = rand() % 200 + 55;
-        scene.cells[i].rgb[1] = rand() % 200 + 55;
-        scene.cells[i].rgb[2] = rand() % 200 + 55;
+        scene.cells[i].rgba[0] = rand() % 200 + 55;
+        scene.cells[i].rgba[1] = rand() % 200 + 55;
+        scene.cells[i].rgba[2] = rand() % 200 + 55;
+        scene.cells[i].rgba[3] = 0xFF;
     }
     for(; i < CELL_COUNT; i ++)
     {
         scene.cells[i].draw = 0;
-        scene.cells[i].rgb[0] = scene.clear_rgb[0];
-        scene.cells[i].rgb[1] = scene.clear_rgb[1];
-        scene.cells[i].rgb[2] = scene.clear_rgb[2];
+        *(uint32_t*)scene.cells[i].rgba = *(uint32_t*)scene.clear_rgba;
     }
     scene.pad.x = BOARD_SIZE / 2;
     scene.pad.w = CELL_SIZE * 2;
     scene.pad.h = CELL_SIZE / 2;
-    scene.pad.rgb[0] = 0xFF;
-    scene.pad.rgb[1] = 0xFF;
-    scene.pad.rgb[2] = 0xFF;
+    scene.pad.rgba[0] = 0xFF;
+    scene.pad.rgba[1] = 0xFF;
+    scene.pad.rgba[2] = 0xFF;
+    scene.pad.rgba[3] = 0xFF;
 }
 
 static void draw_board(void* fb, int pitch)
@@ -87,12 +89,12 @@ static void draw_board(void* fb, int pitch)
             int x_cell = x_board / CELL_SIZE;
             int cell_idx = x_cell + y_cell * BOARD_SIZE / CELL_SIZE;
 
+            *(uint32_t*)pp = *(uint32_t*)scene.clear_rgba;
+
             // draw the cells
             if(scene.cells[cell_idx].draw && (y_board % CELL_SIZE) && (x_board % CELL_SIZE))
             {
-                pp[0] = scene.cells[cell_idx].rgb[0];
-                pp[1] = scene.cells[cell_idx].rgb[1];
-                pp[2] = scene.cells[cell_idx].rgb[2];
+                *(uint32_t*)pp = *(uint32_t*)scene.cells[cell_idx].rgba;
                 pp[3] = (x_board % CELL_SIZE) * 255 / CELL_SIZE;
             }
 
@@ -101,9 +103,7 @@ static void draw_board(void* fb, int pitch)
                     && x_board > scene.pad.x - scene.pad.w / 2
                     && x_board < scene.pad.x + scene.pad.w / 2)
             {
-                pp[0] = scene.pad.rgb[0];
-                pp[1] = scene.pad.rgb[1];
-                pp[2] = scene.pad.rgb[2];
+                *(uint32_t*)pp = *(uint32_t*)scene.pad.rgba;
                 pp[3] = 100 + ((x_board - scene.pad.x + scene.pad.w / 2) % scene.pad.w) * 155 / scene.pad.w;
             }
             pp += 4;
@@ -159,21 +159,12 @@ SDL_AppResult SDL_AppEvent(void* app_context, SDL_Event* evt)
 
 SDL_AppResult SDL_AppIterate(void* app_context)
 {
-
     void* pixels = NULL;
     int pitch = 0;
     SDL_LockTexture(texture, NULL, &pixels, &pitch);
     draw_board(pixels, pitch);
     SDL_UnlockTexture(texture);
 
-    SDL_SetRenderTarget(rend, NULL);
-    SDL_SetRenderDrawColor(rend
-            , scene.clear_rgb[0] = 0x33
-            , scene.clear_rgb[1] = 0x33
-            , scene.clear_rgb[2] = 0x33
-            , 0xFF);
-
-    SDL_RenderClear(rend);
     SDL_RenderTexture(rend, texture, NULL, NULL);
     SDL_RenderPresent(rend);
     return SDL_APP_CONTINUE;

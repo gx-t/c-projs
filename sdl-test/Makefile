@@ -11,7 +11,7 @@ else ifeq ($(UNAME_S),Linux)
   CFLAGS := `pkg-config --cflags --libs sdl3-ttf` -DTTF_PATH=\"/usr/share/fonts/truetype/freefont/FreeSans.ttf\"
 else
   # Windows
-  CFLAGS := -lSDL3 -lSDL3_ttf -DTTF_PATH=\"C:/Windows/Fonts/times.ttf\" -mwindows
+  CFLAGS := `pkg-config --cflags --libs sdl3-ttf` -DTTF_PATH=\"C:/Windows/Fonts/times.ttf\" -mwindows
 endif
 
 
