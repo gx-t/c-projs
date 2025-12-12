@@ -34,9 +34,11 @@ struct
 
     struct
     {
-        int x;
-        int y;
+        float x;
+        float y;
         int r;
+        float vx;
+        float vy;
         uint8_t rgba[4];
     }ball;
 }static scene;
@@ -69,6 +71,16 @@ static void init_board()
     scene.pad.rgba[1] = 0xFF;
     scene.pad.rgba[2] = 0xFF;
     scene.pad.rgba[3] = 0xFF;
+
+    scene.ball.x = 100;
+    scene.ball.y = 150;
+    scene.ball.r = 5;
+    scene.ball.vx = 0.1;
+    scene.ball.vy = 0.1;
+    scene.ball.rgba[0] = 0xFF;
+    scene.ball.rgba[1] = 0xFF;
+    scene.ball.rgba[2] = 0x77;
+    scene.ball.rgba[3] = 0xFF;
 }
 
 static void draw_board(void* fb, int pitch)
@@ -106,10 +118,20 @@ static void draw_board(void* fb, int pitch)
                 *(uint32_t*)pp = *(uint32_t*)scene.pad.rgba;
                 pp[3] = 100 + ((x_board - scene.pad.x + scene.pad.w / 2) % scene.pad.w) * 155 / scene.pad.w;
             }
+
+            // draw the ball
+            float dx = x_board - scene.ball.x;
+            float dy = y_board - scene.ball.y;
+            if((dx * dx + dy * dy) < scene.ball.r * scene.ball.r)
+            {
+                *(uint32_t*)pp = *(uint32_t*)scene.ball.rgba;
+            }
             pp += 4;
         }
         row += pitch;
     }
+    scene.ball.x += scene.ball.vx;
+    scene.ball.y += scene.ball.vy;
 }
 
 SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
