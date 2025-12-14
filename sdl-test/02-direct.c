@@ -11,13 +11,14 @@ static SDL_Texture* texture = NULL;
 
 #define WINDOW_WIDTH    640
 #define WINDOW_HEIGHT   480
-#define BOARD_SIZE      200
+#define BOARD_SIZE      201
 #define CELL_SIZE       20
 #define CELL_COUNT      ((BOARD_SIZE / CELL_SIZE) * (BOARD_SIZE / CELL_SIZE))
 
 struct
 {
     uint8_t clear_rgba[4];
+    uint8_t border_rgba[4];
     struct
     {
         uint8_t draw : 1;
@@ -50,6 +51,11 @@ static void init_board()
     scene.clear_rgba[2] = 0x33;
     scene.clear_rgba[3] = 0xFF;
 
+    scene.border_rgba[0] = 0x00;
+    scene.border_rgba[1] = 0xFF;
+    scene.border_rgba[2] = 0x00;
+    scene.border_rgba[3] = 0xFF;
+
     int i = 0;
     for(; i < CELL_COUNT / 2; i ++)
     {
@@ -58,6 +64,8 @@ static void init_board()
         scene.cells[i].rgba[1] = rand() % 200 + 55;
         scene.cells[i].rgba[2] = rand() % 200 + 55;
         scene.cells[i].rgba[3] = 0xFF;
+        if(*(uint32_t*)scene.cells[i].rgba == *(uint32_t*)scene.clear_rgba)
+            i --;
     }
     for(; i < CELL_COUNT; i ++)
     {
@@ -75,8 +83,8 @@ static void init_board()
     scene.ball.x = 100;
     scene.ball.y = 150;
     scene.ball.r = 5;
-    scene.ball.vx = 0.1;
-    scene.ball.vy = 0.1;
+    scene.ball.vx = 0.5;
+    scene.ball.vy = 0.5;
     scene.ball.rgba[0] = 0xFF;
     scene.ball.rgba[1] = 0xFF;
     scene.ball.rgba[2] = 0x77;
@@ -98,11 +106,12 @@ static void draw_board(void* fb, int pitch)
         uint8_t* pp = (uint8_t*)row;
         for(int x_board = 0; x_board < BOARD_SIZE; x_board ++)
         {
+            *(uint32_t*)pp = *(uint32_t*)scene.clear_rgba;
+            if(0 == x_board || 0 == y_board || BOARD_SIZE - 1 == x_board || BOARD_SIZE - 1 == y_board)
+                *(uint32_t*)pp = *(uint32_t*)scene.border_rgba;
+
             int x_cell = x_board / CELL_SIZE;
             int cell_idx = x_cell + y_cell * BOARD_SIZE / CELL_SIZE;
-
-            *(uint32_t*)pp = *(uint32_t*)scene.clear_rgba;
-
             // draw the cells
             if(scene.cells[cell_idx].draw && (y_board % CELL_SIZE) && (x_board % CELL_SIZE))
             {
@@ -124,6 +133,13 @@ static void draw_board(void* fb, int pitch)
             float dy = y_board - scene.ball.y;
             if((dx * dx + dy * dy) < scene.ball.r * scene.ball.r)
             {
+                if(*(uint32_t*)pp != *(uint32_t*)scene.clear_rgba)
+                {
+                    //collision
+                    scene.ball.vx = -scene.ball.vx;
+                    scene.ball.vy = -scene.ball.vy;
+                    
+                }
                 *(uint32_t*)pp = *(uint32_t*)scene.ball.rgba;
             }
             pp += 4;
