@@ -83,8 +83,8 @@ static void init_board()
     scene.ball.x = 100;
     scene.ball.y = 150;
     scene.ball.r = 5;
-    scene.ball.vx = 0.5;
-    scene.ball.vy = 0.5;
+    scene.ball.vx = 1.0;
+    scene.ball.vy = 1.0;
     scene.ball.rgba[0] = 0xFF;
     scene.ball.rgba[1] = 0xFF;
     scene.ball.rgba[2] = 0x77;
@@ -131,14 +131,17 @@ static void draw_board(void* fb, int pitch)
             // draw the ball
             float dx = x_board - scene.ball.x;
             float dy = y_board - scene.ball.y;
-            if((dx * dx + dy * dy) < scene.ball.r * scene.ball.r)
+            dx *= dx;
+            dy *= dy;
+            float r = scene.ball.r * scene.ball.r;
+            if((dx + dy) < r)
             {
-                if(*(uint32_t*)pp != *(uint32_t*)scene.clear_rgba)
+                if(*(uint32_t*)pp != *(uint32_t*)scene.clear_rgba) //collision
                 {
-                    //collision
-                    scene.ball.vx = -scene.ball.vx;
-                    scene.ball.vy = -scene.ball.vy;
-                    
+                    if(dx > r / 2)
+                        scene.ball.vx = -scene.ball.vx;
+                    if(dy > r / 2)
+                        scene.ball.vy = -scene.ball.vy;
                 }
                 *(uint32_t*)pp = *(uint32_t*)scene.ball.rgba;
             }
@@ -152,7 +155,7 @@ static void draw_board(void* fb, int pitch)
 
 SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
 {
-    SDL_SetAppMetadata("SDL3 test: ditect access to texture data", "0.0", "shah32768.sdf.org");
+    SDL_SetAppMetadata("SDL3 test: direct access to texture data", "0.0", "shah32768.sdf.org");
     if(!SDL_Init(SDL_INIT_VIDEO))
     {
         fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
