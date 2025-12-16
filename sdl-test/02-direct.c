@@ -15,6 +15,8 @@ static SDL_Texture* texture = NULL;
 #define CELL_SIZE       20
 #define CELL_COUNT      ((BOARD_SIZE / CELL_SIZE) * (BOARD_SIZE / CELL_SIZE))
 
+#define ACCELERATION    0.1f
+
 struct
 {
     uint8_t clear_rgba[4];
@@ -83,12 +85,21 @@ static void init_board()
     scene.ball.x = 100;
     scene.ball.y = 150;
     scene.ball.r = 5;
-    scene.ball.vx = 1.0;
-    scene.ball.vy = 1.0;
+    scene.ball.vx = 0.6;
+    scene.ball.vy = 0.6;
     scene.ball.rgba[0] = 0xFF;
     scene.ball.rgba[1] = 0xFF;
     scene.ball.rgba[2] = 0x77;
     scene.ball.rgba[3] = 0xFF;
+}
+
+static float clamp_f(float v)
+{
+    if(v > 2.0)
+        return 2.0;
+    if(v < -2.0)
+        return -2.0;
+    return v;
 }
 
 static void draw_board(void* fb, int pitch)
@@ -131,19 +142,17 @@ static void draw_board(void* fb, int pitch)
             // draw the ball
             float dx = x_board - scene.ball.x;
             float dy = y_board - scene.ball.y;
-            dx *= dx;
-            dy *= dy;
-            float r = scene.ball.r * scene.ball.r;
-            if((dx + dy) < r)
+            if((dx * dx + dy * dy) < scene.ball.r * scene.ball.r)
             {
                 if(*(uint32_t*)pp != *(uint32_t*)scene.clear_rgba) //collision
                 {
-                    if(dx > r / 2)
-                        scene.ball.vx = -scene.ball.vx;
-                    if(dy > r / 2)
-                        scene.ball.vy = -scene.ball.vy;
+                    scene.ball.vx -= dx * ACCELERATION;
+                    scene.ball.vy -= dy * ACCELERATION;
+                    scene.ball.vx = clamp_f(scene.ball.vx);
+                    scene.ball.vy = clamp_f(scene.ball.vy);
                 }
-                *(uint32_t*)pp = *(uint32_t*)scene.ball.rgba;
+                else
+                    *(uint32_t*)pp = *(uint32_t*)scene.ball.rgba;
             }
             pp += 4;
         }
