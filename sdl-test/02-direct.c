@@ -167,7 +167,7 @@ SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
     SDL_SetAppMetadata("SDL3 test: direct access to texture data", "0.0", "shah32768.sdf.org");
     if(!SDL_Init(SDL_INIT_VIDEO))
     {
-        fprintf(stderr, "SDL_Init Error: %s\n", SDL_GetError());
+        SDL_Log("SDL_Init Error: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
@@ -178,7 +178,7 @@ SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
                 , &win
                 , &rend))
     {
-        fprintf(stderr, "SDL_CreateWindowAndRenderer Error: %s\n", SDL_GetError());
+        SDL_Log("SDL_CreateWindowAndRenderer Error: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
     }
     SDL_SetWindowPosition(win, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
@@ -192,7 +192,7 @@ SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
                     , BOARD_SIZE
                     , BOARD_SIZE)))
     {
-        fprintf(stderr, "SDL_CreateTexture Error: %s\n", SDL_GetError());
+        SDL_Log("SDL_CreateTexture Error: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
     }
     srand(time(NULL));

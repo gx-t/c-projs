@@ -24,7 +24,7 @@ SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
     SDL_SetAppMetadata("SDL3 test: random dots", "0.0", "shah32768.sdf.org");
     if(!SDL_Init(SDL_INIT_VIDEO))
     {
-        fprintf(stderr, "SDL_CreateWindowAndRenderer Error: %s\n", SDL_GetError());
+        SDL_Log("SDL_CreateWindowAndRenderer Error: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
     }
     if(!SDL_CreateWindowAndRenderer("SDL test"
@@ -34,9 +34,13 @@ SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
                 , &win
                 , &rend))
     {
-        fprintf(stderr, "SDL_CreateWindow Error: %s\n", SDL_GetError());
+        SDL_Log("SDL_CreateWindow Error: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
     }
+
+    SDL_Log("Current Renderer: %s", SDL_GetRendererName(rend));
+    for(int i = 0; i < SDL_GetNumRenderDrivers(); i ++)
+        SDL_Log("\t%d. %s", i + 1, SDL_GetRenderDriver(i));
 
     SDL_SetWindowPosition(win, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     SDL_SetRenderLogicalPresentation(rend, 64, 48, SDL_LOGICAL_PRESENTATION_STRETCH);

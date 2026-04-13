@@ -63,7 +63,7 @@ static bool prepareSprite()
     if(!TTF_Init()
             || !(font = TTF_OpenFont(TTF_PATH, cellWidth / 2)))
     {
-        fprintf(stderr, "TTF_OpenFont Error: %s\n", SDL_GetError());
+        SDL_Log("TTF_OpenFont Error: %s\n", SDL_GetError());
         TTF_Quit();
         return false;
     }
@@ -120,7 +120,7 @@ static bool check_victory()
             val = board[y][x];
         }
     }
-    fprintf(stderr, "==>> won\n");
+    SDL_Log("==>> won\n");
     return true;
 }
 
@@ -286,7 +286,7 @@ SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
                     , cellWidth * 4))
             || !prepareSprite())
     {
-        fprintf(stderr, "Application initialization Error: %s\n", SDL_GetError());
+        SDL_Log("Application initialization Error: %s\n", SDL_GetError());
         return SDL_APP_FAILURE;
     }
     srand(time(NULL));
