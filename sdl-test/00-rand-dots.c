@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #define SDL_MAIN_USE_CALLBACKS 1
 #include <SDL3/SDL.h>
@@ -24,7 +23,7 @@ SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
     SDL_SetAppMetadata("SDL3 test: random dots", "0.0", "shah32768.sdf.org");
     if(!SDL_Init(SDL_INIT_VIDEO))
     {
-        SDL_Log("SDL_CreateWindowAndRenderer Error: %s\n", SDL_GetError());
+        SDL_Log("SDL_CreateWindowAndRenderer Error: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
     if(!SDL_CreateWindowAndRenderer("SDL test"
@@ -34,7 +33,7 @@ SDL_AppResult SDL_AppInit(void** app_context, int argc, char* argv[])
                 , &win
                 , &rend))
     {
-        SDL_Log("SDL_CreateWindow Error: %s\n", SDL_GetError());
+        SDL_Log("SDL_CreateWindow Error: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
