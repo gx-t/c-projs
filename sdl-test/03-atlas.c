@@ -6,8 +6,8 @@
 
 #define VIEW_WIDTH      400
 #define VIEW_HEIGHT     400
-#define ATLAS_WIDTH     400
-#define ATLAS_HEIGHT    400
+#define ATLAS_WIDTH     256
+#define ATLAS_HEIGHT    256
 
 static SDL_Window* win = NULL;
 static SDL_Renderer* rend = NULL;
@@ -15,12 +15,17 @@ static SDL_Texture* atlas = NULL;
 
 void fill_atlas(SDL_Surface* surface)
 {
-    Uint32 *pixels = (Uint32*)surface->pixels;
-    int pitch = surface->pitch / 4;  // pixels per row
+    Uint32* pixels = (Uint32*)surface->pixels;
+    int pitch = surface->pitch / sizeof(*pixels);
 
-    for (int y = 0; y < 100; y++) {
-        for (int x = 0; x < 100; x++) {
-            pixels[y * pitch + x] = 0xFFFFFFFF;
+    int center_x = ATLAS_WIDTH / 2;
+    int center_y = ATLAS_HEIGHT / 2;
+    for(int y = 0; y < ATLAS_HEIGHT; y++)
+    {
+        for(int x = 0; x < ATLAS_WIDTH; x++)
+        {
+            Uint8 val = (center_x * center_y - x * x + y * y) / 128;
+            pixels[y * pitch + x] = (val << 24) | (val << 16) | (val << 8) | val;
         }
     }
 }
