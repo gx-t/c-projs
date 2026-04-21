@@ -1,4 +1,4 @@
-.PHONY: all-deb all-rel 00-deb 00-rel 01-deb 01-rel 02-deb 02-rel clean
+.PHONY: all-deb all-rel 00-deb 00-rel 01-deb 01-rel 02-deb 02-rel 03-deb 03-rel clean
 
 # Detect the operating system
 UNAME_S := $(shell uname -s)
@@ -14,9 +14,9 @@ else
   CFLAGS := `pkg-config --cflags --libs sdl3-ttf` -DTTF_PATH=\"C:/Windows/Fonts/times.ttf\" -mwindows
 endif
 
-all-rel: 00-rel 01-rel 02-rel
+all-rel: 00-rel 01-rel 02-rel 03-rel
 
-all-deb: 00-deb 01-deb 02-deb
+all-deb: 00-deb 01-deb 02-deb 03-deb
 
 00-deb:
 	$(CC) -Wall -g -o 00-rand-dots 00-rand-dots.c $(CFLAGS)
@@ -38,6 +38,13 @@ all-deb: 00-deb 01-deb 02-deb
 02-rel:
 	$(CC) -Wall -O2 -o 02-direct 02-direct.c  $(CFLAGS)
 	strip 02-direct
+
+03-deb:
+	$(CC) -Wall -g -o 03-atlas 03-atlas.c $(CFLAGS)
+
+03-rel:
+	$(CC) -Wall -O2 -o 03-atlas 03-atlas.c  $(CFLAGS)
+	strip 03-atlas
 
 
 clean:
